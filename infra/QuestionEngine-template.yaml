@@ -1,0 +1,216 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Unified API Gateway with Separate Cognito User Pools for Web and Mobile in a TRE (using .NET 8)
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: dotnet8
+    MemorySize: 512
+    Environment:
+      Variables:
+        REGION: !Ref AWS::Region
+
+Resources:
+
+  ################################################
+  # Cognito User Pools
+  ################################################
+
+  MobileUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: MobileUserPool
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+
+  WebUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: WebUserPool
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+
+  ################################################
+  # Unified API Gateway
+  ################################################
+
+  UnifiedApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'OPTIONS,GET,POST,PUT,DELETE'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+        AllowOrigin: "'*'"
+
+  ################################################
+  # Cognito Authorizers
+  ################################################
+
+  MobileCognitoAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: MobileAuthorizer
+      RestApiId: !Ref UnifiedApi
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      ProviderARNs:
+        - !GetAtt MobileUserPool.Arn
+
+  WebCognitoAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: WebAuthorizer
+      RestApiId: !Ref UnifiedApi
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      ProviderARNs:
+        - !GetAtt WebUserPool.Arn
+
+  ################################################
+  # Example Mobile Lambda Functions (dotnet8)
+  ################################################
+
+  MobileGetQuestionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: MyApi::MyApi.Lambdas.MobileGetQuestions::FunctionHandler
+      CodeUri: ./src/MobileApi
+      Policies:
+        - AmazonDynamoDBReadOnlyAccess
+      Environment:
+        Variables:
+          QUESTIONS_TABLE_NAME: !Ref QuestionnaireTable
+      Events:
+        GetQuestions:
+          Type: Api
+          Properties:
+            Path: /mobile/questions
+            Method: get
+            RestApiId: !Ref UnifiedApi
+            Auth:
+              Authorizer: MobileCognitoAuthorizer
+
+  MobilePostAnswersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: MyApi::MyApi.Lambdas.MobilePostAnswers::FunctionHandler
+      CodeUri: ./src/MobileApi
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Environment:
+        Variables:
+          ANSWERS_TABLE_NAME: !Ref AnswersTable
+      Events:
+        PostAnswers:
+          Type: Api
+          Properties:
+            Path: /mobile/answers
+            Method: post
+            RestApiId: !Ref UnifiedApi
+            Auth:
+              Authorizer: MobileCognitoAuthorizer
+
+  ################################################
+  # Example Web Lambda Functions (dotnet8)
+  ################################################
+
+  WebManageQuestionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: MyApi::MyApi.Lambdas.WebManageQuestions::FunctionHandler
+      CodeUri: ./src/WebApi
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Environment:
+        Variables:
+          QUESTIONS_TABLE_NAME: !Ref QuestionnaireTable
+      Events:
+        ManageQuestions:
+          Type: Api
+          Properties:
+            Path: /web/questions
+            Method: post
+            RestApiId: !Ref UnifiedApi
+            Auth:
+              Authorizer: WebCognitoAuthorizer
+
+  WebDashboardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: MyApi::MyApi.Lambdas.WebDashboard::FunctionHandler
+      CodeUri: ./src/WebApi
+      Policies:
+        - AmazonDynamoDBReadOnlyAccess
+      Environment:
+        Variables:
+          ANSWERS_TABLE_NAME: !Ref AnswersTable
+      Events:
+        GetDashboard:
+          Type: Api
+          Properties:
+            Path: /web/dashboard
+            Method: get
+            RestApiId: !Ref UnifiedApi
+            Auth:
+              Authorizer: WebCognitoAuthorizer
+
+  ################################################
+  # DynamoDB Tables
+  ################################################
+
+  QuestionnaireTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: questionnaire-table
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  AnswersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: answers-table
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+Outputs:
+  ApiUrl:
+    Description: "Unified API Gateway URL"
+    Value: !Sub "https://${UnifiedApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+
+  MobileUserPoolId:
+    Value: !Ref MobileUserPool
+
+  WebUserPoolId:
+    Value: !Ref WebUserPool
+
+  QuestionnaireTableName:
+    Value: !Ref QuestionnaireTable
+
+  AnswersTableName:
+    Value: !Ref AnswersTable
