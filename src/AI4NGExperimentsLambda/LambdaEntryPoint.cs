@@ -89,9 +89,9 @@ public class LambdaEntryPoint
         return Success(new
         {
             id = experimentId,
-            data = JsonSerializer.Deserialize<object>(experiment["data"].M.ToJson()),
-            questionnaireConfig = JsonSerializer.Deserialize<object>(experiment["questionnaireConfig"].M.ToJson()),
-            sessions = sessions.Select(s => JsonSerializer.Deserialize<object>(s["data"].M.ToJson()))
+            data = ConvertAttributeValueToObject(experiment["data"]),
+            questionnaireConfig = ConvertAttributeValueToObject(experiment["questionnaireConfig"]),
+            sessions = sessions.Select(s => ConvertAttributeValueToObject(s["data"]))
         });
     }
 
@@ -108,8 +108,8 @@ public class LambdaEntryPoint
                 ["PK"] = new($"EXPERIMENT#{experimentId}"),
                 ["SK"] = new("METADATA"),
                 ["type"] = new("Experiment"),
-                ["data"] = new { M = JsonToAttributeValue(experiment.GetProperty("data")) },
-                ["questionnaireConfig"] = new { M = JsonToAttributeValue(experiment.GetProperty("questionnaireConfig")) },
+                ["data"] = new AttributeValue { M = JsonToAttributeValue(experiment.GetProperty("data")) },
+                ["questionnaireConfig"] = new AttributeValue { M = JsonToAttributeValue(experiment.GetProperty("questionnaireConfig")) },
                 ["createdBy"] = new(username),
                 ["createdAt"] = new(DateTime.UtcNow.ToString("O"))
             }
@@ -134,7 +134,7 @@ public class LambdaEntryPoint
                     ["PK"] = new($"EXPERIMENT#{experimentId}"),
                     ["SK"] = new($"SESSION#{sessionId}"),
                     ["type"] = new("Session"),
-                    ["data"] = new { M = JsonToAttributeValue(session) },
+                    ["data"] = new AttributeValue { M = JsonToAttributeValue(session) },
                     ["GSI1PK"] = new($"EXPERIMENT#{experimentId}"),
                     ["GSI1SK"] = new($"SESSION#{sessionId}"),
                     ["updatedBy"] = new(username),
@@ -154,11 +154,28 @@ public class LambdaEntryPoint
             result[prop.Name] = prop.Value.ValueKind switch
             {
                 JsonValueKind.String => new(prop.Value.GetString()),
-                JsonValueKind.Number => new { N = prop.Value.GetDecimal().ToString() },
+                JsonValueKind.Number => new AttributeValue { N = prop.Value.GetDecimal().ToString() },
                 _ => new(prop.Value.ToString())
             };
         }
         return result;
+    }
+
+    private object ConvertAttributeValueToObject(AttributeValue attributeValue)
+    {
+        if (attributeValue.M != null)
+        {
+            var dict = new Dictionary<string, object>();
+            foreach (var kvp in attributeValue.M)
+            {
+                dict[kvp.Key] = ConvertAttributeValueToObject(kvp.Value);
+            }
+            return dict;
+        }
+        if (attributeValue.S != null) return attributeValue.S;
+        if (attributeValue.N != null) return decimal.Parse(attributeValue.N);
+        if (attributeValue.BOOL != null) return attributeValue.BOOL;
+        return null;
     }
 
     private string GetUsernameFromJwt(string token)

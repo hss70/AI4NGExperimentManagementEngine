@@ -85,7 +85,7 @@ public class LambdaEntryPoint
         return Success(new
         {
             id = questionnaireId,
-            data = JsonSerializer.Deserialize<object>(response.Item["data"].M.ToJson()),
+            data = ConvertAttributeValueToObject(response.Item["data"]),
             createdAt = response.Item.GetValueOrDefault("createdAt")?.S,
             updatedAt = response.Item.GetValueOrDefault("updatedAt")?.S
         });
@@ -105,14 +105,14 @@ public class LambdaEntryPoint
                 ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
                 ["SK"] = new("CONFIG"),
                 ["type"] = new("Questionnaire"),
-                ["data"] = new { M = JsonToAttributeValue(questionnaire.GetProperty("data")) },
+                ["data"] = new AttributeValue { M = JsonToAttributeValue(questionnaire.GetProperty("data")) },
                 ["createdAt"] = new(timestamp),
                 ["updatedAt"] = new(timestamp),
-                ["syncMetadata"] = new { M = new Dictionary<string, AttributeValue>
+                ["syncMetadata"] = new AttributeValue { M = new Dictionary<string, AttributeValue>
                 {
-                    ["version"] = new { N = "1" },
+                    ["version"] = new AttributeValue { N = "1" },
                     ["lastModified"] = new(timestamp),
-                    ["isDeleted"] = new { BOOL = false }
+                    ["isDeleted"] = new AttributeValue { BOOL = false }
                 }}
             }
         });
@@ -141,9 +141,9 @@ public class LambdaEntryPoint
             },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":data"] = new { M = JsonToAttributeValue(questionnaire.GetProperty("data")) },
+                [":data"] = new AttributeValue { M = JsonToAttributeValue(questionnaire.GetProperty("data")) },
                 [":timestamp"] = new(timestamp),
-                [":inc"] = new { N = "1" }
+                [":inc"] = new AttributeValue { N = "1" }
             }
         });
 
@@ -158,8 +158,8 @@ public class LambdaEntryPoint
             result[prop.Name] = prop.Value.ValueKind switch
             {
                 JsonValueKind.String => new(prop.Value.GetString()),
-                JsonValueKind.Number => new { N = prop.Value.GetDecimal().ToString() },
-                JsonValueKind.Array => new { L = prop.Value.EnumerateArray().Select(v => new AttributeValue(v.ToString())).ToList() },
+                JsonValueKind.Number => new AttributeValue { N = prop.Value.GetDecimal().ToString() },
+                JsonValueKind.Array => new AttributeValue { L = prop.Value.EnumerateArray().Select(v => new AttributeValue(v.ToString())).ToList() },
                 _ => new(prop.Value.ToString())
             };
         }
@@ -198,4 +198,21 @@ public class LambdaEntryPoint
         Body = JsonSerializer.Serialize(new { error = message }),
         Headers = new Dictionary<string, string> { ["Content-Type"] = "application/json" }
     };
+
+    private object ConvertAttributeValueToObject(AttributeValue attributeValue)
+    {
+        if (attributeValue.M != null)
+        {
+            var dict = new Dictionary<string, object>();
+            foreach (var kvp in attributeValue.M)
+            {
+                dict[kvp.Key] = ConvertAttributeValueToObject(kvp.Value);
+            }
+            return dict;
+        }
+        if (attributeValue.S != null) return attributeValue.S;
+        if (attributeValue.N != null) return decimal.Parse(attributeValue.N);
+        if (attributeValue.BOOL != null) return attributeValue.BOOL;
+        return null;
+    }
 }
