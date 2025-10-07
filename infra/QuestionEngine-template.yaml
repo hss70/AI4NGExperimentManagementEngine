@@ -7,6 +7,18 @@ Parameters:
     Type: String
     Default: dev
     AllowedValues: [dev, prod]
+  SharedApiId:
+    Type: String
+    Description: The API Gateway ID from the shared API stack
+  SharedApiAuthorizerId:
+    Type: String
+    Description: The Cognito authorizer ID from the shared API stack
+  PrivateSG:
+    Type: String
+    Description: Private security group ID from network stack
+  PrivateSubnetIds:
+    Type: CommaDelimitedList
+    Description: Private subnet IDs from network stack
 
 Resources:
   # DynamoDB Tables
@@ -86,15 +98,28 @@ Resources:
       TableName: !Sub AI4NGQuestionnaires-${Environment}
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: "PK"
-          AttributeType: "S"
-        - AttributeName: "SK"
-          AttributeType: "S"
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI3PK
+          AttributeType: S
+        - AttributeName: GSI3SK
+          AttributeType: S
       KeySchema:
-        - AttributeName: "PK"
-          KeyType: "HASH"
-        - AttributeName: "SK"
-          KeyType: "RANGE"
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI3
+          KeySchema:
+            - AttributeName: GSI3PK
+              KeyType: HASH
+            - AttributeName: GSI3SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 
   # Lambda Functions
   ExperimentsApi:
@@ -103,12 +128,12 @@ Resources:
       Handler: AI4NGExperimentsLambda::AI4NGExperimentsLambda.LambdaEntryPoint::FunctionHandlerAsync
       Runtime: dotnet8
       CodeUri: ../src/AI4NGExperimentsLambda
+      Timeout: 30
+      MemorySize: 512
       VpcConfig:
         SecurityGroupIds:
-          - !ImportValue NetworkStack-PrivateSG
-        SubnetIds: !Split
-          - ","
-          - !ImportValue NetworkStack-PrivateSubnetIds
+          - !Ref PrivateSG
+        SubnetIds: !Ref PrivateSubnetIds
       Environment:
         Variables:
           EXPERIMENTS_TABLE: !Ref AI4NGExperimentsTable
@@ -127,12 +152,12 @@ Resources:
       Handler: AI4NGResponsesLambda::AI4NGResponsesLambda.LambdaEntryPoint::FunctionHandlerAsync
       Runtime: dotnet8
       CodeUri: ../src/AI4NGResponsesLambda
+      Timeout: 30
+      MemorySize: 512
       VpcConfig:
         SecurityGroupIds:
-          - !ImportValue NetworkStack-PrivateSG
-        SubnetIds: !Split
-          - ","
-          - !ImportValue NetworkStack-PrivateSubnetIds
+          - !Ref PrivateSG
+        SubnetIds: !Ref PrivateSubnetIds
       Environment:
         Variables:
           RESPONSES_TABLE: !Ref AI4NGResponsesTable
@@ -145,12 +170,32 @@ Resources:
         - DynamoDBReadPolicy:
             TableName: !Ref AI4NGExperimentsTable
 
+  QuestionnairesApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: AI4NGQuestionnairesLambda::AI4NGQuestionnairesLambda.LambdaEntryPoint::FunctionHandlerAsync
+      Runtime: dotnet8
+      CodeUri: ../src/AI4NGQuestionnairesLambda
+      Timeout: 30
+      MemorySize: 512
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref PrivateSG
+        SubnetIds: !Ref PrivateSubnetIds
+      Environment:
+        Variables:
+          QUESTIONNAIRES_TABLE: !Ref AI4NGQuestionnairesTable
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSLambdaVPCAccessExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AI4NGQuestionnairesTable
+
   # API Gateway Integrations (using existing shared API)
   ExperimentsIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
-      ApiId:
-        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      ApiId: !Ref SharedApiId
       IntegrationType: AWS_PROXY
       IntegrationUri: !GetAtt ExperimentsApi.Arn
       PayloadFormatVersion: "2.0"
@@ -158,77 +203,137 @@ Resources:
   ResponsesIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
-      ApiId:
-        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      ApiId: !Ref SharedApiId
       IntegrationType: AWS_PROXY
       IntegrationUri: !GetAtt ResponsesApi.Arn
+      PayloadFormatVersion: "2.0"
+
+  QuestionnairesIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref SharedApiId
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt QuestionnairesApi.Arn
       PayloadFormatVersion: "2.0"
 
   # Routes
   CreateExperimentRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId:
-        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      ApiId: !Ref SharedApiId
       RouteKey: POST /api/experiments
       AuthorizationType: JWT
-      AuthorizerId:
-        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
   GetExperimentsRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId:
-        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      ApiId: !Ref SharedApiId
       RouteKey: GET /api/experiments
       AuthorizationType: JWT
-      AuthorizerId:
-        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
   GetExperimentRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId:
-        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      ApiId: !Ref SharedApiId
       RouteKey: GET /api/experiments/{experimentId}
       AuthorizationType: JWT
-      AuthorizerId:
-        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
   SyncExperimentRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId:
-        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      ApiId: !Ref SharedApiId
       RouteKey: POST /api/experiments/{experimentId}/sync
       AuthorizationType: JWT
-      AuthorizerId:
-        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
   SubmitResponseRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId:
-        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      ApiId: !Ref SharedApiId
       RouteKey: POST /api/responses
       AuthorizationType: JWT
-      AuthorizerId:
-        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ResponsesIntegration}
 
   GetResponsesRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
-      ApiId:
-        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      ApiId: !Ref SharedApiId
       RouteKey: GET /api/responses/{experimentId}
       AuthorizationType: JWT
-      AuthorizerId:
-        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ResponsesIntegration}
+
+  # Questionnaire Routes
+  GetQuestionnairesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/questionnaires
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  GetQuestionnaireRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/questionnaires/{questionnaireId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  CreateQuestionnaireRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: POST /api/questionnaires
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  UpdateQuestionnaireRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: PUT /api/questionnaires/{questionnaireId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  # Mobile Sync Routes
+  SyncExperimentsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/sync/experiments
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  SyncQuestionnairesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/sync/questionnaires
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  SyncResponsesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/sync/responses
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ResponsesIntegration}
 
   # Lambda Permissions
@@ -238,10 +343,7 @@ Resources:
       FunctionName: !Ref ExperimentsApi
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub
-        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*
-        - ApiId:
-            Fn::ImportValue: !Sub SharedApiId-${Environment}
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SharedApiId}/*/*
 
   ResponsesLambdaPermission:
     Type: AWS::Lambda::Permission
@@ -249,10 +351,15 @@ Resources:
       FunctionName: !Ref ResponsesApi
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub
-        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*
-        - ApiId:
-            Fn::ImportValue: !Sub SharedApiId-${Environment}
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SharedApiId}/*/*
+
+  QuestionnairesLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref QuestionnairesApi
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SharedApiId}/*/*
 
 Outputs:
   ExperimentsTableName:
@@ -264,3 +371,23 @@ Outputs:
     Value: !Ref AI4NGResponsesTable
     Export:
       Name: !Sub AI4NG-ResponsesTable-${Environment}
+
+  QuestionnairesTableName:
+    Value: !Ref AI4NGQuestionnairesTable
+    Export:
+      Name: !Sub AI4NG-QuestionnairesTable-${Environment}
+
+  ExperimentsLambdaArn:
+    Value: !GetAtt ExperimentsApi.Arn
+    Export:
+      Name: !Sub AI4NG-ExperimentsLambda-${Environment}
+
+  ResponsesLambdaArn:
+    Value: !GetAtt ResponsesApi.Arn
+    Export:
+      Name: !Sub AI4NG-ResponsesLambda-${Environment}
+
+  QuestionnairesLambdaArn:
+    Value: !GetAtt QuestionnairesApi.Arn
+    Export:
+      Name: !Sub AI4NG-QuestionnairesLambda-${Environment}

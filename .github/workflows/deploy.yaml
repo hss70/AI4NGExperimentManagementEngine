@@ -23,19 +23,19 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-2
 
       - name: Get CloudFormation exports
         id: get_exports
         run: |
           echo "Fetching CloudFormation exports..."
-          API_ID=$(aws cloudformation list-exports \
+          SHARED_API_ID=$(aws cloudformation list-exports \
             --query "Exports[?Name=='SharedApiId-dev'].Value" \
             --output text)
-          UPLOAD_BUCKET=$(aws cloudformation list-exports \
-            --query "Exports[?Name=='EEGUploadBucketName-dev'].Value" \
+          SHARED_API_AUTHORIZER_ID=$(aws cloudformation list-exports \
+            --query "Exports[?Name=='SharedApiAuthorizerId-dev'].Value" \
             --output text)
           PRIVATE_SG=$(aws cloudformation list-exports \
             --query "Exports[?Name=='NetworkStack-PrivateSG'].Value" \
@@ -43,8 +43,8 @@ jobs:
           PRIVATE_SUBNETS=$(aws cloudformation list-exports \
             --query "Exports[?Name=='NetworkStack-PrivateSubnetIds'].Value" \
             --output text)
-          echo "api_id=$API_ID" >> $GITHUB_OUTPUT
-          echo "upload_bucket=$UPLOAD_BUCKET" >> $GITHUB_OUTPUT
+          echo "shared_api_id=$SHARED_API_ID" >> $GITHUB_OUTPUT
+          echo "shared_api_authorizer_id=$SHARED_API_AUTHORIZER_ID" >> $GITHUB_OUTPUT
           echo "private_sg=$PRIVATE_SG" >> $GITHUB_OUTPUT
           echo "private_subnets=$PRIVATE_SUBNETS" >> $GITHUB_OUTPUT
 
@@ -55,9 +55,9 @@ jobs:
         run: |
           sam deploy \
             --parameter-overrides \
-              SharedApiId=${{ steps.get_exports.outputs.api_id }} \
-              EEGUploadBucketName=${{ steps.get_exports.outputs.upload_bucket }} \
+              Environment=dev \
+              SharedApiId=${{ steps.get_exports.outputs.shared_api_id }} \
+              SharedApiAuthorizerId=${{ steps.get_exports.outputs.shared_api_authorizer_id }} \
               PrivateSG=${{ steps.get_exports.outputs.private_sg }} \
               PrivateSubnetIds="${{ steps.get_exports.outputs.private_subnets }}" \
-              Environment=dev \
             --config-env default

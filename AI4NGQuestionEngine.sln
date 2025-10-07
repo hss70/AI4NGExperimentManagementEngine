@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AI4NGExperimentsLambda", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AI4NGResponsesLambda", "src\AI4NGResponsesLambda\AI4NGResponsesLambda.csproj", "{BC612D47-06E2-B883-45BD-165B5B42ECB3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AI4NGQuestionnairesLambda", "src\AI4NGQuestionnairesLambda\AI4NGQuestionnairesLambda.csproj", "{A1B2C3D4-E5F6-G7H8-I9J0-K1L2M3N4O5P6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +26,10 @@ Global
 		{BC612D47-06E2-B883-45BD-165B5B42ECB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC612D47-06E2-B883-45BD-165B5B42ECB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BC612D47-06E2-B883-45BD-165B5B42ECB3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-G7H8-I9J0-K1L2M3N4O5P6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-G7H8-I9J0-K1L2M3N4O5P6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-G7H8-I9J0-K1L2M3N4O5P6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-G7H8-I9J0-K1L2M3N4O5P6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -32,6 +38,7 @@ Global
 		{CA1A74DC-D2D5-53BF-7F9B-C8740F75BB12} = {859698FD-909F-A67B-FDA8-6C25D2992005}
 		{F44DCBDF-E4F6-F6B8-AC86-7DF4D1376441} = {CA1A74DC-D2D5-53BF-7F9B-C8740F75BB12}
 		{BC612D47-06E2-B883-45BD-165B5B42ECB3} = {CA1A74DC-D2D5-53BF-7F9B-C8740F75BB12}
+		{A1B2C3D4-E5F6-G7H8-I9J0-K1L2M3N4O5P6} = {CA1A74DC-D2D5-53BF-7F9B-C8740F75BB12}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EC5BD3E6-8E66-4494-8632-83B55E31CE3C}

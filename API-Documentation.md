@@ -104,6 +104,105 @@ Sync experiment sessions.
 }
 ```
 
+## Questionnaires API
+
+### GET /api/questionnaires
+List all questionnaires.
+
+**Response:**
+```json
+[
+  {
+    "id": "PQ",
+    "name": "Presence Questionnaire",
+    "description": "Measures the sense of presence in a virtual environment",
+    "version": "1.0",
+    "estimatedTime": "120"
+  }
+]
+```
+
+### GET /api/questionnaires/{questionnaireId}
+Get questionnaire definition.
+
+**Response:**
+```json
+{
+  "id": "PQ",
+  "data": {
+    "name": "Presence Questionnaire",
+    "description": "Measures the sense of presence in a virtual environment",
+    "estimatedTime": 120,
+    "version": "1.0",
+    "questions": [
+      {
+        "id": "1",
+        "text": "Time seemed to go by",
+        "type": "scale",
+        "scale": {
+          "min": 1,
+          "max": 10,
+          "minLabel": "Quickly",
+          "maxLabel": "Slowly"
+        },
+        "required": true
+      }
+    ]
+  },
+  "createdAt": "2023-11-01T09:00:00Z",
+  "updatedAt": "2023-11-15T14:20:00Z"
+}
+```
+
+### POST /api/questionnaires
+Create new questionnaire.
+
+**Request Body:**
+```json
+{
+  "id": "PQ",
+  "data": {
+    "name": "Presence Questionnaire",
+    "description": "Measures the sense of presence in a virtual environment",
+    "estimatedTime": 120,
+    "version": "1.0",
+    "questions": [
+      {
+        "id": "1",
+        "text": "Time seemed to go by",
+        "type": "scale",
+        "scale": {
+          "min": 1,
+          "max": 10,
+          "minLabel": "Quickly",
+          "maxLabel": "Slowly"
+        },
+        "required": true
+      }
+    ]
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "id": "PQ"
+}
+```
+
+### PUT /api/questionnaires/{questionnaireId}
+Update questionnaire definition.
+
+**Request Body:** Same as POST
+
+**Response:**
+```json
+{
+  "message": "Questionnaire updated successfully"
+}
+```
+
 ## Responses API
 
 ### POST /api/responses
@@ -147,6 +246,73 @@ Get user responses for experiment.
     "timestamp": "2023-11-07T10:05:30.000Z",
     "sessionId": "2023-11-07",
     "taskId": "POST_QUESTIONS"
+  }
+]
+```
+
+## Mobile Sync API
+
+### GET /api/sync/experiments
+Get modified experiments for mobile sync.
+
+**Query Parameters:**
+- `lastSync` (optional): ISO timestamp of last sync
+
+**Response:**
+```json
+[
+  {
+    "id": "experiment-uuid",
+    "data": {...},
+    "syncMetadata": {
+      "version": 2,
+      "lastModified": "2023-11-07T10:25:00Z",
+      "isDeleted": false
+    }
+  }
+]
+```
+
+### GET /api/sync/questionnaires
+Get modified questionnaires for mobile sync.
+
+**Query Parameters:**
+- `lastSync` (optional): ISO timestamp of last sync
+
+**Response:**
+```json
+[
+  {
+    "id": "PQ",
+    "data": {...},
+    "syncMetadata": {
+      "version": 1,
+      "lastModified": "2023-11-01T09:00:00Z",
+      "isDeleted": false
+    }
+  }
+]
+```
+
+### GET /api/sync/responses
+Get modified responses for mobile sync.
+
+**Query Parameters:**
+- `lastSync` (optional): ISO timestamp of last sync
+
+**Response:**
+```json
+[
+  {
+    "questionnaireId": "PQ",
+    "questionId": "1",
+    "answerValue": "7",
+    "timestamp": "2023-11-07T10:05:30.000Z",
+    "syncMetadata": {
+      "version": 1,
+      "lastModified": "2023-11-07T10:05:30.000Z",
+      "isDeleted": false
+    }
   }
 ]
 ```
