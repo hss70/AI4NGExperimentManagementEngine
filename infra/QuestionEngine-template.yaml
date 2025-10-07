@@ -1,216 +1,266 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: Unified API Gateway with Separate Cognito User Pools for Web and Mobile in a TRE (using .NET 8)
+Description: AI4NG Question Engine using existing API Gateway
 
-Globals:
-  Function:
-    Timeout: 10
-    Runtime: dotnet8
-    MemorySize: 512
-    Environment:
-      Variables:
-        REGION: !Ref AWS::Region
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
 
 Resources:
-
-  ################################################
-  # Cognito User Pools
-  ################################################
-
-  MobileUserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      UserPoolName: MobileUserPool
-      AutoVerifiedAttributes:
-        - email
-      Policies:
-        PasswordPolicy:
-          MinimumLength: 8
-          RequireUppercase: true
-          RequireLowercase: true
-          RequireNumbers: true
-          RequireSymbols: false
-
-  WebUserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      UserPoolName: WebUserPool
-      AutoVerifiedAttributes:
-        - email
-      Policies:
-        PasswordPolicy:
-          MinimumLength: 12
-          RequireUppercase: true
-          RequireLowercase: true
-          RequireNumbers: true
-          RequireSymbols: true
-
-  ################################################
-  # Unified API Gateway
-  ################################################
-
-  UnifiedApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: Prod
-      Cors:
-        AllowMethods: "'OPTIONS,GET,POST,PUT,DELETE'"
-        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-        AllowOrigin: "'*'"
-
-  ################################################
-  # Cognito Authorizers
-  ################################################
-
-  MobileCognitoAuthorizer:
-    Type: AWS::ApiGateway::Authorizer
-    Properties:
-      Name: MobileAuthorizer
-      RestApiId: !Ref UnifiedApi
-      Type: COGNITO_USER_POOLS
-      IdentitySource: method.request.header.Authorization
-      ProviderARNs:
-        - !GetAtt MobileUserPool.Arn
-
-  WebCognitoAuthorizer:
-    Type: AWS::ApiGateway::Authorizer
-    Properties:
-      Name: WebAuthorizer
-      RestApiId: !Ref UnifiedApi
-      Type: COGNITO_USER_POOLS
-      IdentitySource: method.request.header.Authorization
-      ProviderARNs:
-        - !GetAtt WebUserPool.Arn
-
-  ################################################
-  # Example Mobile Lambda Functions (dotnet8)
-  ################################################
-
-  MobileGetQuestionsFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: MyApi::MyApi.Lambdas.MobileGetQuestions::FunctionHandler
-      CodeUri: ./src/MobileApi
-      Policies:
-        - AmazonDynamoDBReadOnlyAccess
-      Environment:
-        Variables:
-          QUESTIONS_TABLE_NAME: !Ref QuestionnaireTable
-      Events:
-        GetQuestions:
-          Type: Api
-          Properties:
-            Path: /mobile/questions
-            Method: get
-            RestApiId: !Ref UnifiedApi
-            Auth:
-              Authorizer: MobileCognitoAuthorizer
-
-  MobilePostAnswersFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: MyApi::MyApi.Lambdas.MobilePostAnswers::FunctionHandler
-      CodeUri: ./src/MobileApi
-      Policies:
-        - AmazonDynamoDBFullAccess
-      Environment:
-        Variables:
-          ANSWERS_TABLE_NAME: !Ref AnswersTable
-      Events:
-        PostAnswers:
-          Type: Api
-          Properties:
-            Path: /mobile/answers
-            Method: post
-            RestApiId: !Ref UnifiedApi
-            Auth:
-              Authorizer: MobileCognitoAuthorizer
-
-  ################################################
-  # Example Web Lambda Functions (dotnet8)
-  ################################################
-
-  WebManageQuestionsFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: MyApi::MyApi.Lambdas.WebManageQuestions::FunctionHandler
-      CodeUri: ./src/WebApi
-      Policies:
-        - AmazonDynamoDBFullAccess
-      Environment:
-        Variables:
-          QUESTIONS_TABLE_NAME: !Ref QuestionnaireTable
-      Events:
-        ManageQuestions:
-          Type: Api
-          Properties:
-            Path: /web/questions
-            Method: post
-            RestApiId: !Ref UnifiedApi
-            Auth:
-              Authorizer: WebCognitoAuthorizer
-
-  WebDashboardFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: MyApi::MyApi.Lambdas.WebDashboard::FunctionHandler
-      CodeUri: ./src/WebApi
-      Policies:
-        - AmazonDynamoDBReadOnlyAccess
-      Environment:
-        Variables:
-          ANSWERS_TABLE_NAME: !Ref AnswersTable
-      Events:
-        GetDashboard:
-          Type: Api
-          Properties:
-            Path: /web/dashboard
-            Method: get
-            RestApiId: !Ref UnifiedApi
-            Auth:
-              Authorizer: WebCognitoAuthorizer
-
-  ################################################
   # DynamoDB Tables
-  ################################################
-
-  QuestionnaireTable:
+  AI4NGExperimentsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: questionnaire-table
+      TableName: !Sub AI4NGExperiments-${Environment}
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: id
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
           AttributeType: S
       KeySchema:
-        - AttributeName: id
+        - AttributeName: PK
           KeyType: HASH
-      BillingMode: PAY_PER_REQUEST
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 
-  AnswersTable:
+  AI4NGResponsesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: answers-table
+      TableName: !Sub AI4NGResponses-${Environment}
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: id
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+        - AttributeName: GSI2PK
+          AttributeType: S
+        - AttributeName: GSI2SK
           AttributeType: S
       KeySchema:
-        - AttributeName: id
+        - AttributeName: PK
           KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI2
+          KeySchema:
+            - AttributeName: GSI2PK
+              KeyType: HASH
+            - AttributeName: GSI2SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  AI4NGQuestionnairesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub AI4NGQuestionnaires-${Environment}
       BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "PK"
+          AttributeType: "S"
+        - AttributeName: "SK"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "PK"
+          KeyType: "HASH"
+        - AttributeName: "SK"
+          KeyType: "RANGE"
+
+  # Lambda Functions
+  ExperimentsApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: AI4NGExperimentsLambda::AI4NGExperimentsLambda.LambdaEntryPoint::FunctionHandlerAsync
+      Runtime: dotnet8
+      CodeUri: ../src/AI4NGExperimentsLambda
+      VpcConfig:
+        SecurityGroupIds:
+          - !ImportValue NetworkStack-PrivateSG
+        SubnetIds: !Split
+          - ","
+          - !ImportValue NetworkStack-PrivateSubnetIds
+      Environment:
+        Variables:
+          EXPERIMENTS_TABLE: !Ref AI4NGExperimentsTable
+          RESPONSES_TABLE: !Ref AI4NGResponsesTable
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSLambdaVPCAccessExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AI4NGExperimentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AI4NGResponsesTable
+
+  ResponsesApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: AI4NGResponsesLambda::AI4NGResponsesLambda.LambdaEntryPoint::FunctionHandlerAsync
+      Runtime: dotnet8
+      CodeUri: ../src/AI4NGResponsesLambda
+      VpcConfig:
+        SecurityGroupIds:
+          - !ImportValue NetworkStack-PrivateSG
+        SubnetIds: !Split
+          - ","
+          - !ImportValue NetworkStack-PrivateSubnetIds
+      Environment:
+        Variables:
+          RESPONSES_TABLE: !Ref AI4NGResponsesTable
+          EXPERIMENTS_TABLE: !Ref AI4NGExperimentsTable
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSLambdaVPCAccessExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AI4NGResponsesTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref AI4NGExperimentsTable
+
+  # API Gateway Integrations (using existing shared API)
+  ExperimentsIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ExperimentsApi.Arn
+      PayloadFormatVersion: "2.0"
+
+  ResponsesIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ResponsesApi.Arn
+      PayloadFormatVersion: "2.0"
+
+  # Routes
+  CreateExperimentRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      RouteKey: POST /api/experiments
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetExperimentsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      RouteKey: GET /api/experiments
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetExperimentRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      RouteKey: GET /api/experiments/{experimentId}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  SyncExperimentRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      RouteKey: POST /api/experiments/{experimentId}/sync
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  SubmitResponseRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      RouteKey: POST /api/responses
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      Target: !Sub integrations/${ResponsesIntegration}
+
+  GetResponsesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub SharedApiId-${Environment}
+      RouteKey: GET /api/responses/{experimentId}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue: !Sub SharedApiAuthorizerId-${Environment}
+      Target: !Sub integrations/${ResponsesIntegration}
+
+  # Lambda Permissions
+  ExperimentsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ExperimentsApi
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*
+        - ApiId:
+            Fn::ImportValue: !Sub SharedApiId-${Environment}
+
+  ResponsesLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ResponsesApi
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*
+        - ApiId:
+            Fn::ImportValue: !Sub SharedApiId-${Environment}
 
 Outputs:
-  ApiUrl:
-    Description: "Unified API Gateway URL"
-    Value: !Sub "https://${UnifiedApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  ExperimentsTableName:
+    Value: !Ref AI4NGExperimentsTable
+    Export:
+      Name: !Sub AI4NG-ExperimentsTable-${Environment}
 
-  MobileUserPoolId:
-    Value: !Ref MobileUserPool
-
-  WebUserPoolId:
-    Value: !Ref WebUserPool
-
-  QuestionnaireTableName:
-    Value: !Ref QuestionnaireTable
-
-  AnswersTableName:
-    Value: !Ref AnswersTable
+  ResponsesTableName:
+    Value: !Ref AI4NGResponsesTable
+    Export:
+      Name: !Sub AI4NG-ResponsesTable-${Environment}

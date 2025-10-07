@@ -1,0 +1,63 @@
+name: Deploy Question Engine to AWS Lambda
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+          aws-region: eu-west-2
+
+      - name: Get CloudFormation exports
+        id: get_exports
+        run: |
+          echo "Fetching CloudFormation exports..."
+          API_ID=$(aws cloudformation list-exports \
+            --query "Exports[?Name=='SharedApiId-dev'].Value" \
+            --output text)
+          UPLOAD_BUCKET=$(aws cloudformation list-exports \
+            --query "Exports[?Name=='EEGUploadBucketName-dev'].Value" \
+            --output text)
+          PRIVATE_SG=$(aws cloudformation list-exports \
+            --query "Exports[?Name=='NetworkStack-PrivateSG'].Value" \
+            --output text)
+          PRIVATE_SUBNETS=$(aws cloudformation list-exports \
+            --query "Exports[?Name=='NetworkStack-PrivateSubnetIds'].Value" \
+            --output text)
+          echo "api_id=$API_ID" >> $GITHUB_OUTPUT
+          echo "upload_bucket=$UPLOAD_BUCKET" >> $GITHUB_OUTPUT
+          echo "private_sg=$PRIVATE_SG" >> $GITHUB_OUTPUT
+          echo "private_subnets=$PRIVATE_SUBNETS" >> $GITHUB_OUTPUT
+
+      - name: Build SAM
+        run: sam build --template-file infra/QuestionEngine-template.yaml
+
+      - name: Deploy SAM
+        run: |
+          sam deploy \
+            --parameter-overrides \
+              SharedApiId=${{ steps.get_exports.outputs.api_id }} \
+              EEGUploadBucketName=${{ steps.get_exports.outputs.upload_bucket }} \
+              PrivateSG=${{ steps.get_exports.outputs.private_sg }} \
+              PrivateSubnetIds="${{ steps.get_exports.outputs.private_subnets }}" \
+              Environment=dev \
+            --config-env default

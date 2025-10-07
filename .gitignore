@@ -1,0 +1,35 @@
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider/JetBrains IDE
+.idea/
+*.DotSettings.user
+
+# AWS SAM build artifacts
+.aws-sam/
+samconfig.toml
+
+# Lambda deploy artifacts
+*.zip
+
+# VS Code settings
+.vscode/
+
+# Logs
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Test results
+TestResults/
+coverage/
+
+# Python cache
+__pycache__/

@@ -1,0 +1,716 @@
+[
+  {
+    "Id": "q1",
+    "Text": "I’d enjoy more being a counselor more than being an architect.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q2",
+    "Text": "I believe more in.",
+    "Type": "choice",
+    "Options": ["being properly serious in everyday life", "?", "the saying “laugh and be merry” most of the time"]
+  },
+  {
+    "Id": "q3",
+    "Text": "I usually enjoy spending time talking with friends about social events or parties.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q4",
+    "Text": "In joining a new group, I usually seem to fit in right away.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q5",
+    "Text": "There’s usually a big difference between what people say they’ll do and what they actually do.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q6",
+    "Text": "My friends think I’m slightly absent-minded and not always practical.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q7",
+    "Text": "A lot of people will “stab you in the back” in order to get ahead themselves.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q8",
+    "Text": "I get into trouble because I sometimes pursue my own ideas without talking them over with the people involved.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q9",
+    "Text": "I find it easy to talk about my life, even about things that others might consider quite personal.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q10",
+    "Text": "I am willing to help people.",
+    "Type": "choice",
+    "Options": ["always", "?", "sometimes"]
+  },
+  {
+    "Id": "q11",
+    "Text": "I prefer to:",
+    "Type": "choice",
+    "Options": ["talk about my problems with my friends", "?", "keep them to myself"]
+  },
+  {
+    "Id": "q12",
+    "Text": "I tend to be too sensitive and worry too much about something I’ve done.",
+    "Type": "choice",
+    "Options": ["hardly ever", "?", "often"]
+  },
+  {
+    "Id": "q13",
+    "Text": "I’d prefer to deal with people who are:",
+    "Type": "choice",
+    "Options": ["conventional and polite in what they say", "?", "direct and speak up about problems they see"]
+  },
+  {
+    "Id": "q14",
+    "Text": "If people act as if they dislike me:",
+    "Type": "choice",
+    "Options": ["it doesn’t upset me", "?", "I usually feel hurt"]
+  },
+  {
+    "Id": "q15",
+    "Text": "If I had to cook or build something, I’d follow the directions exactly.",
+    "Type": "choice",
+    "Options": ["true, why take chances", "?", "false, I’d probably try to make it more interesting"]
+  },
+  {
+    "Id": "q16",
+    "Text": "I feel that:",
+    "Type": "choice",
+    "Options": ["some jobs just don’t have to be done as carefully as others", "?", "any job should be done thoroughly if you do it at all"]
+  },
+  {
+    "Id": "q17",
+    "Text": "I usually like to do my planning alone, without interruptions and suggestions from others.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q18",
+    "Text": "It’s hard to be patient when people criticize me.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q19",
+    "Text": "If my carefully made plans have to be changed because of other people:",
+    "Type": "choice",
+    "Options": ["it annoys me", "?", "I’m happy to change plans"]
+  },
+  {
+    "Id": "q20",
+    "Text": "I would rather be:",
+    "Type": "choice",
+    "Options": ["in a business office, organizing and seeing people", "?", "an architect, drawing plans in a quiet room"]
+  },
+  {
+    "Id": "q21",
+    "Text": "When one small thing after another goes wrong, I:",
+    "Type": "choice",
+    "Options": ["feel as though I can’t cope", "?", "just go on as usual"]
+  },
+  {
+    "Id": "q22",
+    "Text": "In a situation where I’m in charge, I feel comfortable giving people directions.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q23",
+    "Text": "I’d prefer to spend an evening:",
+    "Type": "choice",
+    "Options": ["working on a quiet hobby", "?", "at a lively party"]
+  },
+  {
+    "Id": "q24",
+    "Text": "I value respect for rules and good manners more than easy living.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q25",
+    "Text": "I am shy and cautious about making friends with new people.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q26",
+    "Text": "If I could, I would rather exercise by:",
+    "Type": "choice",
+    "Options": ["fencing or dancing", "?", "wrestling or baseball"]
+  },
+  {
+    "Id": "q27",
+    "Text": "It would be more interesting to be a musician than a mechanic.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q28",
+    "Text": "People form opinions about me too quickly.",
+    "Type": "choice",
+    "Options": ["hardly ever", "?", "often"]
+  },
+  {
+    "Id": "q29",
+    "Text": "I’m the type of person who:",
+    "Type": "choice",
+    "Options": ["is always doing practical things that need to be done", "?", "daydreams and thinks up things on my own"]
+  },
+  {
+    "Id": "q30",
+    "Text": "My thoughts tend to be about sensible, down-to-earth things.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q31",
+    "Text": "I tend to be reserved and keep my problems to myself.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q32",
+    "Text": "After I make up my mind about something, I still keep thinking about whether it’s right or wrong.",
+    "Type": "choice",
+    "Options": ["usually true", "?", "usually false"]
+  },
+  {
+    "Id": "q33",
+    "Text": "I don’t really like people who are “different” or unusual.",
+    "Type": "choice",
+    "Options": ["true, I usually don’t", "?", "false, I usually find them interesting"]
+  },
+  {
+    "Id": "q34",
+    "Text": "I’m more interested in:",
+    "Type": "choice",
+    "Options": ["seeking personal meaning in life", "?", "a secure job that pays well"]
+  },
+  {
+    "Id": "q35",
+    "Text": "When people get angry at each other, it usually bothers me more than most people.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q36",
+    "Text": "I prefer games where:",
+    "Type": "choice",
+    "Options": ["you’re on a team or have a partner", "?", "people are on their own"]
+  },
+  {
+    "Id": "q37",
+    "Text": "I frequently have periods where it’s hard to stop a mood of self-pity.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q38",
+    "Text": "The best hours of the day are usually when I’m alone with my own thoughts and projects.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q39",
+    "Text": "I always keep my belongings in tip-top shape.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q40",
+    "Text": "Sometimes I get frustrated with people too quickly.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q41",
+    "Text": "If people are doing something wrong, I usually tell them what I think.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q42",
+    "Text": "I feel that my emotional needs are:",
+    "Type": "choice",
+    "Options": ["not too satisfied", "?", "well satisfied"]
+  },
+  {
+    "Id": "q43",
+    "Text": "I tend to get embarrassed if I suddenly become the center of attention in a social group.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q44",
+    "Text": "I get annoyed when people insist that I follow every single minor safety rule.",
+    "Type": "choice",
+    "Options": ["true, it’s not always necessary", "?", "false, it’s important to do things right"]
+  },
+  {
+    "Id": "q45",
+    "Text": "Starting conversations with strangers:",
+    "Type": "choice",
+    "Options": ["never gives me any trouble", "?", "is hard for me"]
+  },
+  {
+    "Id": "q46",
+    "Text": "If I worked on a newspaper, I’d rather deal with:",
+    "Type": "choice",
+    "Options": ["movie or book reviews", "?", "sports or politics"]
+  },
+  {
+    "Id": "q47",
+    "Text": "I let little things upset me more than they should.",
+    "Type": "choice",
+    "Options": ["sometimes", "?", "rarely"]
+  },
+  {
+    "Id": "q48",
+    "Text": "It’s wise to be on guard against smooth talkers because they might take advantage of you.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q49",
+    "Text": "I‘d rather stop in the street to watch an artist painting than a building being constructed.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q50",
+    "Text": "People are lazy on a job if they can get away with it.",
+    "Type": "choice",
+    "Options": ["hardly ever", "?", "often"]
+  },
+  {
+    "Id": "q51",
+    "Text": "I pay more attention to:",
+    "Type": "choice",
+    "Options": ["the practical things around me", "?", "thoughts and imagination"]
+  },
+  {
+    "Id": "q52",
+    "Text": "When people criticize me in front of others, I feel very downhearted and hurt.",
+    "Type": "choice",
+    "Options": ["hardly ever", "?", "often"]
+  },
+  {
+    "Id": "q53",
+    "Text": "I find people more interesting if their views are different from most people’s.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q54",
+    "Text": "In dealing with people it’s better to:",
+    "Type": "choice",
+    "Options": ["“put all your cards on the table”", "?", "“play your hand close to your chest”"]
+  },
+  {
+    "Id": "q55",
+    "Text": "I get things done better working alone rather than working with a committee.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q56",
+    "Text": "I don’t usually mind if my room is messy.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q57",
+    "Text": "Even when someone is slow to understand what I’m explaining, it’s easy for me to be patient.",
+    "Type": "choice",
+    "Options": ["true", "?", "false, it’s hard to be patient"]
+  },
+  {
+    "Id": "q58",
+    "Text": "I’m somewhat of a perfectionist and like to have things done just right.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q59",
+    "Text": "I enjoy people who show their emotions openly.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q60",
+    "Text": "I don’t let myself get depressed over little things.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q61",
+    "Text": "In helping with a useful invention, I’d prefer:",
+    "Type": "choice",
+    "Options": ["working on it in a laboratory", "?", "showing people how to use it"]
+  },
+  {
+    "Id": "q62",
+    "Text": "If being polite and pleasant doesn’t work, I can be tough and sharp if I need to.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q63",
+    "Text": "I like to go out to shows or entertainment often.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q64",
+    "Text": "I feel dissatisfied with myself.",
+    "Type": "choice",
+    "Options": ["sometimes", "?", "rarely"]
+  },
+  {
+    "Id": "q65",
+    "Text": "People think of me as a happy-go-lucky, carefree person.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q66",
+    "Text": "Teachers, ministers, and others spend too much time trying to stop us from doing what we want to do.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q67",
+    "Text": "If people are frank and open, others try to get the better of them.",
+    "Type": "choice",
+    "Options": ["hardly ever", "?", "often"]
+  },
+  {
+    "Id": "q68",
+    "Text": "I’m always interested in mechanical things and am pretty good at fixing them.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q69",
+    "Text": "Sometimes I get so lost in my thoughts that, unless I watch out, I misplace things, have small mishaps, or lose track of time.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q70",
+    "Text": "People often say that my ideas are realistic and practical.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q71",
+    "Text": "I make smart, sarcastic remarks to people if I think they deserve it.",
+    "Type": "choice",
+    "Options": ["sometimes", "?", "never"]
+  },
+  {
+    "Id": "q72",
+    "Text": "Sometimes I feel as if I’ve done something wrong, even though I really haven’t.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q73",
+    "Text": "I talk about my feelings:",
+    "Type": "choice",
+    "Options": ["readily when people seem interested", "?", "only if I can’t avoid it"]
+  },
+  {
+    "Id": "q74",
+    "Text": "I think about things that I should have said, but didn’t.",
+    "Type": "choice",
+    "Options": ["hardly ever", "?", "often"]
+  },
+  {
+    "Id": "q75",
+    "Text": "I’d rather spend a free evening:",
+    "Type": "choice",
+    "Options": ["reading or working alone on a project", "?", "working on a task with friends"]
+  },
+  {
+    "Id": "q76",
+    "Text": "If there is a chore to do, I’m more likely to:",
+    "Type": "choice",
+    "Options": ["put it off until it needs to be done", "?", "get started on it right away"]
+  },
+  {
+    "Id": "q77",
+    "Text": "I prefer to eat lunch:",
+    "Type": "choice",
+    "Options": ["with a group of people", "?", "by myself"]
+  },
+  {
+    "Id": "q78",
+    "Text": "I am patient with people, even when they aren’t polite and considerate of my feelings.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q79",
+    "Text": "When I do something, I usually take time to think of everything I’ll need for the job first.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q80",
+    "Text": "I get frustrated when people take too long to explain something.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q81",
+    "Text": "I usually go to bed at night feeling satisfied with how my day went.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q82",
+    "Text": "For a pleasant hobby, I’d prefer:",
+    "Type": "choice",
+    "Options": ["building or making something", "?", "working with a community service group"]
+  },
+  {
+    "Id": "q83",
+    "Text": "I believe in complaining if I receive bad service or poor food in a restaurant.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q84",
+    "Text": "I have more ups and downs in mood than most people I know.",
+    "Type": "choice",
+    "Options": ["usually true", "?", "usually false"]
+  },
+  {
+    "Id": "q85",
+    "Text": "When others don’t see things my way, I can usually get them to come around.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q86",
+    "Text": "I think that being free to do what I want is more important than good manners and respect for rules.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q87",
+    "Text": "I love to make people laugh with witty stories.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q88",
+    "Text": "If a person is clever enough to get around the rules without seeming to break them, he or she should:",
+    "Type": "choice",
+    "Options": ["do it if there is a special reason", "?", "not do it"]
+  },
+  {
+    "Id": "q89",
+    "Text": "I’m usually the one who takes the first step in making new friends.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q90",
+    "Text": "I prefer reading rough and realistic action stories more than sensitive, imaginative novels.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q91",
+    "Text": "In school I preferred (or prefer) math more than English.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q92",
+    "Text": "Many people are too fussy and sensitive and should toughen up for their own good.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q93",
+    "Text": "If someone asks me a question that is too personal, I carefully try to avoid answering.",
+    "Type": "choice",
+    "Options": ["usually true", "?", "usually false"]
+  },
+  {
+    "Id": "q94",
+    "Text": "When asked to do volunteer work, I say I’m too busy.",
+    "Type": "choice",
+    "Options": ["sometimes", "?", "rarely"]
+  },
+  {
+    "Id": "q95",
+    "Text": "More trouble arises from people:",
+    "Type": "choice",
+    "Options": ["questioning and changing methods that are already satisfactory", "?", "turning down promising, new approaches"]
+  },
+  {
+    "Id": "q96",
+    "Text": "I’m very careful when it comes to choosing someone to really “open up” with.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q97",
+    "Text": "I most enjoy a meal if it consists of familiar, everyday foods rather than new, unusual foods.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q98",
+    "Text": "I take advantage of people.",
+    "Type": "choice",
+    "Options": ["sometimes", "?", "never"]
+  },
+  {
+    "Id": "q99",
+    "Text": "I like to plan ahead so that I don’t waste time between tasks.",
+    "Type": "choice",
+    "Options": ["rarely", "?", "often"]
+  },
+  {
+    "Id": "q100",
+    "Text": "When I’m feeling tense, even small things get on my nerves.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q101",
+    "Text": "In building or making something, I would rather work:",
+    "Type": "choice",
+    "Options": ["with others", "?", "on my own"]
+  },
+  {
+    "Id": "q102",
+    "Text": "I enjoy more listening to people talk about their personal feelings than about other things.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q103",
+    "Text": "There are times when I don’t feel in the right mood to see anyone.",
+    "Type": "choice",
+    "Options": ["very rarely", "?", "quite often"]
+  },
+  {
+    "Id": "q104",
+    "Text": "In a business it would be more interesting to be in charge of:",
+    "Type": "choice",
+    "Options": ["machinery or keeping records", "?", "talking to and hiring new people"]
+  },
+  {
+    "Id": "q105",
+    "Text": "In my everyday life, I hardly ever meet problems that I can’t cope with.",
+    "Type": "choice",
+    "Options": ["true, I can cope easily", "?", "false"]
+  },
+  {
+    "Id": "q106",
+    "Text": "If I notice that another person’s line of reasoning is wrong, I usually:",
+    "Type": "choice",
+    "Options": ["point it out", "?", "let it pass"]
+  },
+  {
+    "Id": "q107",
+    "Text": "I greatly enjoy inviting guests over and amusing them.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q108",
+    "Text": "I enjoy having some competition in the things I do.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q109",
+    "Text": "Most rules are made to be broken when there are good reasons for it.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q110",
+    "Text": "I find it hard to speak in front of a large group.",
+    "Type": "choice",
+    "Options": ["true, I usually find it very hard", "?", "false, it doesn’t bother me"]
+  },
+  {
+    "Id": "q111",
+    "Text": "In making a decision, I always think carefully about what’s right and proper.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q112",
+    "Text": "In social groups I tend to feel shy and unsure of myself.",
+    "Type": "choice",
+    "Options": ["true", "?", "false"]
+  },
+  {
+    "Id": "q113",
+    "Text": "Which word does not belong with the other two?",
+    "Type": "choice",
+    "Options": ["cat", "near", "sun"]
+  },
+  {
+    "Id": "q114",
+    "Text": "The opposite of “right” is the opposite of:",
+    "Type": "choice",
+    "Options": ["left", "wrong", "correct"]
+  },
+  {
+    "Id": "q115",
+    "Text": "The opposite of the opposite of “inexact” is:",
+    "Type": "choice",
+    "Options": ["casual", "accurate", "rough"]
+  },
+  {
+    "Id": "q116",
+    "Text": "Which number should come next at the end of the series: 1, 4, 9, 16?",
+    "Type": "choice",
+    "Options": ["20", "25", "32"]
+  },
+  {
+    "Id": "q117",
+    "Text": "Which should come next at the end of this row of letters: A, B, D, G?",
+    "Type": "choice",
+    "Options": ["H", "K", "J"]
+  },
+  {
+    "Id": "q118",
+    "Text": "Which should come next at the end of this row of letters: E, I, L?",
+    "Type": "choice",
+    "Options": ["M", "N", "P"]
+  },
+  {
+    "Id": "q119",
+    "Text": "Which should come next at the end of this series of numbers: 1, 2, 0, 3, -1?",
+    "Type": "choice",
+    "Options": ["5", "4", "-3"]
+  }
+]

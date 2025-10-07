@@ -1,0 +1,350 @@
+[
+  {
+    "Id": "q1",
+    "Text": "I understand something better after I",
+    "Type": "choice",
+    "Options": ["try it out.", "think it through."]
+  },
+  {
+    "Id": "q2",
+    "Text": "I would rather be considered",
+    "Type": "choice",
+    "Options": ["realistic.", "innovative."]
+  },
+  {
+    "Id": "q3",
+    "Text": "When I think about what I did yesterday, I am most likely to get",
+    "Type": "choice",
+    "Options": ["a picture.", "words."]
+  },
+  {
+    "Id": "q4",
+    "Text": "I tend to",
+    "Type": "choice",
+    "Options": [
+      "understand details of a subject but may be fuzzy about its overall structure.",
+      "understand the overall structure but may be fuzzy about details."
+    ]
+  },
+  {
+    "Id": "q5",
+    "Text": "When I am learning something new, it helps me to",
+    "Type": "choice",
+    "Options": ["talk about it.", "think about it."]
+  },
+  {
+    "Id": "q6",
+    "Text": "If I were a teacher, I would rather teach a course",
+    "Type": "choice",
+    "Options": [
+      "that deals with facts and real life situations.",
+      "that deals with ideas and theories."
+    ]
+  },
+  {
+    "Id": "q7",
+    "Text": "I prefer to get new information in",
+    "Type": "choice",
+    "Options": [
+      "pictures, diagrams, graphs, or maps.",
+      "written directions or verbal information."
+    ]
+  },
+  {
+    "Id": "q8",
+    "Text": "Once I understand",
+    "Type": "choice",
+    "Options": [
+      "all the parts, I understand the whole thing.",
+      "the whole thing, I see how the parts fit."
+    ]
+  },
+  {
+    "Id": "q9",
+    "Text": "In a study group working on difficult material, I am more likely to",
+    "Type": "choice",
+    "Options": ["jump in and contribute ideas.", "sit back and listen."]
+  },
+  {
+    "Id": "q10",
+    "Text": "I find it easier",
+    "Type": "choice",
+    "Options": ["to learn facts.", "to learn concepts."]
+  },
+  {
+    "Id": "q11",
+    "Text": "In a book with lots of pictures and charts, I am likely to",
+    "Type": "choice",
+    "Options": [
+      "look over the pictures and charts carefully.",
+      "focus on the written text."
+    ]
+  },
+  {
+    "Id": "q12",
+    "Text": "When I solve math problems",
+    "Type": "choice",
+    "Options": [
+      "I usually work my way to the solutions one step at a time.",
+      "I often just see the solutions but then have to struggle to figure out the steps to get to them."
+    ]
+  },
+  {
+    "Id": "q13",
+    "Text": "In classes I have taken",
+    "Type": "choice",
+    "Options": [
+      "I have usually gotten to know many of the students.",
+      "I have rarely gotten to know many of the students."
+    ]
+  },
+  {
+    "Id": "q14",
+    "Text": "In reading nonfiction, I prefer",
+    "Type": "choice",
+    "Options": [
+      "something that teaches me new facts or tells me how to do something.",
+      "something that gives me new ideas to think about."
+    ]
+  },
+  {
+    "Id": "q15",
+    "Text": "I like teachers",
+    "Type": "choice",
+    "Options": [
+      "who put a lot of diagrams on the board.",
+      "who spend a lot of time explaining."
+    ]
+  },
+  {
+    "Id": "q16",
+    "Text": "When I'm analyzing a story or a novel",
+    "Type": "choice",
+    "Options": [
+      "I think of the incidents and try to put them together to figure out the themes.",
+      "I just know what the themes are when I finish reading and then I have to go back and find the incidents that demonstrate them."
+    ]
+  },
+  {
+    "Id": "q17",
+    "Text": "When I start a homework problem, I am more likely to",
+    "Type": "choice",
+    "Options": [
+      "start working on the solution immediately.",
+      "try to fully understand the problem first."
+    ]
+  },
+  {
+    "Id": "q18",
+    "Text": "I prefer the idea of",
+    "Type": "choice",
+    "Options": ["certainty.", "theory."]
+  },
+  {
+    "Id": "q19",
+    "Text": "I remember best",
+    "Type": "choice",
+    "Options": ["what I see.", "what I hear."]
+  },
+  {
+    "Id": "q20",
+    "Text": "It is more important to me that an instructor",
+    "Type": "choice",
+    "Options": [
+      "lay out the material in clear sequential steps.",
+      "give me an overall picture and relate the material to other subjects."
+    ]
+  },
+  {
+    "Id": "q21",
+    "Text": "I prefer to study",
+    "Type": "choice",
+    "Options": ["in a study group.", "alone."]
+  },
+  {
+    "Id": "q22",
+    "Text": "I am more likely to be considered",
+    "Type": "choice",
+    "Options": [
+      "careful about the details of my work.",
+      "creative about how to do my work."
+    ]
+  },
+  {
+    "Id": "q23",
+    "Text": "When I get directions to a new place, I prefer",
+    "Type": "choice",
+    "Options": ["a map.", "written instructions."]
+  },
+  {
+    "Id": "q24",
+    "Text": "I learn",
+    "Type": "choice",
+    "Options": [
+      "at a fairly regular pace. If I study hard, I'll 'get it.'",
+      "in fits and starts. I'll be totally confused and then suddenly it all 'clicks.'"
+    ]
+  },
+  {
+    "Id": "q25",
+    "Text": "I would rather first",
+    "Type": "choice",
+    "Options": [
+      "try things out.",
+      "think about how I'm going to do it."
+    ]
+  },
+  {
+    "Id": "q26",
+    "Text": "When I am reading for enjoyment, I like writers to",
+    "Type": "choice",
+    "Options": [
+      "clearly say what they mean.",
+      "say things in creative, interesting ways."
+    ]
+  },
+  {
+    "Id": "q27",
+    "Text": "When I see a diagram or sketch in class, I am most likely to remember",
+    "Type": "choice",
+    "Options": [
+      "the picture.",
+      "what the instructor said about it."
+    ]
+  },
+  {
+    "Id": "q28",
+    "Text": "When considering a body of information, I am more likely to",
+    "Type": "choice",
+    "Options": [
+      "focus on details and miss the big picture.",
+      "try to understand the big picture before getting into the details."
+    ]
+  },
+  {
+    "Id": "q29",
+    "Text": "I more easily remember",
+    "Type": "choice",
+    "Options": [
+      "something I have done.",
+      "something I have thought a lot about."
+    ]
+  },
+  {
+    "Id": "q30",
+    "Text": "When I have to perform a task, I prefer to",
+    "Type": "choice",
+    "Options": [
+      "master one way of doing it.",
+      "come up with new ways of doing it."
+    ]
+  },
+  {
+    "Id": "q31",
+    "Text": "When someone is showing me data, I prefer",
+    "Type": "choice",
+    "Options": [
+      "charts or graphs.",
+      "text summarizing the results."
+    ]
+  },
+  {
+    "Id": "q32",
+    "Text": "When writing a paper, I am more likely to",
+    "Type": "choice",
+    "Options": [
+      "work on (think about or write) the beginning of the paper and progress forward.",
+      "work on (think about or write) different parts of the paper and then order them."
+    ]
+  },
+  {
+    "Id": "q33",
+    "Text": "When I have to work on a group project, I first want to",
+    "Type": "choice",
+    "Options": [
+      "have 'group brainstorming' where everyone contributes ideas.",
+      "brainstorm individually and then come together as a group to compare ideas."
+    ]
+  },
+  {
+    "Id": "q34",
+    "Text": "I consider it higher praise to call someone",
+    "Type": "choice",
+    "Options": ["sensible.", "imaginative."]
+  },
+  {
+    "Id": "q35",
+    "Text": "When I meet people at a party, I am more likely to remember",
+    "Type": "choice",
+    "Options": [
+      "what they looked like.",
+      "what they said about themselves."
+    ]
+  },
+  {
+    "Id": "q36",
+    "Text": "When I am learning a new subject, I prefer to",
+    "Type": "choice",
+    "Options": [
+      "stay focused on that subject, learning as much about it as I can.",
+      "try to make connections between that subject and related subjects."
+    ]
+  },
+  {
+    "Id": "q37",
+    "Text": "I am more likely to be considered",
+    "Type": "choice",
+    "Options": ["outgoing.", "reserved."]
+  },
+  {
+    "Id": "q38",
+    "Text": "I prefer courses that emphasize",
+    "Type": "choice",
+    "Options": ["concrete material (facts, data).", "abstract material (concepts, theories)."]
+  },
+  {
+    "Id": "q39",
+    "Text": "For entertainment, I would rather",
+    "Type": "choice",
+    "Options": ["watch television.", "read a book."]
+  },
+  {
+    "Id": "q40",
+    "Text": "Some teachers start their lectures with an outline of what they will cover. Such outlines are",
+    "Type": "choice",
+    "Options": ["somewhat helpful to me.", "very helpful to me."]
+  },
+  {
+    "Id": "q41",
+    "Text": "The idea of doing homework in groups, with one grade for the entire group,",
+    "Type": "choice",
+    "Options": ["appeals to me.", "does not appeal to me."]
+  },
+  {
+    "Id": "q42",
+    "Text": "When I am doing long calculations,",
+    "Type": "choice",
+    "Options": [
+      "I tend to repeat all my steps and check my work carefully.",
+      "I find checking my work tiresome and have to force myself to do it."
+    ]
+  },
+  {
+    "Id": "q43",
+    "Text": "I tend to picture places I have been",
+    "Type": "choice",
+    "Options": [
+      "easily and fairly accurately.",
+      "with difficulty and without much detail."
+    ]
+  },
+  {
+    "Id": "q44",
+    "Text": "When solving problems in a group, I would be more likely to",
+    "Type": "choice",
+    "Options": [
+      "think of the steps in the solution process.",
+      "think of possible consequences or applications of the solution in a wide range of areas."
+    ]
+  }
+]

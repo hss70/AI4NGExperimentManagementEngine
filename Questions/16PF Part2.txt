@@ -1,0 +1,488 @@
+[
+  {
+    "Id": "q120",
+    "Text": "I get restless and depressed if I don’t get some excitement.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "never"]
+  },
+  {
+    "Id": "q121",
+    "Text": "For me, it is important to be:",
+    "Type": "choice",
+    "Options": ["comfortable, safe, content", "in between", "adventurous, risk-taking, thrilled"]
+  },
+  {
+    "Id": "q122",
+    "Text": "I feel lonely and miserable.",
+    "Type": "choice",
+    "Options": ["yes, all the time", "sometimes", "no, hardly ever"]
+  },
+  {
+    "Id": "q123",
+    "Text": "I don’t mind if people joke about me and say I’m “quite a character.”",
+    "Type": "choice",
+    "Options": ["true, I don’t mind", "uncertain", "false, I do mind"]
+  },
+  {
+    "Id": "q124",
+    "Text": "I get so fed up with people bothering me that I just don’t care whether I answer them or not.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "almost never"]
+  },
+  {
+    "Id": "q125",
+    "Text": "I wonder if I have the strength to meet life’s challenges.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q126",
+    "Text": "For me, there doesn’t seem to be much in life that’s really worth doing.",
+    "Type": "choice",
+    "Options": ["true, there’s little worth living for", "in between", "false, I enjoy life"]
+  },
+  {
+    "Id": "q127",
+    "Text": "I am confident that I can face and handle most emergencies that come up.",
+    "Type": "choice",
+    "Options": ["true, always", "sometimes", "false, I cannot face emergencies"]
+  },
+  {
+    "Id": "q128",
+    "Text": "When I wake up in the morning, I just don’t have enough energy to start the day.",
+    "Type": "choice",
+    "Options": ["true, I don’t", "perhaps", "false, I do"]
+  },
+  {
+    "Id": "q129",
+    "Text": "I have fears that no one really loves me.",
+    "Type": "choice",
+    "Options": ["often", "once in a while", "not at all"]
+  },
+  {
+    "Id": "q130",
+    "Text": "When I’ve done something well, I’ve met more friendly encouragement than jealousy or envy.",
+    "Type": "choice",
+    "Options": ["true, I’ve felt encouraged", "in between", "false"]
+  },
+  {
+    "Id": "q131",
+    "Text": "Criticism easily hurts my feelings and makes me give up.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "never"]
+  },
+  {
+    "Id": "q132",
+    "Text": "At times strange, sudden feelings – like wanting to smash a mirror – seem to take hold of me.",
+    "Type": "choice",
+    "Options": ["true, often", "only occasionally", "no, never"]
+  },
+  {
+    "Id": "q133",
+    "Text": "Some simple, unimportant ideas or words run through my mind on and off for days.",
+    "Type": "choice",
+    "Options": ["often", "once in a while", "very rarely"]
+  },
+  {
+    "Id": "q134",
+    "Text": "Sometimes I feel that my nerves are going to pieces.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q135",
+    "Text": "I almost never feel sick and disgusted with my life.",
+    "Type": "choice",
+    "Options": ["true, I almost never feel like that", "in between", "false, I often feel like that"]
+  },
+  {
+    "Id": "q136",
+    "Text": "I feel discontented unless I can find some daring thing to do.",
+    "Type": "choice",
+    "Options": ["yes", "uncertain", "no"]
+  },
+  {
+    "Id": "q137",
+    "Text": "I get a feeling of tension and have a ringing or buzzing in my ears.",
+    "Type": "choice",
+    "Options": ["yes, often", "sometimes", "no, almost never"]
+  },
+  {
+    "Id": "q138",
+    "Text": "I feel life is so pointless and silly that I no longer even try to tell people how I feel.",
+    "Type": "choice",
+    "Options": ["true, I do feel this way", "in between", "false, I don’t feel this way"]
+  },
+  {
+    "Id": "q139",
+    "Text": "People gossip about some of the daring things I do, but I don’t mind being the center of their attention.",
+    "Type": "choice",
+    "Options": ["true, I don’t mind", "in between", "false, I do mind"]
+  },
+  {
+    "Id": "q140",
+    "Text": "People seem to be ganged up to treat me as if my opinions didn’t matter.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "never"]
+  },
+  {
+    "Id": "q141",
+    "Text": "I keep worrying even about unimportant things if they don’t seem quite right.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "never"]
+  },
+  {
+    "Id": "q142",
+    "Text": "There are times when I think I’m no good for anything at all.",
+    "Type": "choice",
+    "Options": ["true, I often think this", "in between", "false, I almost never do"]
+  },
+  {
+    "Id": "q143",
+    "Text": "I can’t keep up with daily activities because I don’t feel well.",
+    "Type": "choice",
+    "Options": ["true, I can’t keep up", "in between", "false, I can keep up"]
+  },
+  {
+    "Id": "q144",
+    "Text": "I think about death, which ends all our problems.",
+    "Type": "choice",
+    "Options": ["a lot", "sometimes", "hardly ever"]
+  },
+  {
+    "Id": "q145",
+    "Text": "I like to be with a group that livens things up with stunts or practical jokes, even when they are a bit risky.",
+    "Type": "choice",
+    "Options": ["yes, certainly", "perhaps", "no"]
+  },
+  {
+    "Id": "q146",
+    "Text": "I feel self-confident and relaxed.",
+    "Type": "choice",
+    "Options": ["almost all the time", "sometimes", "hardly ever"]
+  },
+  {
+    "Id": "q147",
+    "Text": "I don’t get dizzy spells or heart flutters if I’m suddenly asked to do something.",
+    "Type": "choice",
+    "Options": ["true, I don’t feel like this", "uncertain", "false, I do get dizzy spells and heart flutters"]
+  },
+  {
+    "Id": "q148",
+    "Text": "I find it easy to keep up cheerful “small talk” with people.",
+    "Type": "choice",
+    "Options": ["always", "sometimes", "never"]
+  },
+  {
+    "Id": "q149",
+    "Text": "A safe rule in life is “Trust nobody.”",
+    "Type": "choice",
+    "Options": ["yes, always", "sometimes", "no, hardly ever"]
+  },
+  {
+    "Id": "q150",
+    "Text": "I’m not bothered by other people’s disapproval, as long as I’m doing what I enjoy.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q151",
+    "Text": "I don’t have very many fears of hidden physical dangers.",
+    "Type": "choice",
+    "Options": ["true", "partly true", "false, I am fearful"]
+  },
+  {
+    "Id": "q152",
+    "Text": "I have a habit of counting things, such as my steps, or bricks in a wall, for no reason.",
+    "Type": "choice",
+    "Options": ["true, I do this most of the time", "sometimes", "false, I very rarely do this"]
+  },
+  {
+    "Id": "q153",
+    "Text": "The world seems too complex or too demanding for me.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q154",
+    "Text": "Every few days my stomach feels upset and uncomfortable.",
+    "Type": "choice",
+    "Options": ["yes, definitely", "a little", "no, not at all"]
+  },
+  {
+    "Id": "q155",
+    "Text": "Lately I don’t really care what happens to me.",
+    "Type": "choice",
+    "Options": ["true, all the time", "sometimes", "false, I don’t feel like that"]
+  },
+  {
+    "Id": "q156",
+    "Text": "I often feel bored and in a rut so I like to keep trying new things.",
+    "Type": "choice",
+    "Options": ["yes", "uncertain", "no"]
+  },
+  {
+    "Id": "q157",
+    "Text": "Thinking about doing normal, everyday things often makes me tense or anxious.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q158",
+    "Text": "I sleep soundly and wake up full of energy.",
+    "Type": "choice",
+    "Options": ["true, generally", "only sometimes", "never, these days"]
+  },
+  {
+    "Id": "q159",
+    "Text": "My life has lots of enjoyment and excitement in it.",
+    "Type": "choice",
+    "Options": ["almost all the time", "sometimes", "almost never"]
+  },
+  {
+    "Id": "q160",
+    "Text": "I feel that someone may be trying deliberately to harm me.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q161",
+    "Text": "In dark corners I often think I see people watching me, but when I look carefully they disappear.",
+    "Type": "choice",
+    "Options": ["true, often", "occasionally", "false, I never do"]
+  },
+  {
+    "Id": "q162",
+    "Text": "I don’t usually feel a bit lost or anxious when I’m away from home where things are done differently.",
+    "Type": "choice",
+    "Options": ["true, I don’t usually", "uncertain", "false, I often do"]
+  },
+  {
+    "Id": "q163",
+    "Text": "I feel weak and ill.",
+    "Type": "choice",
+    "Options": ["most of the time", "sometimes", "practically never"]
+  },
+  {
+    "Id": "q164",
+    "Text": "My head stays clear and calm in an emergency.",
+    "Type": "choice",
+    "Options": ["always", "sometimes", "never"]
+  },
+  {
+    "Id": "q165",
+    "Text": "I hardly ever have a dark mood of depression come over me for no reason.",
+    "Type": "choice",
+    "Options": ["true, I don’t have such moods", "uncertain", "false, I do have moods like this"]
+  },
+  {
+    "Id": "q166",
+    "Text": "I find it easy to be friendly and playful with young children.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q167",
+    "Text": "Too many people are trying to interfere with my freedom.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q168",
+    "Text": "It doesn’t bother me when others don’t approve of me.",
+    "Type": "choice",
+    "Options": ["true, it doesn’t bother me", "uncertain", "false, it does bother me"]
+  },
+  {
+    "Id": "q169",
+    "Text": "Dirty words or embarrassing ideas run through my mind, and I can’t get rid of them.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "almost never"]
+  },
+  {
+    "Id": "q170",
+    "Text": "Much of the time I feel sluggish and too weary to move.",
+    "Type": "choice",
+    "Options": ["true", "partly true", "false"]
+  },
+  {
+    "Id": "q171",
+    "Text": "I like to fill my life with novel, exciting things and would be bored with most ordinary lives.",
+    "Type": "choice",
+    "Options": ["true", "in between", "false"]
+  },
+  {
+    "Id": "q172",
+    "Text": "My zest for each new day is high.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q173",
+    "Text": "I seem to blame myself for everything that goes wrong, and I’m always critical of myself.",
+    "Type": "choice",
+    "Options": ["true, most times", "true, sometimes", "false"]
+  },
+  {
+    "Id": "q174",
+    "Text": "I’d rather be alone or bored than try to deal with people.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q175",
+    "Text": "For some reason, it upsets me when other people get public praise.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q176",
+    "Text": "I sometimes doubt whether I have been of much use to anyone in my life.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q177",
+    "Text": "I feel my health is run down and I probably should see a doctor soon.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q178",
+    "Text": "I feel that I’m at the “end of my rope” and don’t want to go on any more.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "almost never"]
+  },
+  {
+    "Id": "q179",
+    "Text": "Often I find it hard to fall asleep because I’m so energized.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q180",
+    "Text": "My nervous nature too often keeps me from “branching out” or enjoying things.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q181",
+    "Text": "When faced with problems, I don’t feel I have enough energy to do something to solve them.",
+    "Type": "choice",
+    "Options": ["true, I don’t have the energy", "sometimes", "false, I do"]
+  },
+  {
+    "Id": "q182",
+    "Text": "I have the feeling that I’ve done something horribly wrong but don’t know what.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "never"]
+  },
+  {
+    "Id": "q183",
+    "Text": "People rarely talk about me behind my back.",
+    "Type": "choice",
+    "Options": ["true, I don’t", "uncertain", "false, they often do"]
+  },
+  {
+    "Id": "q184",
+    "Text": "I never have moments that are so unreal, it’s like I’m not part of what’s happening.",
+    "Type": "choice",
+    "Options": ["true, I don’t", "uncertain", "false, sometimes I do have such moments"]
+  },
+  {
+    "Id": "q185",
+    "Text": "When I’m in a formal place where I’m supposed to be quiet, I’m afraid I may feel like shouting out.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q186",
+    "Text": "I sometimes think that I am somehow a doomed or condemned person.",
+    "Type": "choice",
+    "Options": ["true", "perhaps", "false"]
+  },
+  {
+    "Id": "q187",
+    "Text": "When I get up in the morning, I feel I’m ready to face the day’s problems.",
+    "Type": "choice",
+    "Options": ["almost always", "sometimes", "hardly ever"]
+  },
+  {
+    "Id": "q188",
+    "Text": "It’s hard for me to feel truly relaxed and at ease.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q189",
+    "Text": "The stresses of everyday living seem to be too much for me.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q190",
+    "Text": "I have bad dreams in which I am in trouble for something.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q191",
+    "Text": "I find each day challenging and rewarding.",
+    "Type": "choice",
+    "Options": ["true", "in between", "false"]
+  },
+  {
+    "Id": "q192",
+    "Text": "I am often the only person who understands what is really going on.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q193",
+    "Text": "Sometimes I feel distant from even my closest friends and family members.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q194",
+    "Text": "There are things in my daily life that I feel I have to do again and again, no matter how much trouble it takes to get it exactly right.",
+    "Type": "choice",
+    "Options": ["true, I feel like that about many things", "in between", "false, I don’t feel like that"]
+  },
+  {
+    "Id": "q195",
+    "Text": "I feel like giving up in the face of life’s struggles.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q196",
+    "Text": "When things go wrong, I find it hard not to give up.",
+    "Type": "choice",
+    "Options": ["true, I often give up", "uncertain", "false"]
+  },
+  {
+    "Id": "q197",
+    "Text": "If people knew what I really think, they would hate me.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q198",
+    "Text": "Something new and interesting happens almost every day.",
+    "Type": "choice",
+    "Options": ["true", "uncertain", "false"]
+  },
+  {
+    "Id": "q199",
+    "Text": "I question whether anyone can really understand me.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "rarely"]
+  },
+  {
+    "Id": "q200",
+    "Text": "My emotions are so unreasonable that I don’t feel fit to look after myself.",
+    "Type": "choice",
+    "Options": ["often", "sometimes", "I never feel like this"]
+  }
+]
