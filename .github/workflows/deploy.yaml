@@ -32,10 +32,10 @@ jobs:
         run: |
           echo "Fetching CloudFormation exports..."
           SHARED_API_ID=$(aws cloudformation list-exports \
-            --query "Exports[?Name=='SharedApiId-dev'].Value" \
+            --query "Exports[?Name=='SharedApiId'].Value" \
             --output text)
           SHARED_API_AUTHORIZER_ID=$(aws cloudformation list-exports \
-            --query "Exports[?Name=='SharedApiAuthorizerId-dev'].Value" \
+            --query "Exports[?Name=='SharedApiAuthorizerId'].Value" \
             --output text)
           PRIVATE_SG=$(aws cloudformation list-exports \
             --query "Exports[?Name=='NetworkStack-PrivateSG'].Value" \
@@ -43,6 +43,16 @@ jobs:
           PRIVATE_SUBNETS=$(aws cloudformation list-exports \
             --query "Exports[?Name=='NetworkStack-PrivateSubnetIds'].Value" \
             --output text)
+          
+          if [ -z "$SHARED_API_ID" ]; then
+            echo "::error::SharedApiId export not found"
+            exit 1
+          fi
+          if [ -z "$SHARED_API_AUTHORIZER_ID" ]; then
+            echo "::error::SharedApiAuthorizerId export not found"
+            exit 1
+          fi
+          
           echo "shared_api_id=$SHARED_API_ID" >> $GITHUB_OUTPUT
           echo "shared_api_authorizer_id=$SHARED_API_AUTHORIZER_ID" >> $GITHUB_OUTPUT
           echo "private_sg=$PRIVATE_SG" >> $GITHUB_OUTPUT
@@ -55,9 +65,9 @@ jobs:
         run: |
           sam deploy \
             --parameter-overrides \
-              Environment=dev \
-              SharedApiId=${{ steps.get_exports.outputs.shared_api_id }} \
-              SharedApiAuthorizerId=${{ steps.get_exports.outputs.shared_api_authorizer_id }} \
-              PrivateSG=${{ steps.get_exports.outputs.private_sg }} \
-              PrivateSubnetIds="${{ steps.get_exports.outputs.private_subnets }}" \
+              "Environment=dev" \
+              "SharedApiId=${{ steps.get_exports.outputs.shared_api_id }}" \
+              "SharedApiAuthorizerId=${{ steps.get_exports.outputs.shared_api_authorizer_id }}" \
+              "PrivateSG=${{ steps.get_exports.outputs.private_sg }}" \
+              "PrivateSubnetIds=${{ steps.get_exports.outputs.private_subnets }}" \
             --config-env default
