@@ -1,0 +1,15 @@
+{
+  "AI4NGQuestionnairesFunction": {
+    "QUESTIONNAIRES_TABLE": "questionnaires-local",
+    "AWS_ENDPOINT_URL": "http://host.docker.internal:8000"
+  },
+  "AI4NGExperimentsFunction": {
+    "EXPERIMENTS_TABLE": "experiments-local",
+    "RESPONSES_TABLE": "responses-local",
+    "AWS_ENDPOINT_URL": "http://host.docker.internal:8000"
+  },
+  "AI4NGResponsesFunction": {
+    "RESPONSES_TABLE": "responses-local",
+    "AWS_ENDPOINT_URL": "http://host.docker.internal:8000"
+  }
+}

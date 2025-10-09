@@ -95,6 +95,27 @@
               "path": ["api", "researcher", "questionnaires", "PQ"]
             }
           }
+        },
+        {
+          "name": "Batch Create Questionnaires (Researcher)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"id\":\"PQ\",\"data\":{\"name\":\"Presence Questionnaire\",\"description\":\"Measures presence\",\"estimatedTime\":300,\"version\":\"1.0\",\"questions\":[{\"id\":\"q1\",\"text\":\"How much were you able to control events?\",\"type\":\"choice\",\"options\":[\"1 - NOT AT ALL\",\"7 - COMPLETELY\"],\"required\":true}]}},{\"id\":\"TLX\",\"data\":{\"name\":\"NASA TLX\",\"description\":\"Measures workload\",\"estimatedTime\":120,\"version\":\"1.0\",\"questions\":[{\"id\":\"mental\",\"text\":\"How mentally demanding?\",\"type\":\"choice\",\"options\":[\"1 - LOW\",\"7 - HIGH\"],\"required\":true}]}}]"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/researcher/questionnaires/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "researcher", "questionnaires", "batch"]
+            }
+          }
         }
       ]
     },

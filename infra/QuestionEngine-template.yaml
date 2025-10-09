@@ -225,6 +225,7 @@ Resources:
       CodeUri: ../src/AI4NGQuestionnairesLambda
       Timeout: 30
       MemorySize: 512
+      Tracing: Active
       VpcConfig:
         SecurityGroupIds:
           - !Ref PrivateSG
@@ -235,6 +236,7 @@ Resources:
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSLambdaVPCAccessExecutionRole
+        - AWSXRayDaemonWriteAccess
         - DynamoDBCrudPolicy:
             TableName: !Ref AI4NGQuestionnairesTable
 
@@ -443,6 +445,15 @@ Resources:
     Properties:
       ApiId: !Ref SharedApiId
       RouteKey: DELETE /api/researcher/questionnaires/{questionnaireId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  CreateQuestionnaireBatchRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: POST /api/researcher/questionnaires/batch
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${QuestionnairesIntegration}
