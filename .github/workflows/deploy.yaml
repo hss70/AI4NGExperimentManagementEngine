@@ -75,4 +75,4 @@ jobs:
               "SharedApiAuthorizerId=${{ steps.get_exports.outputs.shared_api_authorizer_id }}" \
               "PrivateSG=${{ steps.get_exports.outputs.private_sg }}" \
               "PrivateSubnetIds=${{ steps.get_exports.outputs.private_subnets }}" \
-            --resolve-s3 --no-confirm-changeset --no-fail-on-empty-changeset
+            --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset

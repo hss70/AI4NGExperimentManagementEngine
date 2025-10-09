@@ -31,7 +31,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Deploying SAM application..." -ForegroundColor Green
-sam deploy --no-confirm-changeset --disable-rollback --profile hardeepGmail --parameter-overrides "Environment=dev" "SharedApiId=$SHARED_API_ID" "SharedApiAuthorizerId=$SHARED_API_AUTHORIZER_ID" "PrivateSG=$PRIVATE_SG" "PrivateSubnetIds=$PRIVATE_SUBNETS"
+sam deploy --profile hardeepGmail
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Deployment completed successfully!" -ForegroundColor Green
