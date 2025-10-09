@@ -8,6 +8,10 @@ on:
 jobs:
   deploy-dev:
     runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: eu-west-2
+      STACK_NAME: AI4NG-QuestionEngine-dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -43,7 +47,7 @@ jobs:
           PRIVATE_SUBNETS=$(aws cloudformation list-exports \
             --query "Exports[?Name=='NetworkStack-PrivateSubnetIds'].Value" \
             --output text)
-          
+
           if [ -z "$SHARED_API_ID" ]; then
             echo "::error::SharedApiId export not found"
             exit 1
@@ -52,7 +56,7 @@ jobs:
             echo "::error::SharedApiAuthorizerId export not found"
             exit 1
           fi
-          
+
           echo "shared_api_id=$SHARED_API_ID" >> $GITHUB_OUTPUT
           echo "shared_api_authorizer_id=$SHARED_API_AUTHORIZER_ID" >> $GITHUB_OUTPUT
           echo "private_sg=$PRIVATE_SG" >> $GITHUB_OUTPUT
@@ -64,10 +68,11 @@ jobs:
       - name: Deploy SAM
         run: |
           sam deploy \
+            --stack-name ${{ env.STACK_NAME }} \
             --parameter-overrides \
               "Environment=dev" \
               "SharedApiId=${{ steps.get_exports.outputs.shared_api_id }}" \
               "SharedApiAuthorizerId=${{ steps.get_exports.outputs.shared_api_authorizer_id }}" \
               "PrivateSG=${{ steps.get_exports.outputs.private_sg }}" \
               "PrivateSubnetIds=${{ steps.get_exports.outputs.private_subnets }}" \
-            --config-env default
+            --no-confirm-changeset --no-fail-on-empty-changeset
