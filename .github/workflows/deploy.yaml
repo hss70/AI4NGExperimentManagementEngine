@@ -55,7 +55,7 @@ jobs:
           if [ -z "$SHARED_API_AUTHORIZER_ID" ]; then
             echo "::error::SharedApiAuthorizerId export not found"
             exit 1
-          fi
+          fi 
 
           echo "shared_api_id=$SHARED_API_ID" >> $GITHUB_OUTPUT
           echo "shared_api_authorizer_id=$SHARED_API_AUTHORIZER_ID" >> $GITHUB_OUTPUT
