@@ -2,6 +2,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGResponsesLambda.Interfaces;
 using AI4NGResponsesLambda.Models;
+using AI4NGExperimentManagement.Shared;
 using System.Text.Json;
 
 namespace AI4NGResponsesLambda.Services;
@@ -61,7 +62,7 @@ public class ResponseService : IResponseService
             return scanResponse.Items.Select(item => new
             {
                 id = item["PK"].S.Replace("RESPONSE#", ""),
-                data = ConvertAttributeValueToObject(item["data"]),
+                data = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]),
                 createdBy = item["createdBy"]?.S,
                 createdAt = item["createdAt"]?.S
             });
@@ -71,7 +72,7 @@ public class ResponseService : IResponseService
         return response.Items.Select(item => new
         {
             id = item["PK"].S.Replace("RESPONSE#", ""),
-            data = ConvertAttributeValueToObject(item["data"]),
+            data = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]),
             createdBy = item["createdBy"]?.S,
             createdAt = item["createdAt"]?.S
         });
@@ -95,7 +96,7 @@ public class ResponseService : IResponseService
         return new
         {
             id = responseId,
-            data = ConvertAttributeValueToObject(response.Item["data"]),
+            data = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]),
             createdBy = response.Item["createdBy"]?.S,
             createdAt = response.Item["createdAt"]?.S
         };
@@ -113,7 +114,7 @@ public class ResponseService : IResponseService
                 ["PK"] = new($"RESPONSE#{responseId}"),
                 ["SK"] = new("METADATA"),
                 ["type"] = new("Response"),
-                ["data"] = new AttributeValue { M = JsonToAttributeValue(JsonSerializer.SerializeToElement(response.Data)) },
+                ["data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(response.Data)) },
                 ["GSI1PK"] = new($"EXPERIMENT#{response.Data.ExperimentId}"),
                 ["GSI1SK"] = new($"SESSION#{response.Data.SessionId}"),
                 ["createdBy"] = new(username),
@@ -138,7 +139,7 @@ public class ResponseService : IResponseService
             ExpressionAttributeNames = new Dictionary<string, string> { ["#data"] = "data" },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":data"] = new AttributeValue { M = JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
+                [":data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
                 [":user"] = new(username),
                 [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
             }
@@ -158,56 +159,5 @@ public class ResponseService : IResponseService
         });
     }
 
-    private static Dictionary<string, AttributeValue> JsonToAttributeValue(JsonElement element)
-    {
-        var result = new Dictionary<string, AttributeValue>();
-        foreach (var property in element.EnumerateObject())
-        {
-            result[property.Name] = property.Value.ValueKind switch
-            {
-                JsonValueKind.String => new AttributeValue(property.Value.GetString()),
-                JsonValueKind.Number => new AttributeValue { N = property.Value.GetRawText() },
-                JsonValueKind.True or JsonValueKind.False => new AttributeValue { BOOL = property.Value.GetBoolean() },
-                JsonValueKind.Array => new AttributeValue { L = property.Value.EnumerateArray().Select(v => ConvertJsonElementToAttributeValue(v)).ToList() },
-                JsonValueKind.Object => new AttributeValue { M = JsonToAttributeValue(property.Value) },
-                _ => new AttributeValue(property.Value.GetRawText())
-            };
-        }
-        return result;
-    }
 
-    private static AttributeValue ConvertJsonElementToAttributeValue(JsonElement element)
-    {
-        return element.ValueKind switch
-        {
-            JsonValueKind.String => new AttributeValue(element.GetString()),
-            JsonValueKind.Number => new AttributeValue { N = element.GetRawText() },
-            JsonValueKind.True or JsonValueKind.False => new AttributeValue { BOOL = element.GetBoolean() },
-            JsonValueKind.Array => new AttributeValue { L = element.EnumerateArray().Select(ConvertJsonElementToAttributeValue).ToList() },
-            JsonValueKind.Object => new AttributeValue { M = JsonToAttributeValue(element) },
-            _ => new AttributeValue(element.GetRawText())
-        };
-    }
-
-    private static object ConvertAttributeValueToObject(AttributeValue attributeValue)
-    {
-        if (attributeValue.M != null)
-        {
-            var result = new Dictionary<string, object>();
-            foreach (var kvp in attributeValue.M)
-            {
-                result[kvp.Key] = ConvertAttributeValueToObject(kvp.Value);
-            }
-            return result;
-        }
-        if (attributeValue.L != null)
-            return attributeValue.L.Select(ConvertAttributeValueToObject).ToList();
-        if (attributeValue.S != null)
-            return attributeValue.S;
-        if (attributeValue.N != null)
-            return decimal.Parse(attributeValue.N);
-        if (attributeValue.BOOL.HasValue)
-            return attributeValue.BOOL.Value;
-        return attributeValue.NULL ? null : attributeValue.S ?? "";
-    }
 }

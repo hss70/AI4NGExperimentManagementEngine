@@ -27,8 +27,8 @@ aws dynamodb create-table --table-name responses-local --attribute-definitions A
 Write-Host "Starting SAM Local API..." -ForegroundColor Green
 
 switch ($Service) {
-    "questionnaires" { sam local start-api --template-file infra/QuestionEngine-template.yaml --port 3001 --env-vars local-env.json }
-    "experiments" { sam local start-api --template-file infra/QuestionEngine-template.yaml --port 3002 --env-vars local-env.json }
-    "responses" { sam local start-api --template-file infra/QuestionEngine-template.yaml --port 3003 --env-vars local-env.json }
-    default { sam local start-api --template-file infra/QuestionEngine-template.yaml --port 3000 --env-vars local-env.json }
+    "questionnaires" { sam local start-api --template-file infra/ExperimentManagement-template.yaml --port 3001 --env-vars ../local-testing/local-env.json }
+    "experiments" { sam local start-api --template-file infra/ExperimentManagement-template.yaml --port 3002 --env-vars ../local-testing/local-env.json }
+    "responses" { sam local start-api --template-file infra/ExperimentManagement-template.yaml --port 3003 --env-vars ../local-testing/local-env.json }
+    default { sam local start-api --template-file infra/ExperimentManagement-template.yaml --port 3000 --env-vars ../local-testing/local-env.json }
 }

@@ -1,0 +1,77 @@
+name: Build Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Setup SAM CLI
+      uses: aws-actions/setup-sam@v2
+      with:
+        use-installer: true
+        
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: eu-west-2
+        
+    - name: Start DynamoDB Local
+      run: |
+        docker run -d -p 8000:8000 --name dynamodb-local amazon/dynamodb-local
+        sleep 10
+        
+    - name: Restore dependencies
+      run: |
+        dotnet restore src/AI4NGQuestionnairesLambda
+        dotnet restore src/AI4NGExperimentsLambda  
+        dotnet restore src/AI4NGResponsesLambda
+        
+    - name: Build projects
+      run: |
+        dotnet build src/AI4NGQuestionnairesLambda --configuration Release --no-restore
+        dotnet build src/AI4NGExperimentsLambda --configuration Release --no-restore
+        dotnet build src/AI4NGResponsesLambda --configuration Release --no-restore
+        
+    - name: Build test projects
+      run: |
+        dotnet build tests/AI4NGQuestionnaires.Tests --configuration Release
+        dotnet build tests/AI4NGExperiments.Tests --configuration Release
+        dotnet build tests/AI4NGResponses.Tests --configuration Release
+        
+    - name: Run unit tests
+      run: |
+        dotnet test --configuration Release --no-build --collect:"XPlat Code Coverage" --filter "Category!=Integration"
+        
+    - name: SAM Build
+      run: |
+        sam build --template-file infra/QuestionEngine-template.yaml
+        
+    - name: Validate CloudFormation
+      run: |
+        aws cloudformation validate-template --template-body file://infra/QuestionEngine-template.yaml
+        
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./tests/*/TestResults/*/coverage.cobertura.xml
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        docker stop dynamodb-local || true
+        docker rm dynamodb-local || true

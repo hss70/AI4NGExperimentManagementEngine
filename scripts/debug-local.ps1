@@ -32,9 +32,9 @@ if ($Debug) {
 # Start SAM Local with debug options
 $samArgs = @(
     "local", "start-api",
-    "--template-file", "infra/QuestionEngine-template.yaml",
+    "--template-file", "infra/ExperimentManagement-template.yaml",
     "--port", "3000",
-    "--env-vars", "local-env.json",
+    "--env-vars", "../local-testing/local-env.json",
     "--host", "0.0.0.0"
 )
 
@@ -43,7 +43,7 @@ if ($Debug) {
 }
 
 Write-Host "🚀 Starting SAM Local API on http://localhost:3000" -ForegroundColor Green
-Write-Host "📋 Import postman-local-collection.json into Postman for testing" -ForegroundColor Cyan
+Write-Host "📋 Import ../postman/postman-local-collection.json into Postman for testing" -ForegroundColor Cyan
 Write-Host "🔍 Check logs below for errors..." -ForegroundColor Yellow
 
 sam @samArgs

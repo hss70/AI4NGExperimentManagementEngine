@@ -8,13 +8,25 @@
 - SAM CLI installed
 - .NET 8 SDK
 
+### Build Validation (Before Testing)
+```powershell
+# Quick build check (30 seconds)
+.\scripts\validate-build.ps1
+
+# Skip tests for faster validation
+.\scripts\validate-build.ps1 -SkipTests
+
+# Full CI pipeline validation
+.\scripts\ci-pipeline.ps1
+```
+
 ### Quick Start
 1. **Start local environment**:
    ```powershell
-   .\debug-local.ps1
+   .\scripts\debug-local.ps1
    ```
 
-2. **Import Postman collection**: `postman-local-collection.json`
+2. **Import Postman collection**: `postman/postman-local-collection.json`
    - Set `baseUrl` variable to `http://localhost:3000`
 
 3. **Test APIs** in order:
@@ -25,7 +37,7 @@
 
 ### Debug Mode
 ```powershell
-.\debug-local.ps1 -Debug
+.\scripts\debug-local.ps1 -Debug
 ```
 - Enables detailed logging
 - Add `X-Debug: true` header to requests for extra logs
@@ -91,6 +103,12 @@ Add `X-Debug: true` to any request for detailed logging:
 2. Create experiment with questionnaire → Test experiment management  
 3. Create responses → Test data collection
 4. Verify data in local DynamoDB
+
+### Pre-Deployment Validation
+1. **Build validation**: `.\scripts\validate-build.ps1`
+2. **Unit tests**: `.\scripts\run-tests.ps1 -Coverage`
+3. **Integration tests**: `.\scripts\run-tests.ps1` (with DynamoDB Local)
+4. **Full pipeline**: `.\scripts\ci-pipeline.ps1`
 
 ### Cloud Validation Flow
 1. Deploy changes

@@ -2,6 +2,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Interfaces;
 using AI4NGExperimentsLambda.Models;
+using AI4NGExperimentManagement.Shared;
 using System.Text.Json;
 
 namespace AI4NGExperimentsLambda.Services;
@@ -58,9 +59,9 @@ public class ExperimentService : IExperimentService
         return new
         {
             id = experimentId,
-            data = ConvertAttributeValueToObject(experiment["data"]),
-            questionnaireConfig = ConvertAttributeValueToObject(experiment["questionnaireConfig"]),
-            sessions = sessions.Select(s => ConvertAttributeValueToObject(s["data"]))
+            data = DynamoDBHelper.ConvertAttributeValueToObject(experiment["data"]),
+            questionnaireConfig = DynamoDBHelper.ConvertAttributeValueToObject(experiment["questionnaireConfig"]),
+            sessions = sessions.Select(s => DynamoDBHelper.ConvertAttributeValueToObject(s["data"]))
         };
     }
 
@@ -98,8 +99,8 @@ public class ExperimentService : IExperimentService
                 ["PK"] = new($"EXPERIMENT#{experimentId}"),
                 ["SK"] = new("METADATA"),
                 ["type"] = new("Experiment"),
-                ["data"] = new AttributeValue { M = JsonToAttributeValue(JsonSerializer.SerializeToElement(experiment.Data)) },
-                ["questionnaireConfig"] = new AttributeValue { M = JsonToAttributeValue(JsonSerializer.SerializeToElement(experiment.QuestionnaireConfig)) },
+                ["data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(experiment.Data)) },
+                ["questionnaireConfig"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(experiment.QuestionnaireConfig)) },
                 ["createdBy"] = new(username),
                 ["createdAt"] = new(DateTime.UtcNow.ToString("O"))
             }
@@ -122,7 +123,7 @@ public class ExperimentService : IExperimentService
             ExpressionAttributeNames = new Dictionary<string, string> { ["#data"] = "data" },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":data"] = new AttributeValue { M = JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
+                [":data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
                 [":user"] = new(username),
                 [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
             }
@@ -154,7 +155,7 @@ public class ExperimentService : IExperimentService
                     ["PK"] = new($"EXPERIMENT#{experimentId}"),
                     ["SK"] = new($"SESSION#{session.SessionId}"),
                     ["type"] = new("Session"),
-                    ["data"] = new AttributeValue { M = JsonToAttributeValue(JsonSerializer.SerializeToElement(session)) },
+                    ["data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(session)) },
                     ["GSI1PK"] = new($"EXPERIMENT#{experimentId}"),
                     ["GSI1SK"] = new($"SESSION#{session.SessionId}"),
                     ["updatedBy"] = new(username),
@@ -215,42 +216,5 @@ public class ExperimentService : IExperimentService
         });
     }
 
-    private static Dictionary<string, AttributeValue> JsonToAttributeValue(JsonElement element)
-    {
-        var result = new Dictionary<string, AttributeValue>();
-        foreach (var property in element.EnumerateObject())
-        {
-            result[property.Name] = property.Value.ValueKind switch
-            {
-                JsonValueKind.String => new AttributeValue(property.Value.GetString()),
-                JsonValueKind.Number => new AttributeValue { N = property.Value.GetRawText() },
-                JsonValueKind.True or JsonValueKind.False => new AttributeValue { BOOL = property.Value.GetBoolean() },
-                JsonValueKind.Array => new AttributeValue { L = property.Value.EnumerateArray().Select(v => new AttributeValue(v.GetString())).ToList() },
-                _ => new AttributeValue(property.Value.GetRawText())
-            };
-        }
-        return result;
-    }
 
-    private static object ConvertAttributeValueToObject(AttributeValue attributeValue)
-    {
-        if (attributeValue.M != null)
-        {
-            var result = new Dictionary<string, object>();
-            foreach (var kvp in attributeValue.M)
-            {
-                result[kvp.Key] = ConvertAttributeValueToObject(kvp.Value);
-            }
-            return result;
-        }
-        if (attributeValue.L != null)
-            return attributeValue.L.Select(ConvertAttributeValueToObject).ToList();
-        if (attributeValue.S != null)
-            return attributeValue.S;
-        if (attributeValue.N != null)
-            return decimal.Parse(attributeValue.N);
-        if (attributeValue.BOOL.HasValue)
-            return attributeValue.BOOL.Value;
-        return attributeValue.NULL ? null : attributeValue.S ?? "";
-    }
 }

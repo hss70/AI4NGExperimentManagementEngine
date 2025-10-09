@@ -10,6 +10,9 @@ obj/
 .idea/
 *.DotSettings.user
 
+# Visual Studio Code
+.vs
+
 # AWS SAM build artifacts
 .aws-sam/
 samconfig.toml

@@ -11,10 +11,10 @@ public class QuestionnaireService : IQuestionnaireService
     private readonly IAmazonDynamoDB _dynamoClient;
     private readonly string _tableName;
 
-    public QuestionnaireService(IAmazonDynamoDB dynamoClient, IConfiguration configuration)
+    public QuestionnaireService(IAmazonDynamoDB dynamoClient)
     {
         _dynamoClient = dynamoClient;
-        _tableName = configuration["QUESTIONNAIRES_TABLE"] ?? "";
+        _tableName = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? "";
     }
 
     public async Task<IEnumerable<Questionnaire>> GetAllAsync()

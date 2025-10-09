@@ -1,40 +1,14 @@
-using Amazon.DynamoDBv2;
 using AI4NGResponsesLambda.Interfaces;
 using AI4NGResponsesLambda.Services;
+using AI4NGExperimentManagement.Shared;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AI4NGResponsesLambda;
 
-public class Startup
+public class Startup : BaseStartup
 {
-    public void ConfigureServices(IServiceCollection services)
+    protected override void ConfigureApplicationServices(IServiceCollection services)
     {
-        services.AddControllers();
-        
-        var endpointUrl = Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL");
-        if (!string.IsNullOrEmpty(endpointUrl))
-        {
-            var config = new AmazonDynamoDBConfig { ServiceURL = endpointUrl };
-            services.AddSingleton<IAmazonDynamoDB>(new AmazonDynamoDBClient(config));
-        }
-        else
-        {
-            services.AddSingleton<IAmazonDynamoDB, AmazonDynamoDBClient>();
-        }
-        
         services.AddScoped<IResponseService, ResponseService>();
-    }
-
-    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-    {
-        if (env.IsDevelopment())
-        {
-            app.UseDeveloperExceptionPage();
-        }
-
-        app.UseRouting();
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapControllers();
-        });
     }
 }
