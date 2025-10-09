@@ -1,0 +1,17 @@
+{
+  "id": "TLX",
+  "data": {
+    "name": "NASA Task Load Index (TLX)",
+    "description": "Measures perceived workload across six dimensions",
+    "estimatedTime": 120,
+    "version": "1.0",
+    "questions": [
+      {"id": "nasa_tlx_mental", "text": "How mentally demanding was the task?", "type": "choice", "options": ["1 - VERY LOW", "2", "3", "4", "5", "6", "7 - VERY HIGH"], "required": true},
+      {"id": "nasa_tlx_physical", "text": "How physically demanding was the task?", "type": "choice", "options": ["1 - VERY LOW", "2", "3", "4", "5", "6", "7 - VERY HIGH"], "required": true},
+      {"id": "nasa_tlx_temporal", "text": "How hurried or rushed was the pace of the task?", "type": "choice", "options": ["1 - VERY LOW", "2", "3", "4", "5", "6", "7 - VERY HIGH"], "required": true},
+      {"id": "nasa_tlx_performance", "text": "How successful were you in accomplishing what you were asked to do?", "type": "choice", "options": ["1 - FAILURE", "2", "3", "4", "5", "6", "7 - PERFECT"], "required": true},
+      {"id": "nasa_tlx_effort", "text": "How hard did you have to work to accomplish your level of performance?", "type": "choice", "options": ["1 - VERY LOW", "2", "3", "4", "5", "6", "7 - VERY HIGH"], "required": true},
+      {"id": "nasa_tlx_frustration", "text": "How insecure, discouraged, irritated, stressed, and annoyed were you?", "type": "choice", "options": ["1 - VERY LOW", "2", "3", "4", "5", "6", "7 - VERY HIGH"], "required": true}
+    ]
+  }
+}

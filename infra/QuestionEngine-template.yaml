@@ -149,7 +149,9 @@ Resources:
       ClientName: ai4ng-researcher-client
       UserPoolId: !Ref ResearcherUserPool
       GenerateSecret: false
-      # Important: disable OAuth flows, you’ll use direct auth APIs instead
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
       AllowedOAuthFlowsUserPoolClient: false
       SupportedIdentityProviders:
         - COGNITO
@@ -298,6 +300,70 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
+  GetMyExperimentsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/me/experiments
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  # Researcher Routes (Admin)
+  CreateExperimentResearcherRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: POST /api/researcher/experiments
+      AuthorizationType: JWT
+      AuthorizerId: !Ref ResearcherAuthorizer
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  UpdateExperimentResearcherRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: PUT /api/researcher/experiments/{experimentId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref ResearcherAuthorizer
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  DeleteExperimentResearcherRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: DELETE /api/researcher/experiments/{experimentId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref ResearcherAuthorizer
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetExperimentMembersRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/experiments/{experimentId}/members
+      AuthorizationType: JWT
+      AuthorizerId: !Ref ResearcherAuthorizer
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  AddMemberRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: PUT /api/experiments/{experimentId}/members/{userSub}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref ResearcherAuthorizer
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  RemoveMemberRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: DELETE /api/experiments/{experimentId}/members/{userSub}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref ResearcherAuthorizer
+      Target: !Sub integrations/${ExperimentsIntegration}
+
   SubmitResponseRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -351,6 +417,34 @@ Resources:
       RouteKey: PUT /api/questionnaires/{questionnaireId}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  # Researcher Questionnaire Routes (Admin)
+  CreateQuestionnaireResearcherRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: POST /api/researcher/questionnaires
+      AuthorizationType: JWT
+      AuthorizerId: !Ref ResearcherAuthorizer
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  UpdateQuestionnaireResearcherRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: PUT /api/researcher/questionnaires/{questionnaireId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref ResearcherAuthorizer
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  DeleteQuestionnaireResearcherRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: DELETE /api/researcher/questionnaires/{questionnaireId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref ResearcherAuthorizer
       Target: !Sub integrations/${QuestionnairesIntegration}
 
   # Mobile Sync Routes

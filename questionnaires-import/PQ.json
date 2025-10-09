@@ -1,0 +1,35 @@
+{
+  "id": "PQ",
+  "data": {
+    "name": "Presence Questionnaire",
+    "description": "Measures the sense of presence in a virtual environment",
+    "estimatedTime": 300,
+    "version": "1.0",
+    "questions": [
+      {"id": "q1", "text": "How much were you able to control events?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - COMPLETELY"], "required": true},
+      {"id": "q2", "text": "How responsive was the environment to actions that you initiated (or performed)?", "type": "choice", "options": ["1 - NOT RESPONSIVE", "2", "3", "4 - MODERATELY RESPONSIVE", "5", "6", "7 - COMPLETELY RESPONSIVE"], "required": true},
+      {"id": "q3", "text": "How natural did your interactions with the environment seem?", "type": "choice", "options": ["1 - EXTREMELY ARTIFICIAL", "2", "3", "4 - BORDERLINE", "5", "6", "7 - COMPLETELY NATURAL"], "required": true},
+      {"id": "q4", "text": "How much did the visual aspects of the environment involve you?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - COMPLETELY"], "required": true},
+      {"id": "q5", "text": "How natural was the mechanism which controlled movement through the environment?", "type": "choice", "options": ["1 - EXTREMELY ARTIFICIAL", "2", "3", "4 - BORDERLINE", "5", "6", "7 - COMPLETELY NATURAL"], "required": true},
+      {"id": "q6", "text": "How compelling was your sense of objects moving through space?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - MODERATELY COMPELLING", "5", "6", "7 - VERY COMPELLING"], "required": true},
+      {"id": "q7", "text": "How much did your experiences in the virtual environment seem consistent with your real-world experiences?", "type": "choice", "options": ["1 - NOT CONSISTENT", "2", "3", "4 - MODERATELY CONSISTENT", "5", "6", "7 - VERY CONSISTENT"], "required": true},
+      {"id": "q8", "text": "Were you able to anticipate what would happen next in response to the actions that you performed?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - COMPLETELY"], "required": true},
+      {"id": "q9", "text": "How completely were you able to actively survey or search the environment using vision?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - COMPLETELY"], "required": true},
+      {"id": "q10", "text": "How compelling was your sense of moving around inside the virtual environment?", "type": "choice", "options": ["1 - NOT COMPELLING", "2", "3", "4 - MODERATELY COMPELLING", "5", "6", "7 - VERY COMPELLING"], "required": true},
+      {"id": "q11", "text": "How closely were you able to examine objects?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - PRETTY CLOSELY", "5", "6", "7 - VERY CLOSELY"], "required": true},
+      {"id": "q12", "text": "How well could you examine objects from multiple viewpoints?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - EXTENSIVELY"], "required": true},
+      {"id": "q13", "text": "How involved were you in the virtual environment experience?", "type": "choice", "options": ["1 - NOT INVOLVED", "2", "3", "4 - MILDLY INVOLVED", "5", "6", "7 - COMPLETELY ENGROSSED"], "required": true},
+      {"id": "q14", "text": "How much delay did you experience between your actions and expected outcomes?", "type": "choice", "options": ["1 - NO DELAYS", "2", "3", "4 - MODERATE DELAYS", "5", "6", "7 - LONG DELAYS"], "required": true},
+      {"id": "q15", "text": "How quickly did you adjust to the virtual environment experience?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SLOWLY", "5", "6", "7 - LESS THAN ONE MINUTE"], "required": true},
+      {"id": "q16", "text": "How proficient in moving and interacting with the virtual environment did you feel at the end of the experience?", "type": "choice", "options": ["1 - NOT PROFICIENT", "2", "3", "4 - REASONABLY PROFICIENT", "5", "6", "7 - VERY PROFICIENT"], "required": true},
+      {"id": "q17", "text": "How much did the visual display quality interfere or distract you from performing assigned tasks or required activities?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - INTERFERED SOMEWHAT", "5", "6", "7 - PREVENTED TASK PERFORMANCE"], "required": true},
+      {"id": "q18", "text": "How much did the control devices interfere with the performance of assigned tasks or with other activities?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - INTERFERED SOMEWHAT", "5", "6", "7 - INTERFERED GREATLY"], "required": true},
+      {"id": "q19", "text": "How well could you concentrate on the assigned tasks or required activities rather than on the mechanisms used to perform those tasks or activities?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - COMPLETELY"], "required": true},
+      {"id": "q20", "text": "How much did the auditory aspects of the environment involve you?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - COMPLETELY"], "required": true},
+      {"id": "q21", "text": "How well could you identify sounds?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - COMPLETELY"], "required": true},
+      {"id": "q22", "text": "How well could you localize sounds?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - COMPLETELY"], "required": true},
+      {"id": "q23", "text": "How well could you actively survey or search the virtual environment using touch?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - COMPLETELY"], "required": true},
+      {"id": "q24", "text": "How well could you move or manipulate objects in the virtual environment?", "type": "choice", "options": ["1 - NOT AT ALL", "2", "3", "4 - SOMEWHAT", "5", "6", "7 - EXTENSIVELY"], "required": true}
+    ]
+  }
+}

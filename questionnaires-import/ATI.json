@@ -1,0 +1,20 @@
+{
+  "id": "ATI",
+  "data": {
+    "name": "Affinity for Technology Interaction Scale",
+    "description": "Measures individual differences in the tendency to actively engage with technology",
+    "estimatedTime": 180,
+    "version": "1.0",
+    "questions": [
+      {"id": "q01", "text": "I like to occupy myself in greater detail with technical systems.", "type": "choice", "options": ["completely disagree", "largely disagree", "slightly disagree", "slightly agree", "largely agree", "completely agree"], "required": true},
+      {"id": "q02", "text": "I like testing the functions of new technical systems.", "type": "choice", "options": ["completely disagree", "largely disagree", "slightly disagree", "slightly agree", "largely agree", "completely agree"], "required": true},
+      {"id": "q03", "text": "I predominantly deal with technical systems because I have to.", "type": "choice", "options": ["completely disagree", "largely disagree", "slightly disagree", "slightly agree", "largely agree", "completely agree"], "required": true},
+      {"id": "q04", "text": "When I have a new technical system in front of me, I try it out intensively.", "type": "choice", "options": ["completely disagree", "largely disagree", "slightly disagree", "slightly agree", "largely agree", "completely agree"], "required": true},
+      {"id": "q05", "text": "I enjoy spending time becoming acquainted with a new technical system.", "type": "choice", "options": ["completely disagree", "largely disagree", "slightly disagree", "slightly agree", "largely agree", "completely agree"], "required": true},
+      {"id": "q06", "text": "It is enough for me that a technical system works; I don't care how or why.", "type": "choice", "options": ["completely disagree", "largely disagree", "slightly disagree", "slightly agree", "largely agree", "completely agree"], "required": true},
+      {"id": "q07", "text": "I try to understand how a technical system exactly works.", "type": "choice", "options": ["completely disagree", "largely disagree", "slightly disagree", "slightly agree", "largely agree", "completely agree"], "required": true},
+      {"id": "q08", "text": "It is enough for me to know the basic functions of a technical system.", "type": "choice", "options": ["completely disagree", "largely disagree", "slightly disagree", "slightly agree", "largely agree", "completely agree"], "required": true},
+      {"id": "q09", "text": "I try to make full use of the capabilities of a technical system.", "type": "choice", "options": ["completely disagree", "largely disagree", "slightly disagree", "slightly agree", "largely agree", "completely agree"], "required": true}
+    ]
+  }
+}

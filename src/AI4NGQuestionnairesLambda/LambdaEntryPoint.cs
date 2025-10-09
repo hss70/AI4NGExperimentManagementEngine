@@ -110,6 +110,8 @@ public class LambdaEntryPoint
             {
                 ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
                 ["SK"] = new("CONFIG"),
+                ["GSI3PK"] = new("QUESTIONNAIRE"),
+                ["GSI3SK"] = new(timestamp),
                 ["type"] = new("Questionnaire"),
                 ["data"] = new AttributeValue { M = JsonToAttributeValue(questionnaire.GetProperty("data")) },
                 ["createdAt"] = new(timestamp),
@@ -139,7 +141,7 @@ public class LambdaEntryPoint
                 ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
                 ["SK"] = new("CONFIG")
             },
-            UpdateExpression = "SET #data = :data, updatedAt = :timestamp, syncMetadata.#version = syncMetadata.#version + :inc, syncMetadata.lastModified = :timestamp",
+            UpdateExpression = "SET #data = :data, updatedAt = :timestamp, GSI3SK = :timestamp, syncMetadata.#version = syncMetadata.#version + :inc, syncMetadata.lastModified = :timestamp",
             ExpressionAttributeNames = new Dictionary<string, string>
             {
                 ["#data"] = "data",
