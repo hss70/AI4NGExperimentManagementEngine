@@ -9,7 +9,105 @@ All endpoints require JWT Bearer token in Authorization header:
 Authorization: Bearer {jwt-token}
 ```
 
-## Experiments API
+## User Types
+- **Researchers**: Admin users with full CRUD permissions (use `/api/researcher/` endpoints)
+- **Participants**: Regular users with read-only access + response submission (use `/api/` endpoints)
+
+## Researcher API (Admin Access)
+
+### POST /api/researcher/experiments
+Create new experiment (researchers only).
+
+**Request Body:**
+```json
+{
+  "data": {
+    "name": "BCI Learning Study",
+    "description": "A 21-day study on BCI skill acquisition"
+  },
+  "questionnaireConfig": {
+    "schedule": {
+      "PQ": "every_session",
+      "16PF5": "once"
+    }
+  }
+}
+```
+
+### PUT /api/researcher/experiments/{experimentId}
+Update experiment (researchers only).
+
+### DELETE /api/researcher/experiments/{experimentId}
+Delete experiment (researchers only).
+
+### POST /api/researcher/questionnaires
+Create new questionnaire (researchers only).
+
+### PUT /api/researcher/questionnaires/{questionnaireId}
+Update questionnaire (researchers only).
+
+### DELETE /api/researcher/questionnaires/{questionnaireId}
+Delete questionnaire (researchers only).
+
+### PUT /api/experiments/{experimentId}/members/{userSub}
+Add user to experiment (researchers only).
+
+**Request Body:**
+```json
+{
+  "role": "participant",
+  "status": "active",
+  "cohort": "A",
+  "startDate": "2023-11-02",
+  "endDate": "2023-11-23",
+  "timezone": "Europe/London",
+  "pseudoId": "P-7GQ2K1"
+}
+```
+
+### DELETE /api/experiments/{experimentId}/members/{userSub}
+Remove user from experiment (researchers only).
+
+### GET /api/experiments/{experimentId}/members
+List experiment members (researchers only).
+
+**Response:**
+```json
+[
+  {
+    "userSub": "0b8b7c42-3f8b-4f22-9b7a-2f4f4b8a7e5a",
+    "role": "participant",
+    "status": "active",
+    "assignedAt": "2023-11-01T09:00:00Z",
+    "cohort": "A",
+    "pseudoId": "P-7GQ2K1"
+  }
+]
+```
+
+## Participant API (Read-Only + Responses)
+
+### Experiments API
+
+### GET /api/me/experiments
+Get experiments assigned to the current user.
+
+**Response:**
+```json
+[
+  {
+    "id": "experiment-uuid",
+    "name": "BCI Learning Study",
+    "description": "A 21-day study on BCI skill acquisition",
+    "membership": {
+      "role": "participant",
+      "status": "active",
+      "cohort": "A",
+      "pseudoId": "P-7GQ2K1"
+    }
+  }
+]
+```
 
 ### GET /api/experiments
 List all experiments.
@@ -54,28 +152,12 @@ Get experiment details with sessions.
 ```
 
 ### POST /api/experiments
-Create new experiment.
-
-**Request Body:**
-```json
-{
-  "data": {
-    "name": "BCI Learning Study",
-    "description": "A 21-day study on BCI skill acquisition"
-  },
-  "questionnaireConfig": {
-    "schedule": {
-      "PQ": "every_session",
-      "16PF5": "once"
-    }
-  }
-}
-```
+**RESTRICTED**: Returns 403 Forbidden for participants. Use researcher endpoints for creation.
 
 **Response:**
 ```json
 {
-  "id": "experiment-uuid"
+  "error": "Participants cannot create experiments"
 }
 ```
 
@@ -155,51 +237,22 @@ Get questionnaire definition.
 ```
 
 ### POST /api/questionnaires
-Create new questionnaire.
-
-**Request Body:**
-```json
-{
-  "id": "PQ",
-  "data": {
-    "name": "Presence Questionnaire",
-    "description": "Measures the sense of presence in a virtual environment",
-    "estimatedTime": 120,
-    "version": "1.0",
-    "questions": [
-      {
-        "id": "1",
-        "text": "Time seemed to go by",
-        "type": "scale",
-        "scale": {
-          "min": 1,
-          "max": 10,
-          "minLabel": "Quickly",
-          "maxLabel": "Slowly"
-        },
-        "required": true
-      }
-    ]
-  }
-}
-```
+**RESTRICTED**: Returns 403 Forbidden for participants. Use researcher endpoints for creation.
 
 **Response:**
 ```json
 {
-  "id": "PQ"
+  "error": "Participants cannot create questionnaires"
 }
 ```
 
 ### PUT /api/questionnaires/{questionnaireId}
-Update questionnaire definition.
-
-**Request Body:** Same as POST
+**RESTRICTED**: Returns 403 Forbidden for participants. Use researcher endpoints for updates.
 
 **Response:**
 ```json
 {
-  "message": "Questionnaire updated successfully"
+  "error": "Participants cannot update questionnaires"
 }
 ```
 
@@ -317,6 +370,19 @@ Get modified responses for mobile sync.
 ]
 ```
 
+## Authentication Details
+
+### Researcher Authentication
+Researchers must authenticate against the researcher user pool to access admin endpoints:
+- User Pool: `ai4ng-researchers-{environment}`
+- Client ID: Available in CloudFormation outputs
+- Endpoints: `/api/researcher/*`
+
+### Participant Authentication
+Participants use the shared authentication system:
+- Endpoints: `/api/*` (excluding `/api/researcher/*`)
+- Limited to read operations and response submission
+
 ## Error Responses
 
 All endpoints return errors in this format:
@@ -329,6 +395,7 @@ All endpoints return errors in this format:
 **Status Codes:**
 - `400` - Bad Request
 - `401` - Unauthorized
+- `403` - Forbidden (insufficient permissions)
 - `404` - Not Found
 - `405` - Method Not Allowed
 - `500` - Internal Server Error

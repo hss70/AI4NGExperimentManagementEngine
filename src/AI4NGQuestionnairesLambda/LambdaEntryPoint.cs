@@ -28,13 +28,19 @@ public class LambdaEntryPoint
             if (string.IsNullOrEmpty(username))
                 return Error(401, "Unauthorized");
 
+            var isResearcher = request.Path.StartsWith("/api/researcher/");
+            
             return request.HttpMethod.ToUpper() switch
             {
                 "GET" when request.PathParameters?.ContainsKey("questionnaireId") == true => 
                     await GetQuestionnaire(request.PathParameters["questionnaireId"]),
                 "GET" => await GetQuestionnaires(),
-                "POST" => await CreateQuestionnaire(request.Body, username),
-                "PUT" => await UpdateQuestionnaire(request.PathParameters?["questionnaireId"] ?? "", request.Body, username),
+                "POST" when isResearcher => await CreateQuestionnaire(request.Body, username),
+                "PUT" when isResearcher => await UpdateQuestionnaire(request.PathParameters?["questionnaireId"] ?? "", request.Body, username),
+                "DELETE" when isResearcher => await DeleteQuestionnaire(request.PathParameters?["questionnaireId"] ?? "", username),
+                "POST" when !isResearcher => Error(403, "Participants cannot create questionnaires"),
+                "PUT" when !isResearcher => Error(403, "Participants cannot update questionnaires"),
+                "DELETE" when !isResearcher => Error(403, "Participants cannot delete questionnaires"),
                 _ => Error(405, "Method not allowed")
             };
         }
@@ -148,6 +154,21 @@ public class LambdaEntryPoint
         });
 
         return Success(new { message = "Questionnaire updated successfully" });
+    }
+
+    private async Task<APIGatewayProxyResponse> DeleteQuestionnaire(string questionnaireId, string username)
+    {
+        await _dynamoClient.DeleteItemAsync(new DeleteItemRequest
+        {
+            TableName = _questionnairesTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
+                ["SK"] = new("CONFIG")
+            }
+        });
+
+        return Success(new { message = "Questionnaire deleted successfully" });
     }
 
     private Dictionary<string, AttributeValue> JsonToAttributeValue(JsonElement element)

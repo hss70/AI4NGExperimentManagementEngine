@@ -121,6 +121,51 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  ###################################
+  # Researcher Cognito User Pool (no hosted UI)
+  ###################################
+  ResearcherUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ai4ng-researchers-${Environment}
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      MfaConfiguration: "OFF"
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+
+  ResearcherUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: ai4ng-researcher-client
+      UserPoolId: !Ref ResearcherUserPool
+      GenerateSecret: false
+      # Important: disable OAuth flows, you’ll use direct auth APIs instead
+      AllowedOAuthFlowsUserPoolClient: false
+      SupportedIdentityProviders:
+        - COGNITO
+  ResearcherAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref SharedApiId
+      AuthorizerType: JWT
+      Name: ResearcherAuthorizer
+      IdentitySource:
+        - "$request.header.Authorization"
+      JwtConfiguration:
+        Issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${ResearcherUserPool}"
+        Audience:
+          - !Ref ResearcherUserPoolClient
+
   # Lambda Functions
   ExperimentsApi:
     Type: AWS::Serverless::Function

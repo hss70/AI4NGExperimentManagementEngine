@@ -30,14 +30,25 @@ public class LambdaEntryPoint
             if (string.IsNullOrEmpty(username))
                 return Error(401, "Unauthorized");
 
+            var isResearcher = request.Path.StartsWith("/api/researcher/");
+            
             return request.HttpMethod.ToUpper() switch
             {
+                "GET" when request.Path == "/api/me/experiments" => await GetMyExperiments(username),
+                "GET" when request.Path.Contains("/members") => await GetExperimentMembers(request.PathParameters?["experimentId"] ?? ""),
                 "GET" when request.PathParameters?.ContainsKey("experimentId") == true => 
                     await GetExperiment(request.PathParameters["experimentId"]),
                 "GET" => await GetExperiments(),
                 "POST" when request.Path.EndsWith("/sync") => 
                     await SyncExperiment(request.PathParameters?["experimentId"] ?? "", request.Body, username),
-                "POST" => await CreateExperiment(request.Body, username),
+                "PUT" when request.Path.Contains("/members/") => 
+                    await AddMember(request.PathParameters?["experimentId"] ?? "", request.PathParameters?["userSub"] ?? "", request.Body, username),
+                "DELETE" when request.Path.Contains("/members/") => 
+                    await RemoveMember(request.PathParameters?["experimentId"] ?? "", request.PathParameters?["userSub"] ?? "", username),
+                "POST" when isResearcher => await CreateExperiment(request.Body, username),
+                "PUT" when isResearcher => await UpdateExperiment(request.PathParameters?["experimentId"] ?? "", request.Body, username),
+                "DELETE" when isResearcher => await DeleteExperiment(request.PathParameters?["experimentId"] ?? "", username),
+                "POST" when !isResearcher => Error(403, "Participants cannot create experiments"),
                 _ => Error(405, "Method not allowed")
             };
         }
@@ -144,6 +155,162 @@ public class LambdaEntryPoint
         }
 
         return Success(new { message = "Experiment synced successfully" });
+    }
+
+    private async Task<APIGatewayProxyResponse> UpdateExperiment(string experimentId, string body, string username)
+    {
+        var experiment = JsonSerializer.Deserialize<JsonElement>(body);
+
+        await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"EXPERIMENT#{experimentId}"),
+                ["SK"] = new("METADATA")
+            },
+            UpdateExpression = "SET #data = :data, updatedBy = :user, updatedAt = :timestamp",
+            ExpressionAttributeNames = new Dictionary<string, string> { ["#data"] = "data" },
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":data"] = new AttributeValue { M = JsonToAttributeValue(experiment.GetProperty("data")) },
+                [":user"] = new(username),
+                [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
+            }
+        });
+
+        return Success(new { message = "Experiment updated successfully" });
+    }
+
+    private async Task<APIGatewayProxyResponse> DeleteExperiment(string experimentId, string username)
+    {
+        await _dynamoClient.DeleteItemAsync(new DeleteItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"EXPERIMENT#{experimentId}"),
+                ["SK"] = new("METADATA")
+            }
+        });
+
+        return Success(new { message = "Experiment deleted successfully" });
+    }
+
+    private async Task<APIGatewayProxyResponse> GetMyExperiments(string username)
+    {
+        var response = await _dynamoClient.QueryAsync(new QueryRequest
+        {
+            TableName = _experimentsTable,
+            IndexName = "GSI1",
+            KeyConditionExpression = "GSI1PK = :pk",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":pk"] = new($"USER#{username}")
+            }
+        });
+
+        var experiments = new List<object>();
+        foreach (var item in response.Items)
+        {
+            var experimentId = item["GSI1SK"].S.Replace("EXPERIMENT#", "");
+            var experimentResponse = await _dynamoClient.GetItemAsync(new GetItemRequest
+            {
+                TableName = _experimentsTable,
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    ["PK"] = new($"EXPERIMENT#{experimentId}"),
+                    ["SK"] = new("METADATA")
+                }
+            });
+
+            if (experimentResponse.IsItemSet)
+            {
+                experiments.Add(new
+                {
+                    id = experimentId,
+                    name = experimentResponse.Item["data"].M["name"].S,
+                    description = experimentResponse.Item["data"].M.GetValueOrDefault("description")?.S ?? "",
+                    membership = new
+                    {
+                        role = item["role"].S,
+                        status = item["status"].S,
+                        cohort = item.GetValueOrDefault("cohort")?.S,
+                        pseudoId = item.GetValueOrDefault("pseudoId")?.S
+                    }
+                });
+            }
+        }
+
+        return Success(experiments);
+    }
+
+    private async Task<APIGatewayProxyResponse> GetExperimentMembers(string experimentId)
+    {
+        var response = await _dynamoClient.QueryAsync(new QueryRequest
+        {
+            TableName = _experimentsTable,
+            KeyConditionExpression = "PK = :pk AND begins_with(SK, :sk)",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":pk"] = new($"EXPERIMENT#{experimentId}"),
+                [":sk"] = new("MEMBER#")
+            }
+        });
+
+        var members = response.Items.Select(item => new
+        {
+            userSub = item["SK"].S.Replace("MEMBER#", ""),
+            role = item["role"].S,
+            status = item["status"].S,
+            assignedAt = item["assignedAt"].S,
+            cohort = item.GetValueOrDefault("cohort")?.S,
+            pseudoId = item.GetValueOrDefault("pseudoId")?.S
+        });
+
+        return Success(members);
+    }
+
+    private async Task<APIGatewayProxyResponse> AddMember(string experimentId, string userSub, string body, string username)
+    {
+        var memberData = JsonSerializer.Deserialize<JsonElement>(body);
+        var timestamp = DateTime.UtcNow.ToString("O");
+
+        await _dynamoClient.PutItemAsync(new PutItemRequest
+        {
+            TableName = _experimentsTable,
+            Item = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"EXPERIMENT#{experimentId}"),
+                ["SK"] = new($"MEMBER#{userSub}"),
+                ["GSI1PK"] = new($"USER#{userSub}"),
+                ["GSI1SK"] = new($"EXPERIMENT#{experimentId}"),
+                ["type"] = new("Membership"),
+                ["role"] = new(memberData.GetProperty("role").GetString()),
+                ["status"] = new(memberData.GetProperty("status").GetString()),
+                ["assignedAt"] = new(timestamp),
+                ["cohort"] = new(memberData.GetProperty("cohort").GetString()),
+                ["pseudoId"] = new(memberData.GetProperty("pseudoId").GetString()),
+                ["assignedBy"] = new(username)
+            }
+        });
+
+        return Success(new { message = "Member added successfully" });
+    }
+
+    private async Task<APIGatewayProxyResponse> RemoveMember(string experimentId, string userSub, string username)
+    {
+        await _dynamoClient.DeleteItemAsync(new DeleteItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"EXPERIMENT#{experimentId}"),
+                ["SK"] = new($"MEMBER#{userSub}")
+            }
+        });
+
+        return Success(new { message = "Member removed successfully" });
     }
 
     private Dictionary<string, AttributeValue> JsonToAttributeValue(JsonElement element)

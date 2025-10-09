@@ -8,12 +8,12 @@ This document outlines the database design for a Brain-Computer Interface (BCI) 
 
 ### 1. AI4NGExperiments (Main Table)
 
-Stores experiments, sessions, tasks, and experiment configurations. References questionnaire IDs rather than storing full definitions.
+Stores experiments, sessions, tasks, experiment configurations, and user memberships. References questionnaire IDs rather than storing full definitions.
 
 #### Key Structure:
 - **PK** (Partition Key): Entity identifier (`EXPERIMENT#<id>`, `SESSION#<exp_id>#<session_id>`, `TASK#<id>`)
-- **SK** (Sort Key): Item type (`METADATA`, `TASK#<id>`, `CONFIG`)
-- **GSI1PK/GSI1SK**: For querying all sessions for an experiment
+- **SK** (Sort Key): Item type (`METADATA`, `TASK#<id>`, `CONFIG`, `MEMBER#<cognito_sub>`)
+- **GSI1PK/GSI1SK**: For querying all sessions for an experiment OR user memberships
 - **GSI3PK/GSI3SK**: For mobile sync (user-based queries)
 
 #### Key Attributes:
@@ -77,7 +77,15 @@ Stores user responses to questionnaire questions with multiple access patterns.
 - Query answers by user: Query GSI2 with `GSI2PK = USER#<user_id>`
 - Query answers by session-task: Query GSI1 with `GSI1PK = SESSION#<exp_id>#<session_id>#TASK#<task_id>`
 
+### Membership Management:
+- List experiment members: Query `PK = EXPERIMENT#<id>` with `SK begins_with MEMBER#`
+- List user experiments: Query GSI1 with `GSI1PK = USER#<cognito_sub>`
+- Check user membership: Get item `PK = EXPERIMENT#<id>, SK = MEMBER#<cognito_sub>`
+- Add user to experiment: Put item with membership data
+- Remove user from experiment: Delete item `PK = EXPERIMENT#<id>, SK = MEMBER#<cognito_sub>`
+
 ### Mobile Sync:
+- Get user experiments: Query GSI1 with `GSI1PK = USER#<cognito_sub>` to get memberships, then batch get experiment metadata
 - Get modified experiments: Query GSI3 with `GSI3PK = USER#<user_id>#EXPERIMENT` and `GSI3SK > lastSync`
 - Get modified questionnaires: Query GSI3 with `GSI3PK = USER#<user_id>#QUESTIONNAIRE` and `GSI3SK > lastSync`
 - Get modified responses: Query GSI3 with `GSI3PK = USER#<user_id>#RESPONSE` and `GSI3SK > lastSync`
@@ -158,6 +166,49 @@ Stores user responses to questionnaire questions with multiple access patterns.
     "lastModified": "2023-11-07T10:25:00Z",
     "modifiedBy": "USER_456",
     "clientId": "mobile-app-123",
+    "isDeleted": false
+  }
+}
+
+### Membership Item (Participant):
+```json
+{
+  "PK": "EXPERIMENT#EXP_001",
+  "SK": "MEMBER#0b8b7c42-3f8b-4f22-9b7a-2f4f4b8a7e5a",
+  "GSI1PK": "USER#0b8b7c42-3f8b-4f22-9b7a-2f4f4b8a7e5a",
+  "GSI1SK": "EXPERIMENT#EXP_001",
+  "type": "Membership",
+  "role": "participant",
+  "status": "active",
+  "assignedAt": "2023-11-01T09:00:00Z",
+  "cohort": "A",
+  "startDate": "2023-11-02",
+  "endDate": "2023-11-23",
+  "timezone": "Europe/London",
+  "scheduleSeed": 317,
+  "pseudoId": "P-7GQ2K1",
+  "syncMetadata": {
+    "version": 1,
+    "lastModified": "2023-11-01T09:00:00Z",
+    "isDeleted": false
+  }
+}
+
+### Membership Item (Researcher):
+```json
+{
+  "PK": "EXPERIMENT#EXP_001",
+  "SK": "MEMBER#e5a3d1f7-2a6b-4c5f-9d71-0f2c56ce9b21",
+  "GSI1PK": "USER#e5a3d1f7-2a6b-4c5f-9d71-0f2c56ce9b21",
+  "GSI1SK": "EXPERIMENT#EXP_001",
+  "type": "Membership",
+  "role": "researcher",
+  "status": "active",
+  "assignedAt": "2023-11-01T09:05:00Z",
+  "permissions": ["experiments:create", "experiments:update"],
+  "syncMetadata": {
+    "version": 1,
+    "lastModified": "2023-11-01T09:05:00Z",
     "isDeleted": false
   }
 }
