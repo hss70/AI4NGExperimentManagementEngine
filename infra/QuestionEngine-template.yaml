@@ -316,7 +316,7 @@ Resources:
       ApiId: !Ref SharedApiId
       RouteKey: POST /api/researcher/experiments
       AuthorizationType: JWT
-      AuthorizerId: !Ref ResearcherAuthorizer
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
   UpdateExperimentResearcherRoute:
@@ -325,7 +325,7 @@ Resources:
       ApiId: !Ref SharedApiId
       RouteKey: PUT /api/researcher/experiments/{experimentId}
       AuthorizationType: JWT
-      AuthorizerId: !Ref ResearcherAuthorizer
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
   DeleteExperimentResearcherRoute:
@@ -334,7 +334,7 @@ Resources:
       ApiId: !Ref SharedApiId
       RouteKey: DELETE /api/researcher/experiments/{experimentId}
       AuthorizationType: JWT
-      AuthorizerId: !Ref ResearcherAuthorizer
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
   GetExperimentMembersRoute:
@@ -343,7 +343,7 @@ Resources:
       ApiId: !Ref SharedApiId
       RouteKey: GET /api/experiments/{experimentId}/members
       AuthorizationType: JWT
-      AuthorizerId: !Ref ResearcherAuthorizer
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
   AddMemberRoute:
@@ -352,7 +352,7 @@ Resources:
       ApiId: !Ref SharedApiId
       RouteKey: PUT /api/experiments/{experimentId}/members/{userSub}
       AuthorizationType: JWT
-      AuthorizerId: !Ref ResearcherAuthorizer
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
   RemoveMemberRoute:
@@ -361,7 +361,7 @@ Resources:
       ApiId: !Ref SharedApiId
       RouteKey: DELETE /api/experiments/{experimentId}/members/{userSub}
       AuthorizationType: JWT
-      AuthorizerId: !Ref ResearcherAuthorizer
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
   SubmitResponseRoute:
@@ -426,7 +426,7 @@ Resources:
       ApiId: !Ref SharedApiId
       RouteKey: POST /api/researcher/questionnaires
       AuthorizationType: JWT
-      AuthorizerId: !Ref ResearcherAuthorizer
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${QuestionnairesIntegration}
 
   UpdateQuestionnaireResearcherRoute:
@@ -435,7 +435,7 @@ Resources:
       ApiId: !Ref SharedApiId
       RouteKey: PUT /api/researcher/questionnaires/{questionnaireId}
       AuthorizationType: JWT
-      AuthorizerId: !Ref ResearcherAuthorizer
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${QuestionnairesIntegration}
 
   DeleteQuestionnaireResearcherRoute:
@@ -444,7 +444,7 @@ Resources:
       ApiId: !Ref SharedApiId
       RouteKey: DELETE /api/researcher/questionnaires/{questionnaireId}
       AuthorizationType: JWT
-      AuthorizerId: !Ref ResearcherAuthorizer
+      AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${QuestionnairesIntegration}
 
   # Mobile Sync Routes
