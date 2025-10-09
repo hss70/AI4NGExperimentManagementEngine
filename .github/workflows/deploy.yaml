@@ -1,4 +1,4 @@
-name: Deploy Question Engine to AWS Lambda
+name: Deploy Experiment Management to AWS Lambda
 
 on:
   push:
@@ -6,7 +6,12 @@ on:
   workflow_dispatch:
 
 jobs:
+  validate:
+    uses: ./.github/workflows/build-validation.yml
+    secrets: inherit
+
   deploy-dev:
+    needs: validate
     runs-on: ubuntu-latest
 
     env:
@@ -63,7 +68,7 @@ jobs:
           echo "private_subnets=$PRIVATE_SUBNETS" >> $GITHUB_OUTPUT
 
       - name: Build SAM
-        run: sam build --template-file infra/QuestionEngine-template.yaml
+        run: sam build --template-file infra/ExperimentManagement-template.yaml
 
       - name: Deploy SAM
         run: |

@@ -59,11 +59,11 @@ jobs:
         
     - name: SAM Build
       run: |
-        sam build --template-file infra/QuestionEngine-template.yaml
+        sam build --template-file infra/ExperimentManagement-template.yaml
         
     - name: Validate CloudFormation
       run: |
-        aws cloudformation validate-template --template-body file://infra/QuestionEngine-template.yaml
+        aws cloudformation validate-template --template-body file://infra/ExperimentManagement-template.yaml
         
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
