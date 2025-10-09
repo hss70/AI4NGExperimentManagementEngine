@@ -68,6 +68,8 @@ jobs:
           echo "private_subnets=$PRIVATE_SUBNETS" >> $GITHUB_OUTPUT
 
       - name: Build SAM
+        env:
+          SAM_CLI_TELEMETRY: 0
         run: sam build --template-file infra/ExperimentManagement-template.yaml
 
       - name: Deploy SAM

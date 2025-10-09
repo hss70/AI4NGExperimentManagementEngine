@@ -5,6 +5,7 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
+  workflow_call:
 
 jobs:
   validate-build:
@@ -58,6 +59,8 @@ jobs:
         dotnet test --configuration Release --no-build --collect:"XPlat Code Coverage" --filter "Category!=Integration"
         
     - name: SAM Build
+      env:
+        SAM_CLI_TELEMETRY: 0
       run: |
         sam build --template-file infra/ExperimentManagement-template.yaml
         
