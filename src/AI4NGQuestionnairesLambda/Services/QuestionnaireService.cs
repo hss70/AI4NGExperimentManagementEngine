@@ -54,6 +54,9 @@ public class QuestionnaireService : IQuestionnaireService
 
         if (!response.IsItemSet) return null;
 
+        if (!response.Item.ContainsKey("data"))
+            return null;
+
         return new Questionnaire
         {
             Id = id,
@@ -65,6 +68,31 @@ public class QuestionnaireService : IQuestionnaireService
 
     public async Task<string> CreateAsync(CreateQuestionnaireRequest request, string username)
     {
+        // Input validation
+        if (request?.Data == null)
+            throw new ArgumentException("Request data cannot be null");
+            
+        if (string.IsNullOrWhiteSpace(request.Data.Name))
+            throw new ArgumentException("Questionnaire name cannot be empty");
+
+        // Check for duplicate questionnaire ID
+        var existingItem = await _dynamoClient.GetItemAsync(new GetItemRequest
+        {
+            TableName = _tableName,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"QUESTIONNAIRE#{request.Id}"),
+                ["SK"] = new("CONFIG")
+            }
+        });
+
+        if (existingItem.IsItemSet)
+            throw new DuplicateItemException($"Questionnaire with ID '{request.Id}' already exists");
+
+        // Validate question structure
+        if (request.Data?.Questions != null)
+            ValidateQuestions(request.Data.Questions);
+
         var questionnaireId = request.Id;
         var timestamp = DateTime.UtcNow.ToString("O");
 
@@ -79,7 +107,9 @@ public class QuestionnaireService : IQuestionnaireService
                 ["GSI3SK"] = new(timestamp),
                 ["type"] = new("Questionnaire"),
                 ["data"] = ConvertQuestionnaireDataToAttributeValue(request.Data),
+                ["createdBy"] = new(username),
                 ["createdAt"] = new(timestamp),
+                ["updatedBy"] = new(username),
                 ["updatedAt"] = new(timestamp),
                 ["syncMetadata"] = new AttributeValue { M = new Dictionary<string, AttributeValue>
                 {
@@ -105,7 +135,7 @@ public class QuestionnaireService : IQuestionnaireService
                 ["PK"] = new($"QUESTIONNAIRE#{id}"),
                 ["SK"] = new("CONFIG")
             },
-            UpdateExpression = "SET #data = :data, updatedAt = :timestamp, GSI3SK = :timestamp, syncMetadata.#version = syncMetadata.#version + :inc, syncMetadata.lastModified = :timestamp",
+            UpdateExpression = "SET #data = :data, updatedBy = :user, updatedAt = :timestamp, GSI3SK = :timestamp, syncMetadata.#version = syncMetadata.#version + :inc, syncMetadata.lastModified = :timestamp",
             ExpressionAttributeNames = new Dictionary<string, string>
             {
                 ["#data"] = "data",
@@ -114,6 +144,7 @@ public class QuestionnaireService : IQuestionnaireService
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
                 [":data"] = ConvertQuestionnaireDataToAttributeValue(data),
+                [":user"] = new(username),
                 [":timestamp"] = new(timestamp),
                 [":inc"] = new AttributeValue { N = "1" }
             }
@@ -156,6 +187,35 @@ public class QuestionnaireService : IQuestionnaireService
             ["message"] = $"Processed {requests.Count} questionnaires",
             ["results"] = results
         };
+    }
+
+    private void ValidateQuestions(List<Question> questions)
+    {
+        if (questions == null) return;
+        
+        var questionIds = new HashSet<string>();
+        var validTypes = new[] { "text", "choice", "select", "scale", "number", "boolean" };
+
+        foreach (var question in questions)
+        {
+            if (question == null) continue;
+            
+            // Check question ID uniqueness
+            if (!questionIds.Add(question.Id ?? ""))
+                throw new ArgumentException($"Question ID '{question.Id}' is not unique");
+
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(question.Text))
+                throw new ArgumentException($"Question '{question.Id}' text cannot be empty");
+
+            // Validate question type
+            if (string.IsNullOrWhiteSpace(question.Type) || !validTypes.Contains(question.Type))
+                throw new ArgumentException($"Question '{question.Id}' has invalid type '{question.Type}'");
+
+            // Validate options for select type
+            if (question.Type == "select" && (question.Options == null || !question.Options.Any()))
+                throw new ArgumentException($"Question '{question.Id}' of type 'select' must have options");
+        }
     }
 
     private AttributeValue ConvertQuestionnaireDataToAttributeValue(QuestionnaireData data)

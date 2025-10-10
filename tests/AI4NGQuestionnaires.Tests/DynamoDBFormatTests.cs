@@ -39,6 +39,9 @@ public class DynamoDBFormatTests
         };
 
         PutItemRequest? capturedRequest = null;
+
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+            .ReturnsAsync(new GetItemResponse {Item = null });
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .Callback<PutItemRequest, CancellationToken>((req, _) => capturedRequest = req)
             .ReturnsAsync(new PutItemResponse());
@@ -54,7 +57,7 @@ public class DynamoDBFormatTests
         Assert.Equal("QUESTIONNAIRE#test-questionnaire-001", item["PK"].S);
         
         // Validate SK format
-        Assert.Equal("METADATA", item["SK"].S);
+        Assert.Equal("CONFIG", item["SK"].S);
         
         // Validate type field
         Assert.Equal("Questionnaire", item["type"].S);
@@ -66,7 +69,9 @@ public class DynamoDBFormatTests
         
         // Validate metadata fields
         Assert.Equal("testuser", item["createdBy"].S);
+        Assert.Equal("testuser", item["updatedBy"].S);
         Assert.True(item.ContainsKey("createdAt"));
+        Assert.True(item.ContainsKey("updatedAt"));
         
         // Validate timestamp format (ISO 8601)
         Assert.True(DateTime.TryParse(item["createdAt"].S, out _));
@@ -91,6 +96,8 @@ public class DynamoDBFormatTests
         };
 
         PutItemRequest? capturedRequest = null;
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+            .ReturnsAsync(new GetItemResponse { Item = null });
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .Callback<PutItemRequest, CancellationToken>((req, _) => capturedRequest = req)
             .ReturnsAsync(new PutItemResponse());

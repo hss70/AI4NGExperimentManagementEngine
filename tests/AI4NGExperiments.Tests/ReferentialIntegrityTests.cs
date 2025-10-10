@@ -17,6 +17,7 @@ public class ReferentialIntegrityTests
         _mockDynamoClient = new Mock<IAmazonDynamoDB>();
         Environment.SetEnvironmentVariable("EXPERIMENTS_TABLE", "experiments-test");
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "responses-test");
+        Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "questionnaires-test");
         _service = new ExperimentService(_mockDynamoClient.Object);
     }
 
@@ -34,9 +35,11 @@ public class ReferentialIntegrityTests
         };
 
         // Mock questionnaire not found
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.Is<GetItemRequest>(req => 
-            req.Key["PK"].S == "QUESTIONNAIRE#non-existent-questionnaire"), default))
-            .ReturnsAsync(new GetItemResponse { IsItemSet = false });
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+            .ReturnsAsync(new GetItemResponse { Item = null });
+
+        _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
+            .ReturnsAsync(new PutItemResponse());
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -60,11 +63,9 @@ public class ReferentialIntegrityTests
         };
 
         // Mock questionnaires exist
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.Is<GetItemRequest>(req => 
-            req.Key["PK"].S.StartsWith("QUESTIONNAIRE#")), default))
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
             .ReturnsAsync(new GetItemResponse 
             { 
-                IsItemSet = true,
                 Item = new Dictionary<string, AttributeValue>
                 {
                     ["PK"] = new AttributeValue("QUESTIONNAIRE#test"),
@@ -97,9 +98,11 @@ public class ReferentialIntegrityTests
         };
 
         // Mock experiment not found
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.Is<GetItemRequest>(req => 
-            req.Key["PK"].S == "EXPERIMENT#non-existent-experiment"), default))
-            .ReturnsAsync(new GetItemResponse { IsItemSet = false });
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+            .ReturnsAsync(new GetItemResponse { Item = null });
+
+        _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
+            .ReturnsAsync(new PutItemResponse());
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -126,7 +129,6 @@ public class ReferentialIntegrityTests
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
             .ReturnsAsync(new GetItemResponse 
             { 
-                IsItemSet = true,
                 Item = new Dictionary<string, AttributeValue>
                 {
                     ["PK"] = new AttributeValue("EXPERIMENT#test-experiment")

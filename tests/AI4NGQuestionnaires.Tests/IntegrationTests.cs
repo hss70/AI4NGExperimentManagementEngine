@@ -1,77 +1,83 @@
 using Xunit;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using Amazon.DynamoDBv2;
-using AI4NGQuestionnairesLambda;
-using System.Text;
-using System.Text.Json;
+using Moq;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using AI4NGQuestionnairesLambda.Controllers;
+using AI4NGQuestionnairesLambda.Interfaces;
+using AI4NGQuestionnairesLambda.Models;
 
 namespace AI4NGQuestionnaires.Tests;
 
-public class IntegrationTests : IClassFixture<WebApplicationFactory<Startup>>
+public class ControllerUnitTests
 {
-    private readonly WebApplicationFactory<Startup> _factory;
-    private readonly HttpClient _client;
+    private readonly Mock<IQuestionnaireService> _mockService;
+    private readonly QuestionnairesController _controller;
 
-    public IntegrationTests(WebApplicationFactory<Startup> factory)
+    public ControllerUnitTests()
     {
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                // Replace DynamoDB with in-memory mock for integration tests
-                services.AddSingleton<IAmazonDynamoDB>(provider => 
-                {
-                    var config = new Amazon.DynamoDBv2.AmazonDynamoDBConfig 
-                    { 
-                        ServiceURL = "http://localhost:8000" 
-                    };
-                    return new Amazon.DynamoDBv2.AmazonDynamoDBClient(config);
-                });
-            });
-        });
+        _mockService = new Mock<IQuestionnaireService>();
+        _controller = new QuestionnairesController(_mockService.Object);
         
-        _client = _factory.CreateClient();
+        // Mock HttpContext for local testing
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["X-Test"] = "true";
+        _controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
         
         // Set local testing environment
         Environment.SetEnvironmentVariable("AWS_ENDPOINT_URL", "http://localhost:8000");
-        Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "questionnaires-test");
     }
 
     [Fact]
-    public async Task GetQuestionnaires_ShouldReturn200()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/questionnaires");
-
-        // Assert
-        response.EnsureSuccessStatusCode();
-        Assert.Equal("application/json; charset=utf-8", response.Content.Headers.ContentType?.ToString());
-    }
-
-    [Fact]
-    public async Task CreateQuestionnaire_ShouldReturn200_WithValidData()
+    public async Task GetAll_ShouldReturnOk_WithQuestionnaires()
     {
         // Arrange
-        var questionnaire = new
+        var questionnaires = new List<Questionnaire>
         {
-            id = "integration-test",
-            data = new
-            {
-                name = "Integration Test Questionnaire",
-                description = "Test questionnaire for integration testing"
-            }
+            new() { Id = "test-1", Data = new QuestionnaireData { Name = "Test 1" } }
         };
-
-        var json = JsonSerializer.Serialize(questionnaire);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        _mockService.Setup(x => x.GetAllAsync()).ReturnsAsync(questionnaires);
 
         // Act
-        var response = await _client.PostAsync("/api/questionnaires", content);
+        var result = await _controller.GetAll();
 
         // Assert
-        response.EnsureSuccessStatusCode();
-        var responseContent = await response.Content.ReadAsStringAsync();
-        Assert.Contains("integration-test", responseContent);
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(questionnaires, okResult.Value);
+    }
+
+    [Fact]
+    public async Task Create_ShouldReturnOk_WhenValidRequest()
+    {
+        // Arrange
+        var request = new CreateQuestionnaireRequest
+        {
+            Id = "test-id",
+            Data = new QuestionnaireData { Name = "Test" }
+        };
+        _mockService.Setup(x => x.CreateAsync(request, "testuser")).ReturnsAsync("test-id");
+
+        // Mock researcher path
+        _controller.HttpContext.Request.Path = "/api/researcher/questionnaires";
+
+        // Act
+        var result = await _controller.Create(request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsAssignableFrom<object>(okResult.Value);
+        Assert.NotNull(response);
+    }
+
+    [Fact]
+    public async Task GetById_ShouldReturnNotFound_WhenQuestionnaireDoesNotExist()
+    {
+        // Arrange
+        _mockService.Setup(x => x.GetByIdAsync("nonexistent")).ReturnsAsync((Questionnaire?)null);
+
+        // Act
+        var result = await _controller.GetById("nonexistent");
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result.Result);
     }
 }

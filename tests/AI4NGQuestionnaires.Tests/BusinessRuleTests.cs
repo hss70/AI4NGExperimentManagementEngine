@@ -9,14 +9,45 @@ namespace AI4NGQuestionnaires.Tests;
 
 public class BusinessRuleTests
 {
-    private readonly Mock<IAmazonDynamoDB> _mockDynamoClient;
-    private readonly QuestionnaireService _service;
 
+    private readonly QuestionnaireService _service;
     public BusinessRuleTests()
     {
-        _mockDynamoClient = new Mock<IAmazonDynamoDB>();
+
         Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "test-table");
-        _service = new QuestionnaireService(_mockDynamoClient.Object);
+
+        // Default mock setup for all tests
+        _service = SetUpMockService();
+    }
+
+    public QuestionnaireService SetUpMockService(bool duplicateTest = false)
+    {
+        var mockDynamoClient = new Mock<IAmazonDynamoDB>();
+        mockDynamoClient
+            .Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GetItemRequest req, CancellationToken _) =>
+            {
+                // Simulate: when duplicateTest == true, the item already exists
+                if (duplicateTest)
+                {
+                    return new GetItemResponse
+                    {
+                        Item = new Dictionary<string, AttributeValue>
+                        {
+                            ["PK"] = new AttributeValue($"QUESTIONNAIRE#{req.Key["PK"].S}"),
+                            ["SK"] = new AttributeValue("CONFIG")
+                        }
+                    };
+                }
+
+                // Not found
+                return new GetItemResponse { Item = null };
+            });
+
+        mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
+            .ReturnsAsync(new PutItemResponse());
+
+        return new QuestionnaireService(mockDynamoClient.Object);
     }
 
     [Fact]
@@ -29,20 +60,11 @@ public class BusinessRuleTests
             Data = new QuestionnaireData { Name = "Test" }
         };
 
-        // Mock existing questionnaire
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
-                IsItemSet = true,
-                Item = new Dictionary<string, AttributeValue>
-                {
-                    ["PK"] = new AttributeValue("QUESTIONNAIRE#existing-questionnaire")
-                }
-            });
+        var service = SetUpMockService(duplicateTest: true);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateAsync(request, "testuser"));
+        var exception = await Assert.ThrowsAsync<DuplicateItemException>(
+            () => service.CreateAsync(request, "testuser"));
         
         Assert.Contains("already exists", exception.Message);
     }
@@ -91,6 +113,7 @@ public class BusinessRuleTests
         
         Assert.Contains("unique", exception.Message.ToLower());
         Assert.Contains("question", exception.Message.ToLower());
+        Assert.Contains(request.Data.Questions[0].Id, exception.Message.ToLower());
     }
 
     [Fact]
@@ -150,7 +173,7 @@ public class BusinessRuleTests
         // Arrange
         var request = new CreateQuestionnaireRequest
         {
-            Id = "test-questionnaire",
+            Id = "select-test-questionnaire", // Use unique ID
             Data = new QuestionnaireData 
             { 
                 Name = "Test Questionnaire",

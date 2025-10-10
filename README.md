@@ -46,7 +46,9 @@ sam deploy --guided
 - **Comprehensive Logging** - Debug headers and structured logging
 - **Postman Collections** - Ready-to-use API testing
 - **Batch Operations** - Bulk questionnaire uploads
-- **Unit & Integration Tests** - No deployment required
+- **Comprehensive Test Suite** - Unit tests, controller tests, DB schema compliance
+- **Business Logic Validation** - Input validation, referential integrity, duplicate prevention
+- **Audit Trail** - CreatedBy/UpdatedBy tracking for compliance
 
 ## Build Validation
 

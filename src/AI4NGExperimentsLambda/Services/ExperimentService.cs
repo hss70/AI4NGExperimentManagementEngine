@@ -89,6 +89,26 @@ public class ExperimentService : IExperimentService
 
     public async Task<object> CreateExperimentAsync(Experiment experiment, string username)
     {
+        // Validate questionnaire existence
+        if (experiment.QuestionnaireConfig?.QuestionnaireIds != null)
+        {
+            foreach (var questionnaireId in experiment.QuestionnaireConfig.QuestionnaireIds)
+            {
+                var questionnaireExists = await _dynamoClient.GetItemAsync(new GetItemRequest
+                {
+                    TableName = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? "AI4NGQuestionnaires-dev",
+                    Key = new Dictionary<string, AttributeValue>
+                    {
+                        ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
+                        ["SK"] = new("CONFIG")
+                    }
+                });
+
+                if (!questionnaireExists.IsItemSet)
+                    throw new InvalidOperationException($"Questionnaire '{questionnaireId}' not found");
+            }
+        }
+
         var experimentId = Guid.NewGuid().ToString();
 
         await _dynamoClient.PutItemAsync(new PutItemRequest
@@ -145,6 +165,31 @@ public class ExperimentService : IExperimentService
 
     public async Task SyncExperimentAsync(string experimentId, SyncRequest syncData, string username)
     {
+        // Validate experiment exists
+        var experimentExists = await _dynamoClient.GetItemAsync(new GetItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"EXPERIMENT#{experimentId}"),
+                ["SK"] = new("METADATA")
+            }
+        });
+
+        if (!experimentExists.IsItemSet)
+            throw new InvalidOperationException($"Experiment '{experimentId}' not found");
+
+        // Validate session ID uniqueness
+        if (syncData?.Sessions != null)
+        {
+            var sessionIds = new HashSet<string>();
+            foreach (var session in syncData.Sessions)
+            {
+                if (session?.SessionId != null && !sessionIds.Add(session.SessionId))
+                    throw new ArgumentException($"Session ID '{session.SessionId}' is not unique");
+            }
+        }
+
         foreach (var session in syncData.Sessions)
         {
             await _dynamoClient.PutItemAsync(new PutItemRequest

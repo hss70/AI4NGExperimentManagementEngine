@@ -29,6 +29,11 @@ public class QuestionnaireServiceTests
             Data = new QuestionnaireData { Name = "Test Questionnaire" }
         };
 
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+        .ReturnsAsync(new GetItemResponse
+        {
+            Item = null
+        });
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
@@ -78,7 +83,7 @@ public class QuestionnaireServiceTests
     {
         // Arrange
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse { IsItemSet = false });
+            .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act
         var result = await _service.GetByIdAsync("nonexistent");
