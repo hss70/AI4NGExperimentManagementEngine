@@ -177,6 +177,11 @@ Resources:
       CodeUri: ../src/AI4NGExperimentsLambda
       Timeout: 30
       MemorySize: 512
+      Tracing: Active
+      LoggingConfig:
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: INFO
       VpcConfig:
         SecurityGroupIds:
           - !Ref PrivateSG
@@ -201,6 +206,11 @@ Resources:
       CodeUri: ../src/AI4NGResponsesLambda
       Timeout: 30
       MemorySize: 512
+      Tracing: Active
+      LoggingConfig:
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: INFO
       VpcConfig:
         SecurityGroupIds:
           - !Ref PrivateSG
@@ -226,6 +236,10 @@ Resources:
       Timeout: 30
       MemorySize: 512
       Tracing: Active
+      LoggingConfig:
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: INFO
       VpcConfig:
         SecurityGroupIds:
           - !Ref PrivateSG
@@ -246,24 +260,27 @@ Resources:
     Properties:
       ApiId: !Ref SharedApiId
       IntegrationType: AWS_PROXY
-      IntegrationUri: !GetAtt ExperimentsApi.Arn
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ExperimentsApi.Arn}/invocations
       PayloadFormatVersion: "2.0"
+      IntegrationMethod: POST
 
   ResponsesIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref SharedApiId
       IntegrationType: AWS_PROXY
-      IntegrationUri: !GetAtt ResponsesApi.Arn
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ResponsesApi.Arn}/invocations
       PayloadFormatVersion: "2.0"
+      IntegrationMethod: POST
 
   QuestionnairesIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref SharedApiId
       IntegrationType: AWS_PROXY
-      IntegrationUri: !GetAtt QuestionnairesApi.Arn
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${QuestionnairesApi.Arn}/invocations
       PayloadFormatVersion: "2.0"
+      IntegrationMethod: POST
 
   # Routes
   # Removed POST /api/experiments (no corresponding controller route)
@@ -381,7 +398,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: GET /api/responses/{responseId}
+      RouteKey: GET /api/responses/id/{responseId}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ResponsesIntegration}
@@ -390,7 +407,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: PUT /api/responses/{responseId}
+      RouteKey: PUT /api/responses/id/{responseId}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ResponsesIntegration}
@@ -399,7 +416,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: DELETE /api/responses/{responseId}
+      RouteKey: DELETE /api/responses/id/{responseId}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ResponsesIntegration}

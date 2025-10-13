@@ -23,7 +23,7 @@ public class ResponsesController : BaseApiController
         return Ok(responses);
     }
 
-    [HttpGet("responses/{responseId}")]
+    [HttpGet("responses/id/{responseId}")]
     public async Task<IActionResult> GetResponse(string responseId)
     {
         var response = await _responseService.GetResponseAsync(responseId);
@@ -45,7 +45,7 @@ public class ResponsesController : BaseApiController
         }
     }
 
-    [HttpPut("responses/{responseId}")]
+    [HttpPut("responses/id/{responseId}")]
     public async Task<IActionResult> UpdateResponse(string responseId, [FromBody] ResponseData data)
     {
         try
@@ -60,7 +60,7 @@ public class ResponsesController : BaseApiController
         }
     }
 
-    [HttpDelete("responses/{responseId}")]
+    [HttpDelete("responses/id/{responseId}")]
     public async Task<IActionResult> DeleteResponse(string responseId)
     {
         try

@@ -335,7 +335,7 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{apiGateWayUrl}}/api/responses/{{responseId}}",
+                            "raw": "{{apiGateWayUrl}}/api/responses/id/{{responseId}}",
                             "host": [
                                 "{{apiGateWayUrl}}"
                             ],
@@ -362,7 +362,7 @@
                             "raw": "{ \"data\": { \"responses\": [ { \"questionId\": \"1\", \"answer\": \"6\" } ] } }"
                         },
                         "url": {
-                            "raw": "{{apiGateWayUrl}}/api/responses/{{responseId}}",
+                            "raw": "{{apiGateWayUrl}}/api/responses/id/{{responseId}}",
                             "host": [
                                 "{{apiGateWayUrl}}"
                             ],
@@ -380,7 +380,7 @@
                         "method": "DELETE",
                         "header": [],
                         "url": {
-                            "raw": "{{apiGateWayUrl}}/api/responses/{{responseId}}",
+                            "raw": "{{apiGateWayUrl}}/api/responses/id/{{responseId}}",
                             "host": [
                                 "{{apiGateWayUrl}}"
                             ],
