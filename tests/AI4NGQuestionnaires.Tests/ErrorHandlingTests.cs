@@ -151,7 +151,7 @@ public class ErrorHandlingTests
             .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act
-        var result = await _service.GetByIdAsync(invalidId);
+        var result = await _service.GetByIdAsync(invalidId!);
 
         // Assert
         Assert.Null(result);

@@ -16,7 +16,7 @@ public class BusinessRuleTests
     {
         _mockDynamoClient = new Mock<IAmazonDynamoDB>();
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "responses-test");
-        
+
         _service = new ResponseService(_mockDynamoClient.Object);
     }
 
@@ -26,8 +26,8 @@ public class BusinessRuleTests
         // Arrange
         var response = new Response
         {
-            Data = new ResponseData 
-            { 
+            Data = new ResponseData
+            {
                 ExperimentId = "test-experiment",
                 SessionId = "test-session",
                 QuestionnaireId = "test-questionnaire"
@@ -169,8 +169,8 @@ public class BusinessRuleTests
         // Arrange
         var response = new Response
         {
-            Data = new ResponseData 
-            { 
+            Data = new ResponseData
+            {
                 ExperimentId = "test-experiment",
                 SessionId = "test-session",
                 QuestionnaireId = "test-questionnaire"
@@ -179,7 +179,7 @@ public class BusinessRuleTests
 
         var capturedIds = new List<string>();
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
-            .Callback<PutItemRequest, CancellationToken>((request, _) => 
+            .Callback<PutItemRequest, CancellationToken>((request, _) =>
             {
                 var id = request.Item["PK"].S.Replace("RESPONSE#", "");
                 capturedIds.Add(id);
@@ -213,7 +213,7 @@ public class BusinessRuleTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task GetResponsesAsync_ShouldHandleInvalidFilters(string invalidFilter)
+    public async Task GetResponsesAsync_ShouldHandleInvalidFilters(string? invalidFilter)
     {
         // Arrange
         var scanResponse = new ScanResponse { Items = new List<Dictionary<string, AttributeValue>>() };

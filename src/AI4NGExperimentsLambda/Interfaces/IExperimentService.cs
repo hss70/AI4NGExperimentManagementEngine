@@ -5,7 +5,7 @@ namespace AI4NGExperimentsLambda.Interfaces;
 public interface IExperimentService
 {
     Task<IEnumerable<object>> GetExperimentsAsync();
-    Task<object?> GetExperimentAsync(string experimentId);
+    Task<object?> GetExperimentAsync(string? experimentId);
     Task<IEnumerable<object>> GetMyExperimentsAsync(string username);
     Task<object> CreateExperimentAsync(Experiment experiment, string username);
     Task UpdateExperimentAsync(string experimentId, ExperimentData data, string username);

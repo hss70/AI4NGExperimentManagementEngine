@@ -164,14 +164,14 @@ public class QuestionnaireServiceTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task GetByIdAsync_ShouldHandleInvalidIds(string invalidId)
+    public async Task GetByIdAsync_ShouldHandleInvalidIds(string? invalidId)
     {
         // Arrange
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
             .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act
-        var result = await _service.GetByIdAsync(invalidId);
+        var result = await _service.GetByIdAsync(invalidId!);
 
         // Assert
         Assert.Null(result);
@@ -215,7 +215,7 @@ public class QuestionnaireServiceTests
     [InlineData("")]
     [InlineData(null)]
     [InlineData("   ")]
-    public async Task CreateAsync_ShouldHandleInvalidUsernames(string username)
+    public async Task CreateAsync_ShouldHandleInvalidUsernames(string? username)
     {
         // Arrange
         var request = new CreateQuestionnaireRequest
@@ -230,7 +230,7 @@ public class QuestionnaireServiceTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act
-        var result = await _service.CreateAsync(request, username);
+        var result = await _service.CreateAsync(request, username!);
 
         // Assert
         Assert.NotNull(result);

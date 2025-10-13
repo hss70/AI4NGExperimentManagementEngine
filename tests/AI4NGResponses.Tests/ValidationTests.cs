@@ -16,21 +16,21 @@ public class ValidationTests
     {
         _mockDynamoClient = new Mock<IAmazonDynamoDB>();
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "responses-test");
-        
+
         _service = new ResponseService(_mockDynamoClient.Object);
     }
 
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task CreateResponseAsync_ShouldHandleInvalidExperimentId(string invalidExperimentId)
+    public async Task CreateResponseAsync_ShouldHandleInvalidExperimentId(string? invalidExperimentId)
     {
         // Arrange
         var response = new Response
         {
-            Data = new ResponseData 
-            { 
-                ExperimentId = invalidExperimentId,
+            Data = new ResponseData
+            {
+                ExperimentId = invalidExperimentId!,
                 SessionId = "test-session",
                 QuestionnaireId = "test-questionnaire"
             }
@@ -49,15 +49,15 @@ public class ValidationTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task CreateResponseAsync_ShouldHandleInvalidSessionId(string invalidSessionId)
+    public async Task CreateResponseAsync_ShouldHandleInvalidSessionId(string? invalidSessionId)
     {
         // Arrange
         var response = new Response
         {
-            Data = new ResponseData 
-            { 
+            Data = new ResponseData
+            {
                 ExperimentId = "test-experiment",
-                SessionId = invalidSessionId,
+                SessionId = invalidSessionId!,
                 QuestionnaireId = "test-questionnaire"
             }
         };
@@ -75,16 +75,16 @@ public class ValidationTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task CreateResponseAsync_ShouldHandleInvalidQuestionnaireId(string invalidQuestionnaireId)
+    public async Task CreateResponseAsync_ShouldHandleInvalidQuestionnaireId(string? invalidQuestionnaireId)
     {
         // Arrange
         var response = new Response
         {
-            Data = new ResponseData 
-            { 
+            Data = new ResponseData
+            {
                 ExperimentId = "test-experiment",
                 SessionId = "test-session",
-                QuestionnaireId = invalidQuestionnaireId
+                QuestionnaireId = invalidQuestionnaireId!
             }
         };
 
@@ -104,8 +104,8 @@ public class ValidationTests
         // Arrange
         var response = new Response
         {
-            Data = new ResponseData 
-            { 
+            Data = new ResponseData
+            {
                 ExperimentId = "valid-experiment",
                 SessionId = "valid-session",
                 QuestionnaireId = "valid-questionnaire"
@@ -126,7 +126,7 @@ public class ValidationTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task GetResponseAsync_ShouldHandleInvalidResponseIds(string invalidId)
+    public async Task GetResponseAsync_ShouldHandleInvalidResponseIds(string? invalidId)
     {
         // Arrange
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
@@ -143,13 +143,13 @@ public class ValidationTests
     [InlineData("")]
     [InlineData(null)]
     [InlineData("   ")]
-    public async Task CreateResponseAsync_ShouldHandleInvalidUsernames(string username)
+    public async Task CreateResponseAsync_ShouldHandleInvalidUsernames(string? username)
     {
         // Arrange
         var response = new Response
         {
-            Data = new ResponseData 
-            { 
+            Data = new ResponseData
+            {
                 ExperimentId = "test-experiment",
                 SessionId = "test-session",
                 QuestionnaireId = "test-questionnaire"
@@ -160,7 +160,7 @@ public class ValidationTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act
-        var result = await _service.CreateResponseAsync(response, username);
+        var result = await _service.CreateResponseAsync(response, username!);
 
         // Assert
         Assert.NotNull(result);

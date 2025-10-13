@@ -23,12 +23,12 @@ public class ValidationTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task CreateAsync_ShouldThrowException_WhenIdIsInvalid(string invalidId)
+    public async Task CreateAsync_ShouldThrowException_WhenIdIsInvalid(string? invalidId)
     {
         // Arrange
         var request = new CreateQuestionnaireRequest
         {
-            Id = invalidId,
+            Id = invalidId!,
             Data = new QuestionnaireData { Name = "Test" }
         };
 
@@ -43,8 +43,8 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "valid-questionnaire",
-            Data = new QuestionnaireData 
-            { 
+            Data = new QuestionnaireData
+            {
                 Name = "Valid Questionnaire",
                 Description = "Valid description",
                 Questions = new List<Question>
@@ -70,14 +70,14 @@ public class ValidationTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task GetByIdAsync_ShouldHandleInvalidQuestionnaireIds(string invalidId)
+    public async Task GetByIdAsync_ShouldHandleInvalidQuestionnaireIds(string? invalidId)
     {
         // Arrange
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
             .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act
-        var result = await _service.GetByIdAsync(invalidId);
+        var result = await _service.GetByIdAsync(invalidId!);
 
         // Assert
         Assert.Null(result);
@@ -90,8 +90,8 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireData 
-            { 
+            Data = new QuestionnaireData
+            {
                 Name = "Test Questionnaire",
                 Questions = new List<Question>
                 {
@@ -111,7 +111,7 @@ public class ValidationTests
     [InlineData("")]
     [InlineData(null)]
     [InlineData("   ")]
-    public async Task UpdateAsync_ShouldHandleInvalidUsernames(string username)
+    public async Task UpdateAsync_ShouldHandleInvalidUsernames(string? username)
     {
         // Arrange
         var data = new QuestionnaireData { Name = "Updated" };
@@ -119,7 +119,7 @@ public class ValidationTests
             .ReturnsAsync(new UpdateItemResponse());
 
         // Act
-        await _service.UpdateAsync("test-id", data, username);
+        await _service.UpdateAsync("test-id", data, username!);
 
         // Assert
         _mockDynamoClient.Verify(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default), Times.Once);
@@ -132,8 +132,8 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "empty-questions",
-            Data = new QuestionnaireData 
-            { 
+            Data = new QuestionnaireData
+            {
                 Name = "Empty Questions",
                 Questions = new List<Question>() // Empty list
             }
@@ -158,8 +158,8 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "null-questions",
-            Data = new QuestionnaireData 
-            { 
+            Data = new QuestionnaireData
+            {
                 Name = "Null Questions",
                 Questions = null! // Null list
             }
@@ -181,18 +181,18 @@ public class ValidationTests
     [InlineData("invalid-type")]
     [InlineData("")]
     [InlineData(null)]
-    public async Task CreateAsync_ShouldHandleInvalidQuestionTypes(string invalidType)
+    public async Task CreateAsync_ShouldHandleInvalidQuestionTypes(string? invalidType)
     {
         // Arrange
         var request = new CreateQuestionnaireRequest
         {
             Id = "invalid-type-test",
-            Data = new QuestionnaireData 
-            { 
+            Data = new QuestionnaireData
+            {
                 Name = "Invalid Type Test",
                 Questions = new List<Question>
                 {
-                    new() { Id = "q1", Text = "Question 1", Type = invalidType, Required = true }
+                    new() { Id = "q1", Text = "Question 1", Type = invalidType!, Required = true }
                 }
             }
         };

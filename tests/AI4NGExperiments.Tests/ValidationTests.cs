@@ -18,7 +18,7 @@ public class ValidationTests
         Environment.SetEnvironmentVariable("EXPERIMENTS_TABLE", "experiments-test");
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "responses-test");
         Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "questionnaires-test");
-        
+
         _service = new ExperimentService(_mockDynamoClient.Object);
     }
 
@@ -59,14 +59,14 @@ public class ValidationTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData 
-            { 
+            Data = new ExperimentData
+            {
                 Name = "Valid Experiment Name",
                 Description = "Valid description"
             },
-            QuestionnaireConfig = new QuestionnaireConfig 
-            { 
-                QuestionnaireIds = new List<string>() 
+            QuestionnaireConfig = new QuestionnaireConfig
+            {
+                QuestionnaireIds = new List<string>()
             }
         };
 
@@ -88,12 +88,12 @@ public class ValidationTests
         var invalidTimestamp = DateTime.MinValue; // Invalid timestamp
 
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
+            .ReturnsAsync(new GetItemResponse
+            {
                 IsItemSet = true,
                 Item = new Dictionary<string, AttributeValue> { ["PK"] = new AttributeValue("EXPERIMENT#test-id") }
             });
-            
+
         _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
             .ReturnsAsync(new QueryResponse { Items = new List<Dictionary<string, AttributeValue>>() });
 
@@ -157,7 +157,7 @@ public class ValidationTests
     [InlineData("")]
     [InlineData(null)]
     [InlineData("   ")]
-    public async Task CreateExperimentAsync_ShouldHandleInvalidUsernames(string username)
+    public async Task CreateExperimentAsync_ShouldHandleInvalidUsernames(string? username)
     {
         // Arrange
         var experiment = new Experiment
@@ -170,7 +170,7 @@ public class ValidationTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act - This would need validation logic in the service
-        var result = await _service.CreateExperimentAsync(experiment, username);
+        var result = await _service.CreateExperimentAsync(experiment, username!);
 
         // Assert - Currently passes, but should validate username
         Assert.NotNull(result);
@@ -179,7 +179,7 @@ public class ValidationTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task GetExperimentAsync_ShouldHandleInvalidExperimentIds(string experimentId)
+    public async Task GetExperimentAsync_ShouldHandleInvalidExperimentIds(string? experimentId)
     {
         // Arrange
         _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))

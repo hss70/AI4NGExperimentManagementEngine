@@ -18,7 +18,7 @@ public class BusinessRuleTests
         Environment.SetEnvironmentVariable("EXPERIMENTS_TABLE", "experiments-test");
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "responses-test");
         Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "questionnaires-test");
-        
+
         _service = new ExperimentService(_mockDynamoClient.Object);
     }
 
@@ -26,19 +26,19 @@ public class BusinessRuleTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task CreateExperimentAsync_ShouldThrowException_WhenNameIsInvalid(string invalidName)
+    public async Task CreateExperimentAsync_ShouldThrowException_WhenNameIsInvalid(string? invalidName)
     {
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = invalidName },
+            Data = new ExperimentData { Name = invalidName! },
             QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         // Act - Currently this passes but should validate name
         // This test documents the expected behavior that should be implemented
         var result = await _service.CreateExperimentAsync(experiment, "testuser");
-        
+
         // Assert - For now, just verify it doesn't crash
         // TODO: Should throw ArgumentException when validation is implemented
         Assert.NotNull(result);
@@ -51,8 +51,8 @@ public class BusinessRuleTests
         var experiment = new Experiment
         {
             Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig 
-            { 
+            QuestionnaireConfig = new QuestionnaireConfig
+            {
                 QuestionnaireIds = new List<string> { "non-existent-questionnaire" }
             }
         };
@@ -64,7 +64,7 @@ public class BusinessRuleTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CreateExperimentAsync(experiment, "testuser"));
-        
+
         Assert.Contains("questionnaire", exception.Message.ToLower());
         Assert.Contains("not found", exception.Message.ToLower());
     }
@@ -76,16 +76,16 @@ public class BusinessRuleTests
         var experiment = new Experiment
         {
             Data = new ExperimentData { Name = "Valid Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig 
-            { 
+            QuestionnaireConfig = new QuestionnaireConfig
+            {
                 QuestionnaireIds = new List<string> { "questionnaire-1", "questionnaire-2" }
             }
         };
 
         // Mock questionnaires exist
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
+            .ReturnsAsync(new GetItemResponse
+            {
                 IsItemSet = true,
                 Item = new Dictionary<string, AttributeValue>
                 {
@@ -112,8 +112,8 @@ public class BusinessRuleTests
         var experiment = new Experiment
         {
             Data = new ExperimentData { Name = "Experiment Without Questionnaires" },
-            QuestionnaireConfig = new QuestionnaireConfig 
-            { 
+            QuestionnaireConfig = new QuestionnaireConfig
+            {
                 QuestionnaireIds = new List<string>() // Empty list
             }
         };
@@ -142,7 +142,7 @@ public class BusinessRuleTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.SyncExperimentAsync("non-existent", lastSyncTime, "testuser"));
-        
+
         Assert.Contains("experiment", exception.Message.ToLower());
         Assert.Contains("not found", exception.Message.ToLower());
     }
@@ -157,8 +157,8 @@ public class BusinessRuleTests
 
         // Mock experiment exists
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
+            .ReturnsAsync(new GetItemResponse
+            {
                 Item = new Dictionary<string, AttributeValue>
                 {
                     ["PK"] = new AttributeValue("EXPERIMENT#test-experiment")
@@ -196,8 +196,8 @@ public class BusinessRuleTests
 
         // Mock experiment exists
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
+            .ReturnsAsync(new GetItemResponse
+            {
                 Item = new Dictionary<string, AttributeValue>
                 {
                     ["PK"] = new AttributeValue("EXPERIMENT#test-experiment")
@@ -238,10 +238,10 @@ public class BusinessRuleTests
     [InlineData("invalid-role")]
     [InlineData("")]
     [InlineData(null)]
-    public async Task AddMemberAsync_ShouldHandleInvalidRoles(string invalidRole)
+    public async Task AddMemberAsync_ShouldHandleInvalidRoles(string? invalidRole)
     {
         // Arrange
-        var memberData = new MemberRequest { Role = invalidRole };
+        var memberData = new MemberRequest { Role = invalidRole! };
 
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
@@ -257,7 +257,7 @@ public class BusinessRuleTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task AddMemberAsync_ShouldHandleInvalidUserSub(string invalidUserSub)
+    public async Task AddMemberAsync_ShouldHandleInvalidUserSub(string? invalidUserSub)
     {
         // Arrange
         var memberData = new MemberRequest { Role = "participant" };
@@ -266,7 +266,7 @@ public class BusinessRuleTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act - Currently this passes but should validate userSub
-        await _service.AddMemberAsync("test-id", invalidUserSub, memberData, "testuser");
+        await _service.AddMemberAsync("test-id", invalidUserSub!, memberData, "testuser");
 
         // Assert - For now, just verify it doesn't crash
         // TODO: Should throw ArgumentException when validation is implemented
@@ -290,14 +290,14 @@ public class BusinessRuleTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task RemoveMemberAsync_ShouldHandleInvalidUserSub(string invalidUserSub)
+    public async Task RemoveMemberAsync_ShouldHandleInvalidUserSub(string? invalidUserSub)
     {
         // Arrange
         _mockDynamoClient.Setup(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), default))
             .ReturnsAsync(new DeleteItemResponse());
 
         // Act - Currently this passes but should validate userSub
-        await _service.RemoveMemberAsync("test-id", invalidUserSub, "testuser");
+        await _service.RemoveMemberAsync("test-id", invalidUserSub!, "testuser");
 
         // Assert - For now, just verify it doesn't crash
         // TODO: Should throw ArgumentException when validation is implemented

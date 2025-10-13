@@ -65,7 +65,7 @@ public class BusinessRuleTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DuplicateItemException>(
             () => service.CreateAsync(request, "testuser"));
-        
+
         Assert.Contains("already exists", exception.Message);
     }
 
@@ -73,19 +73,19 @@ public class BusinessRuleTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task CreateAsync_ShouldThrowException_WhenNameIsInvalid(string invalidName)
+    public async Task CreateAsync_ShouldThrowException_WhenNameIsInvalid(string? invalidName)
     {
         // Arrange
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireData { Name = invalidName }
+            Data = new QuestionnaireData { Name = invalidName! }
         };
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _service.CreateAsync(request, "testuser"));
-        
+
         Assert.Contains("name", exception.Message.ToLower());
     }
 
@@ -96,8 +96,8 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireData 
-            { 
+            Data = new QuestionnaireData
+            {
                 Name = "Test Questionnaire",
                 Questions = new List<Question>
                 {
@@ -110,7 +110,7 @@ public class BusinessRuleTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _service.CreateAsync(request, "testuser"));
-        
+
         Assert.Contains("unique", exception.Message.ToLower());
         Assert.Contains("question", exception.Message.ToLower());
         Assert.Contains(request.Data.Questions[0].Id, exception.Message.ToLower());
@@ -123,8 +123,8 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireData 
-            { 
+            Data = new QuestionnaireData
+            {
                 Name = "Test Questionnaire",
                 Questions = new List<Question>
                 {
@@ -136,7 +136,7 @@ public class BusinessRuleTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _service.CreateAsync(request, "testuser"));
-        
+
         Assert.Contains("text", exception.Message.ToLower());
     }
 
@@ -144,18 +144,18 @@ public class BusinessRuleTests
     [InlineData("invalid-type")]
     [InlineData("")]
     [InlineData(null)]
-    public async Task CreateAsync_ShouldThrowException_WhenQuestionTypeInvalid(string invalidType)
+    public async Task CreateAsync_ShouldThrowException_WhenQuestionTypeInvalid(string? invalidType)
     {
         // Arrange
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireData 
-            { 
+            Data = new QuestionnaireData
+            {
                 Name = "Test Questionnaire",
                 Questions = new List<Question>
                 {
-                    new() { Id = "q1", Text = "Question 1", Type = invalidType, Required = true }
+                    new() { Id = "q1", Text = "Question 1", Type = invalidType!, Required = true }
                 }
             }
         };
@@ -163,7 +163,7 @@ public class BusinessRuleTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _service.CreateAsync(request, "testuser"));
-        
+
         Assert.Contains("type", exception.Message.ToLower());
     }
 
@@ -174,8 +174,8 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "select-test-questionnaire", // Use unique ID
-            Data = new QuestionnaireData 
-            { 
+            Data = new QuestionnaireData
+            {
                 Name = "Test Questionnaire",
                 Questions = new List<Question>
                 {
@@ -187,7 +187,7 @@ public class BusinessRuleTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _service.CreateAsync(request, "testuser"));
-        
+
         Assert.Contains("options", exception.Message.ToLower());
         Assert.Contains("select", exception.Message.ToLower());
     }
