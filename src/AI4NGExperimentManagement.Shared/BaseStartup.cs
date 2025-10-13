@@ -11,7 +11,9 @@ public abstract class BaseStartup
     public virtual void ConfigureServices(IServiceCollection services)
     {
         services.AddControllers();
-        
+        services.AddHttpContextAccessor();
+        services.AddScoped<IAuthenticationService, AuthenticationService>();
+
         var endpointUrl = Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL");
         if (!string.IsNullOrEmpty(endpointUrl))
         {
@@ -22,7 +24,7 @@ public abstract class BaseStartup
         {
             services.AddSingleton<IAmazonDynamoDB, AmazonDynamoDBClient>();
         }
-        
+
         ConfigureApplicationServices(services);
     }
 
@@ -32,6 +34,20 @@ public abstract class BaseStartup
         {
             app.UseDeveloperExceptionPage();
         }
+
+        // Basic exception logging for Lambda to aid diagnostics
+        app.Use(async (context, next) =>
+        {
+            try
+            {
+                await next();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ERROR] {context.Request.Method} {context.Request.Path}: {ex}");
+                throw;
+            }
+        });
 
         app.UseRouting();
         app.UseEndpoints(endpoints =>

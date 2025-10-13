@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace AI4NGResponsesLambda;
 
-public class LambdaEntryPoint : APIGatewayProxyFunction
+public class LambdaEntryPoint : APIGatewayHttpApiV2ProxyFunction
 {
     protected override void Init(IWebHostBuilder builder)
     {

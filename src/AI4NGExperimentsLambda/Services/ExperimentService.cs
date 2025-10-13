@@ -16,8 +16,11 @@ public class ExperimentService : IExperimentService
     public ExperimentService(IAmazonDynamoDB dynamoClient)
     {
         _dynamoClient = dynamoClient;
-        _experimentsTable = Environment.GetEnvironmentVariable("EXPERIMENTS_TABLE") ?? "";
-        _responsesTable = Environment.GetEnvironmentVariable("RESPONSES_TABLE") ?? "";
+        _experimentsTable = Environment.GetEnvironmentVariable("EXPERIMENTS_TABLE") ?? string.Empty;
+        _responsesTable = Environment.GetEnvironmentVariable("RESPONSES_TABLE") ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_experimentsTable))
+            throw new InvalidOperationException("EXPERIMENTS_TABLE environment variable is not set");
     }
 
     public async Task<IEnumerable<object>> GetExperimentsAsync()
@@ -32,9 +35,9 @@ public class ExperimentService : IExperimentService
 
         return response.Items.Select(item => new
         {
-            id = item["PK"].S.Replace("EXPERIMENT#", ""),
-            name = item["data"].M["name"].S,
-            description = item["data"].M.GetValueOrDefault("description")?.S ?? ""
+            id = item.ContainsKey("PK") ? item["PK"].S.Replace("EXPERIMENT#", "") : string.Empty,
+            name = item.ContainsKey("data") && item["data"].M.ContainsKey("name") ? item["data"].M["name"].S : string.Empty,
+            description = item.ContainsKey("data") && item["data"].M.ContainsKey("description") ? item["data"].M["description"].S : string.Empty
         });
     }
 

@@ -266,14 +266,7 @@ Resources:
       PayloadFormatVersion: "2.0"
 
   # Routes
-  CreateExperimentRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: POST /api/experiments
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${ExperimentsIntegration}
+  # Removed POST /api/experiments (no corresponding controller route)
 
   GetExperimentsRoute:
     Type: AWS::ApiGatewayV2::Route
@@ -297,7 +290,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: POST /api/experiments/{experimentId}/sync
+      RouteKey: GET /api/experiments/{experimentId}/sync
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
@@ -379,7 +372,34 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: GET /api/responses/{experimentId}
+      RouteKey: GET /api/responses
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ResponsesIntegration}
+
+  GetResponseByIdRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/responses/{responseId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ResponsesIntegration}
+
+  UpdateResponseRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: PUT /api/responses/{responseId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ResponsesIntegration}
+
+  DeleteResponseRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: DELETE /api/responses/{responseId}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ResponsesIntegration}
