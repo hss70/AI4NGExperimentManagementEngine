@@ -26,14 +26,17 @@
    .\scripts\debug-local.ps1
    ```
 
-2. **Import Postman collection**: `postman/postman-local-collection.json`
-   - Set `baseUrl` variable to `http://localhost:3000`
+2. **Import Postman collection**: `postman/AI4NG-QuestionEngine.postman_collection.json`
+   - Set `baseUrl` to your local or cloud API URL
+   - Set `jwt_token` if testing against cloud (Cognito JWT)
 
 3. **Test APIs** in order:
    - Create Questionnaire → Copy ID
    - Create Experiment → Copy experimentId 
    - Set `experimentId` variable in Postman
-   - Create Response
+   - Add/Remove Members to the experiment (optional)
+   - Sync Experiment via GET `/api/experiments/{id}/sync?lastSyncTime=`
+   - Create Response (note: body must use `data` wrapper)
 
 ### Debug Mode
 ```powershell
@@ -63,7 +66,7 @@ sam deploy --guided
 ### Postman Setup for Cloud
 1. Update `baseUrl` to your API Gateway URL
 2. Add Authorization header: `Bearer <your-cognito-jwt-token>`
-3. Use production Postman collection (includes auth)
+3. Use unified Postman collection (`postman/AI4NG-QuestionEngine.postman_collection.json`) with cloud baseUrl/auth
 
 ### Get Cognito Token
 ```bash
@@ -101,14 +104,24 @@ Add `X-Debug: true` to any request for detailed logging:
 ### Local Development Flow
 1. Create questionnaire → Test CRUD operations
 2. Create experiment with questionnaire → Test experiment management  
-3. Create responses → Test data collection
-4. Verify data in local DynamoDB
+3. Manage members → Test add/remove/get
+4. Sync experiment via GET `/api/experiments/{id}/sync?lastSyncTime=`
+5. Create responses → Test data collection (ensure body uses `data` wrapper to match API)
+6. Verify data in local DynamoDB
 
 ### Pre-Deployment Validation
 1. **Build validation**: `.\scripts\validate-build.ps1`
 2. **Unit tests**: `.\scripts\run-tests.ps1 -Coverage`
 3. **Integration tests**: `.\scripts\run-tests.ps1` (with DynamoDB Local)
 4. **Full pipeline**: `.\scripts\ci-pipeline.ps1`
+
+## Test Infrastructure Notes
+
+- Shared helpers live in `AI4NGExperimentManagementTests.Shared`:
+   - `ControllerTestBase<TController>` centralizes controller and auth setup
+   - Use `CreateControllerWithMocks` for consistent controller/service mocks
+- Prefer `[Theory]` with `[InlineData]` for found/not-found and invalid-input patterns
+- Nullability in tests is intentional in some cases; we use null-forgiving (`!`) to keep analyzers quiet without altering behavior
 
 ### Cloud Validation Flow
 1. Deploy changes

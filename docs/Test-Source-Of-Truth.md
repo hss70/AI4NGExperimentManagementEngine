@@ -36,6 +36,7 @@
 - **Member Role Validation**: Member roles must be valid (`researcher`, `participant`)
 - **Experiment Access Control**: Only experiment creators and members can access experiment data
 - **Session Sync Validation**: Cannot sync sessions for non-existent experiments
+- **Member Management**: Only authenticated users can modify members; roles limited to `researcher` and `participant`; removing a non-existent member should be idempotent/no-op
 
 ### Response Management
 

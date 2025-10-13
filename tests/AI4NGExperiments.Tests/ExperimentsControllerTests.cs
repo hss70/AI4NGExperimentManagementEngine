@@ -94,4 +94,94 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
         var response = okResult.Value as dynamic;
         Assert.NotNull(response);
     }
+
+    [Fact]
+    public async Task GetExperimentMembers_ShouldReturnOk_WithMembers()
+    {
+        // Arrange
+        var (mockService, controller, _) = CreateController();
+        var members = new List<object>
+        {
+            new { userSub = "user-1", role = "participant" },
+            new { userSub = "user-2", role = "researcher" }
+        };
+        mockService.Setup(x => x.GetExperimentMembersAsync(TestDataBuilder.TestUserId)).ReturnsAsync(members);
+
+        // Act
+        var result = await controller.GetExperimentMembers(TestDataBuilder.TestUserId);
+
+        // Assert
+        var ok = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(members, ok.Value);
+    }
+
+    [Fact]
+    public async Task AddMember_ShouldReturnOk_WhenValid()
+    {
+        // Arrange
+        var (mockService, controller, authMock) = CreateController();
+        var member = new MemberRequest { Role = "participant" };
+        mockService
+            .Setup(x => x.AddMemberAsync(TestDataBuilder.TestUserId, TestDataBuilder.TestUserId, member, TestDataBuilder.TestUsername))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await controller.AddMember(TestDataBuilder.TestUserId, TestDataBuilder.TestUserId, member);
+
+        // Assert
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = ok.Value as dynamic;
+        Assert.NotNull(body);
+        mockService.Verify(x => x.AddMemberAsync(TestDataBuilder.TestUserId, TestDataBuilder.TestUserId, member, TestDataBuilder.TestUsername), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddMember_ShouldReturnUnauthorized_WhenAuthFails()
+    {
+        // Arrange
+        var (mockService, controller, authMock) = CreateController(isLocal: false);
+        authMock.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Authorization header is required"));
+        var member = new MemberRequest { Role = "participant" };
+
+        // Act
+        var result = await controller.AddMember(TestDataBuilder.TestUserId, TestDataBuilder.TestUserId, member);
+
+        // Assert
+        Assert.IsType<UnauthorizedObjectResult>(result);
+        mockService.Verify(x => x.AddMemberAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<MemberRequest>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RemoveMember_ShouldReturnOk_WhenValid()
+    {
+        // Arrange
+        var (mockService, controller, _) = CreateController();
+        mockService
+            .Setup(x => x.RemoveMemberAsync(TestDataBuilder.TestUserId, TestDataBuilder.NonExistentId, TestDataBuilder.TestUsername))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await controller.RemoveMember(TestDataBuilder.TestUserId, TestDataBuilder.NonExistentId);
+
+        // Assert
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = ok.Value as dynamic;
+        Assert.NotNull(body);
+        mockService.Verify(x => x.RemoveMemberAsync(TestDataBuilder.TestUserId, TestDataBuilder.NonExistentId, TestDataBuilder.TestUsername), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoveMember_ShouldReturnUnauthorized_WhenAuthFails()
+    {
+        // Arrange
+        var (mockService, controller, authMock) = CreateController(isLocal: false);
+        authMock.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Bearer token required"));
+
+        // Act
+        var result = await controller.RemoveMember(TestDataBuilder.TestUserId, TestDataBuilder.NonExistentId);
+
+        // Assert
+        Assert.IsType<UnauthorizedObjectResult>(result);
+        mockService.Verify(x => x.RemoveMemberAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
 }

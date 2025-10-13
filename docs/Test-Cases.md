@@ -104,9 +104,20 @@
 |------|--------|-----------------|-----------|
 | 1 | Create questionnaire | Returns questionnaire ID | Prerequisites |
 | 2 | POST /api/researcher/experiments | 200 OK, returns experiment ID | Experiment creation |
-| 3 | POST /api/experiments/{id}/sync | 200 OK, sessions synced | Session management |
+| 3 | GET /api/experiments/{id}/sync?lastSyncTime= | 200 OK, sessions synced | Session management |
 | 4 | POST /api/responses | 200 OK, response created | Response collection |
 | 5 | GET /api/responses?experimentId={id} | 200 OK, returns responses | Response retrieval |
+
+### ExperimentsController Member Tests
+
+#### ✅ Member Endpoints
+| Test Case | Input | Expected Output | Validates |
+|-----------|-------|-----------------|-----------|
+| `GetExperimentMembers_ShouldReturnOk_WithMembers` | Valid experimentId | 200 OK with members array | Members listing |
+| `AddMember_ShouldReturnOk_WhenValid` | Valid experimentId, userSub, role | 200 OK success message | Member addition |
+| `AddMember_ShouldReturnUnauthorized_WhenAuthFails` | Missing/invalid auth | 401 Unauthorized | Auth enforcement |
+| `RemoveMember_ShouldReturnOk_WhenValid` | Valid experimentId, userSub | 200 OK success message | Member removal |
+| `RemoveMember_ShouldReturnUnauthorized_WhenAuthFails` | Missing/invalid auth | 401 Unauthorized | Auth enforcement |
 
 ### Error Handling Test Cases
 

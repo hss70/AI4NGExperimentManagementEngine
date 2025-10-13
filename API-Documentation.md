@@ -40,17 +40,17 @@ Update experiment (researchers only).
 ### DELETE /api/researcher/experiments/{experimentId}
 Delete experiment (researchers only).
 
-### POST /api/researcher/questionnaires
-Create new questionnaire (researchers only).
+### POST /api/questionnaires
+Create new questionnaire (researchers only). Note: Route does not include `researcher` segment; access is enforced via role check in the controller.
 
-### PUT /api/researcher/questionnaires/{questionnaireId}
-Update questionnaire (researchers only).
+### PUT /api/questionnaires/{questionnaireId}
+Update questionnaire (researchers only). Enforced via role check.
 
-### DELETE /api/researcher/questionnaires/{questionnaireId}
-Delete questionnaire (researchers only).
+### DELETE /api/questionnaires/{questionnaireId}
+Delete questionnaire (researchers only). Enforced via role check.
 
 ### PUT /api/experiments/{experimentId}/members/{userSub}
-Add user to experiment (researchers only).
+Add user to experiment. Note: The current implementation does not explicitly enforce researcher role on this route.
 
 **Request Body:**
 ```json
@@ -66,10 +66,10 @@ Add user to experiment (researchers only).
 ```
 
 ### DELETE /api/experiments/{experimentId}/members/{userSub}
-Remove user from experiment (researchers only).
+Remove user from experiment. Note: The current implementation does not explicitly enforce researcher role on this route.
 
 ### GET /api/experiments/{experimentId}/members
-List experiment members (researchers only).
+List experiment members.
 
 **Response:**
 ```json
@@ -152,7 +152,7 @@ Get experiment details with sessions.
 ```
 
 ### POST /api/experiments
-**RESTRICTED**: Returns 403 Forbidden for participants. Use researcher endpoints for creation.
+Not available. Use `POST /api/researcher/experiments` to create experiments.
 
 **Response:**
 ```json
@@ -161,28 +161,25 @@ Get experiment details with sessions.
 }
 ```
 
-### POST /api/experiments/{experimentId}/sync
-Sync experiment sessions.
+### GET /api/experiments/{experimentId}/sync
+Retrieve experiment metadata and sessions, optionally filtered by last sync time.
 
-**Request Body:**
+Query Parameters:
+- `lastSyncTime` (optional, ISO-8601) — only return items updated after this timestamp.
+
+Example Response:
 ```json
 {
+  "experiment": {
+    "id": "experiment-uuid",
+    "data": { "name": "BCI Learning Study", "description": "..." },
+    "questionnaireConfig": { "schedule": { "PQ": "every_session" } },
+    "updatedAt": "2025-10-13T09:00:00Z"
+  },
   "sessions": [
-    {
-      "sessionId": "2023-11-07",
-      "date": "2023-11-07",
-      "type": "daily",
-      "userId": "USER_456",
-      "taskOrder": ["TASK#TRAIN_EEG", "TASK#POST_QUESTIONS"]
-    }
-  ]
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Experiment synced successfully"
+    { "data": { "sessionId": "2025-10-12", "type": "daily" }, "updatedAt": "2025-10-12T10:00:00Z" }
+  ],
+  "syncTimestamp": "2025-10-13T10:00:00Z"
 }
 ```
 
@@ -237,7 +234,7 @@ Get questionnaire definition.
 ```
 
 ### POST /api/questionnaires
-**RESTRICTED**: Returns 403 Forbidden for participants. Use researcher endpoints for creation.
+Researcher-only route (role enforced in controller). Creates a questionnaire with the given id and data.
 
 **Response:**
 ```json
@@ -247,7 +244,7 @@ Get questionnaire definition.
 ```
 
 ### PUT /api/questionnaires/{questionnaireId}
-**RESTRICTED**: Returns 403 Forbidden for participants. Use researcher endpoints for updates.
+Researcher-only route (role enforced in controller). Updates questionnaire data.
 
 **Response:**
 ```json
@@ -261,114 +258,38 @@ Get questionnaire definition.
 ### POST /api/responses
 Submit questionnaire responses.
 
-**Request Body:**
+Request Body:
 ```json
 {
-  "experimentId": "experiment-uuid",
-  "questionnaireId": "PQ",
-  "sessionId": "2023-11-07",
-  "taskId": "POST_QUESTIONS",
-  "answers": [
-    {
-      "questionId": "1",
-      "questionText": "Time seemed to go by",
-      "answerValue": "7"
-    }
-  ]
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Responses submitted successfully"
-}
-```
-
-### GET /api/responses/{experimentId}
-Get user responses for experiment.
-
-**Response:**
-```json
-[
-  {
+  "data": {
+    "experimentId": "experiment-uuid",
     "questionnaireId": "PQ",
-    "questionId": "1",
-    "questionText": "Time seemed to go by",
-    "answerValue": "7",
-    "timestamp": "2023-11-07T10:05:30.000Z",
-    "sessionId": "2023-11-07",
-    "taskId": "POST_QUESTIONS"
+    "sessionId": "2025-10-13",
+    "responses": [
+      { "questionId": "1", "answer": 7, "timestamp": "2025-10-13T10:05:30Z" }
+    ]
   }
-]
+}
 ```
+
+Response:
+```json
+{ "id": "response-uuid" }
+```
+
+### GET /api/responses
+List responses. Supports filtering by query parameters:
+- `experimentId` (optional)
+- `sessionId` (optional; only valid when `experimentId` is provided)
+
+Response items include metadata: `id`, `data`, `createdBy`, `createdAt`.
+
+### GET /api/responses/{responseId}
+Get a single response by id.
 
 ## Mobile Sync API
 
-### GET /api/sync/experiments
-Get modified experiments for mobile sync.
-
-**Query Parameters:**
-- `lastSync` (optional): ISO timestamp of last sync
-
-**Response:**
-```json
-[
-  {
-    "id": "experiment-uuid",
-    "data": {...},
-    "syncMetadata": {
-      "version": 2,
-      "lastModified": "2023-11-07T10:25:00Z",
-      "isDeleted": false
-    }
-  }
-]
-```
-
-### GET /api/sync/questionnaires
-Get modified questionnaires for mobile sync.
-
-**Query Parameters:**
-- `lastSync` (optional): ISO timestamp of last sync
-
-**Response:**
-```json
-[
-  {
-    "id": "PQ",
-    "data": {...},
-    "syncMetadata": {
-      "version": 1,
-      "lastModified": "2023-11-01T09:00:00Z",
-      "isDeleted": false
-    }
-  }
-]
-```
-
-### GET /api/sync/responses
-Get modified responses for mobile sync.
-
-**Query Parameters:**
-- `lastSync` (optional): ISO timestamp of last sync
-
-**Response:**
-```json
-[
-  {
-    "questionnaireId": "PQ",
-    "questionId": "1",
-    "answerValue": "7",
-    "timestamp": "2023-11-07T10:05:30.000Z",
-    "syncMetadata": {
-      "version": 1,
-      "lastModified": "2023-11-07T10:05:30.000Z",
-      "isDeleted": false
-    }
-  }
-]
-```
+Use `GET /api/experiments/{experimentId}/sync` with `lastSyncTime` to drive mobile-side sync for experiments. Questionnaires and responses do not have dedicated sync endpoints; fetch via their standard list endpoints with app-level caching logic.
 
 ## Authentication Details
 
