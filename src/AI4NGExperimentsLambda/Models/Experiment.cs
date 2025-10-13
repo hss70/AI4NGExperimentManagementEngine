@@ -30,11 +30,6 @@ public class Session
     public string Status { get; set; } = string.Empty;
 }
 
-public class SyncRequest
-{
-    public List<Session> Sessions { get; set; } = new();
-}
-
 public class MemberRequest
 {
     public string Role { get; set; } = string.Empty;

@@ -29,8 +29,11 @@ public static class DynamoDBHelper
         };
     }
 
-    public static object ConvertAttributeValueToObject(AttributeValue attributeValue)
+    public static object? ConvertAttributeValueToObject(AttributeValue? attributeValue)
     {
+        if (attributeValue == null)
+            return null;
+            
         if (attributeValue.M != null)
         {
             var result = new Dictionary<string, object>();

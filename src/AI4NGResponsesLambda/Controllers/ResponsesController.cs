@@ -1,17 +1,17 @@
 using Microsoft.AspNetCore.Mvc;
 using AI4NGResponsesLambda.Interfaces;
 using AI4NGResponsesLambda.Models;
-using System.IdentityModel.Tokens.Jwt;
+using AI4NGExperimentManagement.Shared;
 
 namespace AI4NGResponsesLambda.Controllers;
 
-[ApiController]
 [Route("api")]
-public class ResponsesController : ControllerBase
+public class ResponsesController : BaseApiController
 {
     private readonly IResponseService _responseService;
 
-    public ResponsesController(IResponseService responseService)
+    public ResponsesController(IResponseService responseService, IAuthenticationService authService)
+        : base(authService)
     {
         _responseService = responseService;
     }
@@ -33,88 +33,47 @@ public class ResponsesController : ControllerBase
     [HttpPost("responses")]
     public async Task<IActionResult> CreateResponse([FromBody] Response response)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        var result = await _responseService.CreateResponseAsync(response, username);
-        return Ok(result);
+        try
+        {
+            var username = GetAuthenticatedUsername();
+            var result = await _responseService.CreateResponseAsync(response, username);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "creating response");
+        }
     }
 
     [HttpPut("responses/{responseId}")]
     public async Task<IActionResult> UpdateResponse(string responseId, [FromBody] ResponseData data)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        await _responseService.UpdateResponseAsync(responseId, data, username);
-        return Ok(new { message = "Response updated successfully" });
+        try
+        {
+            var username = GetAuthenticatedUsername();
+            await _responseService.UpdateResponseAsync(responseId, data, username);
+            return Ok(new { message = "Response updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "updating response");
+        }
     }
 
     [HttpDelete("responses/{responseId}")]
     public async Task<IActionResult> DeleteResponse(string responseId)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        await _responseService.DeleteResponseAsync(responseId, username);
-        return Ok(new { message = "Response deleted successfully" });
-    }
-
-    private string? GetUsernameFromJwt()
-    {
-        LogDebug("Getting username from JWT");
-        
-        // For local testing, return a test user
-        if (Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL") != null)
-        {
-            LogDebug("Local testing mode - returning testuser");
-            return "testuser";
-        }
-
-        var authHeader = Request.Headers.Authorization.FirstOrDefault();
-        if (string.IsNullOrEmpty(authHeader))
-        {
-            LogDebug("No Authorization header found");
-            throw new UnauthorizedAccessException("Authorization header is required");
-        }
-
-        if (!authHeader.StartsWith("Bearer "))
-        {
-            LogDebug("Invalid Authorization header format");
-            throw new UnauthorizedAccessException("Bearer token required");
-        }
-
-        var token = authHeader["Bearer ".Length..];
         try
         {
-            var handler = new JwtSecurityTokenHandler();
-            var jwt = handler.ReadJwtToken(token);
-            var username = jwt.Claims.FirstOrDefault(c => c.Type == "cognito:username")?.Value;
-            
-            if (string.IsNullOrEmpty(username))
-            {
-                LogDebug("No username claim found in JWT");
-                throw new UnauthorizedAccessException("Invalid token: no username claim");
-            }
-            
-            LogDebug($"Successfully extracted username: {username}");
-            return username;
+            var username = GetAuthenticatedUsername();
+            await _responseService.DeleteResponseAsync(responseId, username);
+            return Ok(new { message = "Response deleted successfully" });
         }
-        catch (Exception ex) when (!(ex is UnauthorizedAccessException))
+        catch (Exception ex)
         {
-            LogDebug($"JWT parsing failed: {ex.Message}");
-            throw new UnauthorizedAccessException("Invalid token format");
+            return HandleException(ex, "deleting response");
         }
     }
 
-    private void LogDebug(string message)
-    {
-        if (Request.Headers.ContainsKey("X-Debug") || Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL") != null)
-        {
-            Console.WriteLine($"[DEBUG] ResponsesController: {message}");
-        }
-    }
+
 }

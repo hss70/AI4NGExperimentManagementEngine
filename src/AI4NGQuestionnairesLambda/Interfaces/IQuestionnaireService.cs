@@ -8,6 +8,6 @@ public interface IQuestionnaireService
     Task<Questionnaire?> GetByIdAsync(string id);
     Task<string> CreateAsync(CreateQuestionnaireRequest request, string username);
     Task UpdateAsync(string id, QuestionnaireData data, string username);
-    Task DeleteAsync(string id);
+    Task DeleteAsync(string id, string username);
     Task<Dictionary<string, object>> CreateBatchAsync(List<CreateQuestionnaireRequest> requests, string username);
 }

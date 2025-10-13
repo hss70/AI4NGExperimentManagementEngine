@@ -1,17 +1,17 @@
 using Microsoft.AspNetCore.Mvc;
 using AI4NGQuestionnairesLambda.Interfaces;
 using AI4NGQuestionnairesLambda.Models;
-using System.IdentityModel.Tokens.Jwt;
+using AI4NGExperimentManagement.Shared;
 
 namespace AI4NGQuestionnairesLambda.Controllers;
 
-[ApiController]
 [Route("api/[controller]")]
-public class QuestionnairesController : ControllerBase
+public class QuestionnairesController : BaseApiController
 {
     private readonly IQuestionnaireService _questionnaireService;
 
-    public QuestionnairesController(IQuestionnaireService questionnaireService)
+    public QuestionnairesController(IQuestionnaireService questionnaireService, IAuthenticationService authService) 
+        : base(authService)
     {
         _questionnaireService = questionnaireService;
     }
@@ -28,7 +28,7 @@ public class QuestionnairesController : ControllerBase
     {
         var questionnaire = await _questionnaireService.GetByIdAsync(id);
         if (questionnaire == null)
-            return NotFound();
+            return NotFound("Questionnaire not found");
         
         return Ok(questionnaire);
     }
@@ -38,130 +38,72 @@ public class QuestionnairesController : ControllerBase
     {
         try
         {
-            LogDebug($"Create questionnaire called with: {System.Text.Json.JsonSerializer.Serialize(request)}");
-            
-            var username = GetUsernameFromJwt();
-            LogDebug($"Username: {username}");
-
-            if (!IsResearcher())
-                return Forbid("Participants cannot create questionnaires");
+            var username = GetAuthenticatedUsername();
+            var researcherCheck = RequireResearcher();
+            if (researcherCheck != null) return researcherCheck;
 
             var id = await _questionnaireService.CreateAsync(request, username);
-            LogDebug($"Created questionnaire with ID: {id}");
-            
             return Ok(new { id });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            LogDebug($"Unauthorized: {ex.Message}");
-            return Unauthorized(new { error = ex.Message });
         }
         catch (Exception ex)
         {
-            LogDebug($"Error creating questionnaire: {ex.Message}");
-            return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            return HandleException(ex, "creating questionnaire");
         }
     }
 
     [HttpPut("{id}")]
     public async Task<ActionResult> Update(string id, [FromBody] QuestionnaireData data)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
+        try
+        {
+            var username = GetAuthenticatedUsername();
+            var researcherCheck = RequireResearcher();
+            if (researcherCheck != null) return researcherCheck;
 
-        if (!IsResearcher())
-            return Forbid("Participants cannot update questionnaires");
-
-        await _questionnaireService.UpdateAsync(id, data, username);
-        return Ok(new { message = "Questionnaire updated successfully" });
+            await _questionnaireService.UpdateAsync(id, data, username);
+            return Ok(new { message = "Questionnaire updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "updating questionnaire");
+        }
     }
 
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(string id)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
+        try
+        {
+            var username = GetAuthenticatedUsername();
+            var researcherCheck = RequireResearcher();
+            if (researcherCheck != null) return researcherCheck;
 
-        if (!IsResearcher())
-            return Forbid("Participants cannot delete questionnaires");
-
-        await _questionnaireService.DeleteAsync(id);
-        return Ok(new { message = "Questionnaire deleted successfully" });
+            await _questionnaireService.DeleteAsync(id, username);
+            return Ok(new { message = "Questionnaire deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "deleting questionnaire");
+        }
     }
 
     [HttpPost("batch")]
     public async Task<ActionResult> CreateBatch([FromBody] List<CreateQuestionnaireRequest> requests)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        if (!IsResearcher())
-            return Forbid("Participants cannot create questionnaires");
-
-        var result = await _questionnaireService.CreateBatchAsync(requests, username);
-        return Ok(result);
-    }
-
-    private string GetUsernameFromJwt()
-    {
-        LogDebug("Getting username from JWT");
-        
-        // For local testing, return a test user
-        if (Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL") != null)
-        {
-            LogDebug("Local testing mode - returning testuser");
-            return "testuser";
-        }
-
-        var authHeader = Request.Headers.Authorization.FirstOrDefault();
-        if (string.IsNullOrEmpty(authHeader))
-        {
-            LogDebug("No Authorization header found");
-            throw new UnauthorizedAccessException("Authorization header is required");
-        }
-
-        if (!authHeader.StartsWith("Bearer "))
-        {
-            LogDebug("Invalid Authorization header format");
-            throw new UnauthorizedAccessException("Bearer token required");
-        }
-
-        var token = authHeader.Substring(7);
         try
         {
-            var handler = new JwtSecurityTokenHandler();
-            var jwtToken = handler.ReadJwtToken(token);
-            var username = jwtToken.Claims.FirstOrDefault(c => c.Type == "username" || c.Type == "cognito:username")?.Value;
-            
-            if (string.IsNullOrEmpty(username))
-            {
-                LogDebug("No username claim found in JWT");
-                throw new UnauthorizedAccessException("Invalid token: no username claim");
-            }
-            
-            LogDebug($"Successfully extracted username: {username}");
-            return username;
+            var username = GetAuthenticatedUsername();
+            var researcherCheck = RequireResearcher();
+            if (researcherCheck != null) return researcherCheck;
+
+            var result = await _questionnaireService.CreateBatchAsync(requests, username);
+            return Ok(result);
         }
-        catch (Exception ex) when (!(ex is UnauthorizedAccessException))
+        catch (Exception ex)
         {
-            LogDebug($"JWT parsing failed: {ex.Message}");
-            throw new UnauthorizedAccessException("Invalid token format");
+            return HandleException(ex, "creating batch questionnaires");
         }
     }
 
-    private void LogDebug(string message)
-    {
-        if (Request.Headers.ContainsKey("X-Debug") || Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL") != null)
-        {
-            Console.WriteLine($"[DEBUG] QuestionnairesController: {message}");
-        }
-    }
 
-    private bool IsResearcher()
-    {
-        return Request.Path.StartsWithSegments("/api/researcher");
-    }
 }

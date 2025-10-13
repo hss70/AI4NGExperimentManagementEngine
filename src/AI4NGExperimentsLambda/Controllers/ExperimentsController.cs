@@ -1,17 +1,17 @@
 using Microsoft.AspNetCore.Mvc;
 using AI4NGExperimentsLambda.Interfaces;
 using AI4NGExperimentsLambda.Models;
-using System.IdentityModel.Tokens.Jwt;
+using AI4NGExperimentManagement.Shared;
 
 namespace AI4NGExperimentsLambda.Controllers;
 
-[ApiController]
 [Route("api")]
-public class ExperimentsController : ControllerBase
+public class ExperimentsController : BaseApiController
 {
     private readonly IExperimentService _experimentService;
 
-    public ExperimentsController(IExperimentService experimentService)
+    public ExperimentsController(IExperimentService experimentService, IAuthenticationService authService)
+        : base(authService)
     {
         _experimentService = experimentService;
     }
@@ -33,56 +33,76 @@ public class ExperimentsController : ControllerBase
     [HttpGet("me/experiments")]
     public async Task<IActionResult> GetMyExperiments()
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        var experiments = await _experimentService.GetMyExperimentsAsync(username);
-        return Ok(experiments);
+        try
+        {
+            var username = GetAuthenticatedUsername();
+            var experiments = await _experimentService.GetMyExperimentsAsync(username);
+            return Ok(experiments);
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "getting my experiments");
+        }
     }
 
     [HttpPost("researcher/experiments")]
     public async Task<IActionResult> CreateExperiment([FromBody] Experiment experiment)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        var result = await _experimentService.CreateExperimentAsync(experiment, username);
-        return Ok(result);
+        try
+        {
+            var username = GetAuthenticatedUsername();
+            var result = await _experimentService.CreateExperimentAsync(experiment, username);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "creating experiment");
+        }
     }
 
     [HttpPut("researcher/experiments/{experimentId}")]
     public async Task<IActionResult> UpdateExperiment(string experimentId, [FromBody] ExperimentData data)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        await _experimentService.UpdateExperimentAsync(experimentId, data, username);
-        return Ok(new { message = "Experiment updated successfully" });
+        try
+        {
+            var username = GetAuthenticatedUsername();
+            await _experimentService.UpdateExperimentAsync(experimentId, data, username);
+            return Ok(new { message = "Experiment updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "updating experiment");
+        }
     }
 
     [HttpDelete("researcher/experiments/{experimentId}")]
     public async Task<IActionResult> DeleteExperiment(string experimentId)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        await _experimentService.DeleteExperimentAsync(experimentId, username);
-        return Ok(new { message = "Experiment deleted successfully" });
+        try
+        {
+            var username = GetAuthenticatedUsername();
+            await _experimentService.DeleteExperimentAsync(experimentId, username);
+            return Ok(new { message = "Experiment deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "deleting experiment");
+        }
     }
 
-    [HttpPost("experiments/{experimentId}/sync")]
-    public async Task<IActionResult> SyncExperiment(string experimentId, [FromBody] SyncRequest syncData)
+    [HttpGet("experiments/{experimentId}/sync")]
+    public async Task<IActionResult> SyncExperiment(string experimentId, [FromQuery] DateTime? lastSyncTime = null)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        await _experimentService.SyncExperimentAsync(experimentId, syncData, username);
-        return Ok(new { message = "Experiment synced successfully" });
+        try
+        {
+            var username = GetAuthenticatedUsername();
+            var result = await _experimentService.SyncExperimentAsync(experimentId, lastSyncTime, username);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "syncing experiment");
+        }
     }
 
     [HttpGet("experiments/{experimentId}/members")]
@@ -95,77 +115,32 @@ public class ExperimentsController : ControllerBase
     [HttpPut("experiments/{experimentId}/members/{userSub}")]
     public async Task<IActionResult> AddMember(string experimentId, string userSub, [FromBody] MemberRequest memberData)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        await _experimentService.AddMemberAsync(experimentId, userSub, memberData, username);
-        return Ok(new { message = "Member added successfully" });
+        try
+        {
+            var username = GetAuthenticatedUsername();
+            await _experimentService.AddMemberAsync(experimentId, userSub, memberData, username);
+            return Ok(new { message = "Member added successfully" });
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "adding member");
+        }
     }
 
     [HttpDelete("experiments/{experimentId}/members/{userSub}")]
     public async Task<IActionResult> RemoveMember(string experimentId, string userSub)
     {
-        var username = GetUsernameFromJwt();
-        if (string.IsNullOrEmpty(username))
-            return Unauthorized();
-
-        await _experimentService.RemoveMemberAsync(experimentId, userSub, username);
-        return Ok(new { message = "Member removed successfully" });
-    }
-
-    private string? GetUsernameFromJwt()
-    {
-        LogDebug("Getting username from JWT");
-        
-        // For local testing, return a test user
-        if (Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL") != null)
-        {
-            LogDebug("Local testing mode - returning testuser");
-            return "testuser";
-        }
-
-        var authHeader = Request.Headers.Authorization.FirstOrDefault();
-        if (string.IsNullOrEmpty(authHeader))
-        {
-            LogDebug("No Authorization header found");
-            throw new UnauthorizedAccessException("Authorization header is required");
-        }
-
-        if (!authHeader.StartsWith("Bearer "))
-        {
-            LogDebug("Invalid Authorization header format");
-            throw new UnauthorizedAccessException("Bearer token required");
-        }
-
-        var token = authHeader["Bearer ".Length..];
         try
         {
-            var handler = new JwtSecurityTokenHandler();
-            var jwt = handler.ReadJwtToken(token);
-            var username = jwt.Claims.FirstOrDefault(c => c.Type == "cognito:username")?.Value;
-            
-            if (string.IsNullOrEmpty(username))
-            {
-                LogDebug("No username claim found in JWT");
-                throw new UnauthorizedAccessException("Invalid token: no username claim");
-            }
-            
-            LogDebug($"Successfully extracted username: {username}");
-            return username;
+            var username = GetAuthenticatedUsername();
+            await _experimentService.RemoveMemberAsync(experimentId, userSub, username);
+            return Ok(new { message = "Member removed successfully" });
         }
-        catch (Exception ex) when (!(ex is UnauthorizedAccessException))
+        catch (Exception ex)
         {
-            LogDebug($"JWT parsing failed: {ex.Message}");
-            throw new UnauthorizedAccessException("Invalid token format");
+            return HandleException(ex, "removing member");
         }
     }
 
-    private void LogDebug(string message)
-    {
-        if (Request.Headers.ContainsKey("X-Debug") || Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL") != null)
-        {
-            Console.WriteLine($"[DEBUG] ExperimentsController: {message}");
-        }
-    }
+
 }

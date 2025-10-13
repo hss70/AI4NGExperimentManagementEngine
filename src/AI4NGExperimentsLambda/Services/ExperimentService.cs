@@ -38,8 +38,11 @@ public class ExperimentService : IExperimentService
         });
     }
 
-    public async Task<object?> GetExperimentAsync(string experimentId)
+    public async Task<object?> GetExperimentAsync(string? experimentId)
     {
+        if (string.IsNullOrWhiteSpace(experimentId))
+            return null;
+
         var response = await _dynamoClient.QueryAsync(new QueryRequest
         {
             TableName = _experimentsTable,
@@ -163,7 +166,7 @@ public class ExperimentService : IExperimentService
         });
     }
 
-    public async Task SyncExperimentAsync(string experimentId, SyncRequest syncData, string username)
+    public async Task<object> SyncExperimentAsync(string experimentId, DateTime? lastSyncTime, string username)
     {
         // Validate experiment exists
         var experimentExists = await _dynamoClient.GetItemAsync(new GetItemRequest
@@ -179,35 +182,45 @@ public class ExperimentService : IExperimentService
         if (!experimentExists.IsItemSet)
             throw new InvalidOperationException($"Experiment '{experimentId}' not found");
 
-        // Validate session ID uniqueness
-        if (syncData?.Sessions != null)
+        var filterExpression = "PK = :pk";
+        var expressionValues = new Dictionary<string, AttributeValue>
         {
-            var sessionIds = new HashSet<string>();
-            foreach (var session in syncData.Sessions)
-            {
-                if (session?.SessionId != null && !sessionIds.Add(session.SessionId))
-                    throw new ArgumentException($"Session ID '{session.SessionId}' is not unique");
-            }
+            [":pk"] = new($"EXPERIMENT#{experimentId}")
+        };
+
+        // Add timestamp filter if provided
+        if (lastSyncTime.HasValue)
+        {
+            filterExpression += " AND updatedAt > :lastSync";
+            expressionValues[":lastSync"] = new(lastSyncTime.Value.ToString("O"));
         }
 
-        foreach (var session in syncData.Sessions)
+        var response = await _dynamoClient.QueryAsync(new QueryRequest
         {
-            await _dynamoClient.PutItemAsync(new PutItemRequest
+            TableName = _experimentsTable,
+            KeyConditionExpression = filterExpression,
+            ExpressionAttributeValues = expressionValues
+        });
+
+        var experiment = response.Items?.FirstOrDefault(i => i["SK"].S == "METADATA");
+        var sessions = response.Items?.Where(i => i["SK"].S.StartsWith("SESSION#")).ToList() ?? new List<Dictionary<string, AttributeValue>>();
+
+        return new
+        {
+            experiment = experiment != null ? new
             {
-                TableName = _experimentsTable,
-                Item = new Dictionary<string, AttributeValue>
-                {
-                    ["PK"] = new($"EXPERIMENT#{experimentId}"),
-                    ["SK"] = new($"SESSION#{session.SessionId}"),
-                    ["type"] = new("Session"),
-                    ["data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(session)) },
-                    ["GSI1PK"] = new($"EXPERIMENT#{experimentId}"),
-                    ["GSI1SK"] = new($"SESSION#{session.SessionId}"),
-                    ["updatedBy"] = new(username),
-                    ["updatedAt"] = new(DateTime.UtcNow.ToString("O"))
-                }
-            });
-        }
+                id = experimentId,
+                data = DynamoDBHelper.ConvertAttributeValueToObject(experiment["data"]),
+                questionnaireConfig = DynamoDBHelper.ConvertAttributeValueToObject(experiment.GetValueOrDefault("questionnaireConfig")),
+                updatedAt = experiment.GetValueOrDefault("updatedAt")?.S
+            } : null,
+            sessions = sessions.Select(s => new
+            {
+                data = DynamoDBHelper.ConvertAttributeValueToObject(s["data"]),
+                updatedAt = s.GetValueOrDefault("updatedAt")?.S
+            }),
+            syncTimestamp = DateTime.UtcNow.ToString("O")
+        };
     }
 
     public async Task<IEnumerable<object>> GetExperimentMembersAsync(string experimentId)

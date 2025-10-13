@@ -22,7 +22,7 @@ public class ResponseService : IResponseService
     {
         QueryRequest request;
 
-        if (!string.IsNullOrEmpty(experimentId) && !string.IsNullOrEmpty(sessionId))
+        if (!string.IsNullOrWhiteSpace(experimentId) && !string.IsNullOrWhiteSpace(sessionId))
         {
             request = new QueryRequest
             {
@@ -36,7 +36,7 @@ public class ResponseService : IResponseService
                 }
             };
         }
-        else if (!string.IsNullOrEmpty(experimentId))
+        else if (!string.IsNullOrWhiteSpace(experimentId))
         {
             request = new QueryRequest
             {
@@ -59,27 +59,36 @@ public class ResponseService : IResponseService
                 ExpressionAttributeValues = new Dictionary<string, AttributeValue> { [":type"] = new("Response") }
             });
 
+            if (scanResponse.Items == null)
+                return Enumerable.Empty<object>();
+
             return scanResponse.Items.Select(item => new
             {
                 id = item["PK"].S.Replace("RESPONSE#", ""),
-                data = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]),
-                createdBy = item["createdBy"]?.S,
-                createdAt = item["createdAt"]?.S
+                data = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data")),
+                createdBy = item.GetValueOrDefault("createdBy")?.S,
+                createdAt = item.GetValueOrDefault("createdAt")?.S
             });
         }
 
         var response = await _dynamoClient.QueryAsync(request);
+        if (response.Items == null)
+            return Enumerable.Empty<object>();
+
         return response.Items.Select(item => new
         {
             id = item["PK"].S.Replace("RESPONSE#", ""),
-            data = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]),
-            createdBy = item["createdBy"]?.S,
-            createdAt = item["createdAt"]?.S
+            data = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data")),
+            createdBy = item.GetValueOrDefault("createdBy")?.S,
+            createdAt = item.GetValueOrDefault("createdAt")?.S
         });
     }
 
-    public async Task<object?> GetResponseAsync(string responseId)
+    public async Task<object?> GetResponseAsync(string? responseId)
     {
+        if (string.IsNullOrWhiteSpace(responseId))
+            return null;
+
         var response = await _dynamoClient.GetItemAsync(new GetItemRequest
         {
             TableName = _responsesTable,
@@ -96,9 +105,9 @@ public class ResponseService : IResponseService
         return new
         {
             id = responseId,
-            data = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]),
-            createdBy = response.Item["createdBy"]?.S,
-            createdAt = response.Item["createdAt"]?.S
+            data = DynamoDBHelper.ConvertAttributeValueToObject(response.Item.GetValueOrDefault("data")),
+            createdBy = response.Item.GetValueOrDefault("createdBy")?.S,
+            createdAt = response.Item.GetValueOrDefault("createdAt")?.S
         };
     }
 
@@ -135,12 +144,12 @@ public class ResponseService : IResponseService
                 ["PK"] = new($"RESPONSE#{responseId}"),
                 ["SK"] = new("METADATA")
             },
-            UpdateExpression = "SET #data = :data, updatedBy = :user, updatedAt = :timestamp",
-            ExpressionAttributeNames = new Dictionary<string, string> { ["#data"] = "data" },
+            UpdateExpression = "SET #data = :data, #updatedBy = :updatedBy, updatedAt = :timestamp",
+            ExpressionAttributeNames = new Dictionary<string, string> { ["#data"] = "data", ["#updatedBy"] = "updatedBy" },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
                 [":data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
-                [":user"] = new(username),
+                [":updatedBy"] = new(username),
                 [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
             }
         });

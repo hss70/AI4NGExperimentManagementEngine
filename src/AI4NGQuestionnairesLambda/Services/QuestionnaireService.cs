@@ -22,9 +22,13 @@ public class QuestionnaireService : IQuestionnaireService
         var response = await _dynamoClient.ScanAsync(new ScanRequest
         {
             TableName = _tableName,
-            FilterExpression = "#type = :type",
+            FilterExpression = "#type = :type AND (attribute_not_exists(syncMetadata.isDeleted) OR syncMetadata.isDeleted = :notDeleted)",
             ExpressionAttributeNames = new Dictionary<string, string> { ["#type"] = "type" },
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue> { [":type"] = new("Questionnaire") }
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue> 
+            { 
+                [":type"] = new("Questionnaire"),
+                [":notDeleted"] = new AttributeValue { BOOL = false }
+            }
         });
 
         return response.Items.Select(item => new Questionnaire
@@ -42,6 +46,9 @@ public class QuestionnaireService : IQuestionnaireService
 
     public async Task<Questionnaire?> GetByIdAsync(string id)
     {
+        if (string.IsNullOrWhiteSpace(id))
+            return null;
+            
         var response = await _dynamoClient.GetItemAsync(new GetItemRequest
         {
             TableName = _tableName,
@@ -56,6 +63,10 @@ public class QuestionnaireService : IQuestionnaireService
 
         if (!response.Item.ContainsKey("data"))
             return null;
+            
+        // Check if item is soft-deleted
+        var isDeleted = response.Item.GetValueOrDefault("syncMetadata")?.M?.GetValueOrDefault("isDeleted")?.BOOL ?? false;
+        if (isDeleted) return null;
 
         return new Questionnaire
         {
@@ -75,7 +86,11 @@ public class QuestionnaireService : IQuestionnaireService
         if (string.IsNullOrWhiteSpace(request.Data.Name))
             throw new ArgumentException("Questionnaire name cannot be empty");
 
-        // Check for duplicate questionnaire ID
+        // Validate ID
+        if (string.IsNullOrWhiteSpace(request.Id))
+            throw new ArgumentException("Questionnaire ID cannot be empty");
+
+        // Check for duplicate questionnaire ID (excluding soft-deleted items)
         var existingItem = await _dynamoClient.GetItemAsync(new GetItemRequest
         {
             TableName = _tableName,
@@ -87,7 +102,13 @@ public class QuestionnaireService : IQuestionnaireService
         });
 
         if (existingItem.IsItemSet)
-            throw new DuplicateItemException($"Questionnaire with ID '{request.Id}' already exists");
+        {
+            var isDeleted = existingItem.Item.GetValueOrDefault("syncMetadata")?.M?.GetValueOrDefault("isDeleted")?.BOOL ?? false;
+            if (!isDeleted)
+                throw new DuplicateItemException($"Questionnaire with ID '{request.Id}' already exists");
+            
+            // If soft-deleted, we can reuse the ID by overwriting
+        }
 
         // Validate question structure
         if (request.Data?.Questions != null)
@@ -106,7 +127,7 @@ public class QuestionnaireService : IQuestionnaireService
                 ["GSI3PK"] = new("QUESTIONNAIRE"),
                 ["GSI3SK"] = new(timestamp),
                 ["type"] = new("Questionnaire"),
-                ["data"] = ConvertQuestionnaireDataToAttributeValue(request.Data),
+                ["data"] = ConvertQuestionnaireDataToAttributeValue(request.Data!),
                 ["createdBy"] = new(username),
                 ["createdAt"] = new(timestamp),
                 ["updatedBy"] = new(username),
@@ -151,15 +172,29 @@ public class QuestionnaireService : IQuestionnaireService
         });
     }
 
-    public async Task DeleteAsync(string id)
+    public async Task DeleteAsync(string id, string username)
     {
-        await _dynamoClient.DeleteItemAsync(new DeleteItemRequest
+        var timestamp = DateTime.UtcNow.ToString("O");
+        
+        // Soft delete by updating syncMetadata
+        await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = _tableName,
             Key = new Dictionary<string, AttributeValue>
             {
                 ["PK"] = new($"QUESTIONNAIRE#{id}"),
                 ["SK"] = new("CONFIG")
+            },
+            UpdateExpression = "SET #deletedBy = :deletedBy, deletedAt = :timestamp, syncMetadata.isDeleted = :deleted, syncMetadata.lastModified = :timestamp",
+            ExpressionAttributeNames = new Dictionary<string, string>
+            {
+                ["#deletedBy"] = "deletedBy"
+            },
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":deletedBy"] = new(username),
+                [":timestamp"] = new(timestamp),
+                [":deleted"] = new AttributeValue { BOOL = true }
             }
         });
     }
@@ -230,7 +265,7 @@ public class QuestionnaireService : IQuestionnaireService
                 ["version"] = new(data.Version),
                 ["questions"] = new AttributeValue
                 {
-                    L = data.Questions.Select(q => new AttributeValue
+                    L = (data.Questions ?? new List<Question>()).Select(q => new AttributeValue
                     {
                         M = new Dictionary<string, AttributeValue>
                         {

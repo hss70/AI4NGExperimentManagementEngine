@@ -89,57 +89,17 @@ public class ReferentialIntegrityTests
     public async Task SyncExperimentAsync_ShouldValidateExperimentExists()
     {
         // Arrange
-        var syncData = new SyncRequest
-        {
-            Sessions = new List<Session>
-            {
-                new() { SessionId = "session-1", ParticipantId = "participant-1", Status = "active" }
-            }
-        };
+        var lastSyncTime = DateTime.UtcNow.AddHours(-1);
 
         // Mock experiment not found
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
             .ReturnsAsync(new GetItemResponse { Item = null });
 
-        _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
-            .ReturnsAsync(new PutItemResponse());
-
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.SyncExperimentAsync("non-existent-experiment", syncData, "testuser"));
+            () => _service.SyncExperimentAsync("non-existent-experiment", lastSyncTime, "testuser"));
         
         Assert.Contains("experiment", exception.Message.ToLower());
         Assert.Contains("not found", exception.Message.ToLower());
-    }
-
-    [Fact]
-    public async Task SyncExperimentAsync_ShouldValidateUniqueSessionIds()
-    {
-        // Arrange
-        var syncData = new SyncRequest
-        {
-            Sessions = new List<Session>
-            {
-                new() { SessionId = "session-1", ParticipantId = "participant-1", Status = "active" },
-                new() { SessionId = "session-1", ParticipantId = "participant-2", Status = "active" } // Duplicate
-            }
-        };
-
-        // Mock experiment exists
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
-                Item = new Dictionary<string, AttributeValue>
-                {
-                    ["PK"] = new AttributeValue("EXPERIMENT#test-experiment")
-                }
-            });
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.SyncExperimentAsync("test-experiment", syncData, "testuser"));
-        
-        Assert.Contains("session", exception.Message.ToLower());
-        Assert.Contains("unique", exception.Message.ToLower());
     }
 }
