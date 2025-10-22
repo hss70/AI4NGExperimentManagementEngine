@@ -31,7 +31,7 @@ public abstract class BaseStartup
         services.AddAuthentication("Bearer")
             .AddJwtBearer("Bearer", options =>
             {
-                options.Authority = "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_EaNz6cSp0";
+                //options.Authority = "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_EaNz6cSp0";
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
