@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\AI4NGExperimentManagementTests.Shared\AI4NGExperimentManagementTests.Shared.csproj" />
+    <ProjectReference Include="..\..\tests\AI4NGExperimentManagementTests.Shared\AI4NGExperimentManagementTests.Shared.csproj" />
     <ProjectReference Include="..\..\src\AI4NGResponsesLambda\AI4NGResponsesLambda.csproj" />
     <ProjectReference Include="..\..\src\AI4NGExperimentManagement.Shared\AI4NGExperimentManagement.Shared.csproj" />
   </ItemGroup>
