@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AI4NGExperimentManagement.Shared;
@@ -32,7 +33,8 @@ public abstract class BaseApiController : ControllerBase
     protected ActionResult RequireResearcher()
     {
         if (!_authService.IsResearcher())
-            return Forbid("Participants cannot perform this action");
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { message = "Participants cannot perform this action" });
         return null!;
     }
 }

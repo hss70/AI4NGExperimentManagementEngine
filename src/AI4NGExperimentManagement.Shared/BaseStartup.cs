@@ -36,11 +36,25 @@ public abstract class BaseStartup
                 {
                     ValidateIssuer = true,
                     ValidIssuer = "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_EaNz6cSp0",
-                    ValidateAudience = true,
-                    ValidAudience = "517s6c84jo5i3lqste5idb0o4c",
-                    ValidateLifetime = true
+                    ValidateAudience = false,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
+                    {
+                        var jwksPath = Path.Combine(AppContext.BaseDirectory, "jwks.json");
+                        var jwksJson = File.ReadAllText(jwksPath);
+                        var jwks = new JsonWebKeySet(jwksJson);
+                        return jwks.Keys.Where(k => k.Kid == kid);
+                    },
+                    NameClaimType = "username",
+                    RoleClaimType = "cognito:groups"
                 };
+
+                // optional: adds group claims automatically to User.Claims
+                options.TokenValidationParameters.NameClaimType = "username";
+                options.TokenValidationParameters.RoleClaimType = "cognito:groups";
             });
+
 
         services.AddAuthorization(options =>
         {
