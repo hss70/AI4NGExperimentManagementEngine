@@ -50,7 +50,7 @@ public class ErrorHandlingTests : ControllerTestBase<ExperimentsController>
 
 
     [Fact]
-    public async Task CreateExperiment_ShouldReturn401_WhenNoAuthHeader()
+    public async Task Create_ShouldReturn401_WhenNoAuthHeader()
     {
         // Arrange
         var (mockService, controller, authMock) = CreateController(isLocal: false);
@@ -58,14 +58,14 @@ public class ErrorHandlingTests : ControllerTestBase<ExperimentsController>
         var experiment = new Experiment();
 
         // Act
-        var result = await controller.CreateExperiment(experiment);
+        var result = await controller.Create(experiment);
 
         // Assert
         Assert.IsType<UnauthorizedObjectResult>(result);
     }
 
     [Fact]
-    public async Task CreateExperiment_ShouldReturn401_WhenInvalidToken()
+    public async Task Create_ShouldReturn401_WhenInvalidToken()
     {
         // Arrange
         var (mockService, controller, authMock) = CreateController(isLocal: false);
@@ -73,14 +73,14 @@ public class ErrorHandlingTests : ControllerTestBase<ExperimentsController>
         var experiment = new Experiment();
 
         // Act
-        var result = await controller.CreateExperiment(experiment);
+        var result = await controller.Create(experiment);
 
         // Assert
         Assert.IsType<UnauthorizedObjectResult>(result);
     }
 
     [Fact]
-    public async Task CreateExperiment_ShouldReturn401_WhenMalformedAuthHeader()
+    public async Task Create_ShouldReturn401_WhenMalformedAuthHeader()
     {
         // Arrange
         var (mockService, controller, authMock) = CreateController(isLocal: false);
@@ -88,7 +88,7 @@ public class ErrorHandlingTests : ControllerTestBase<ExperimentsController>
         var experiment = new Experiment();
 
         // Act
-        var result = await controller.CreateExperiment(experiment);
+        var result = await controller.Create(experiment);
 
         // Assert
         Assert.IsType<UnauthorizedObjectResult>(result);

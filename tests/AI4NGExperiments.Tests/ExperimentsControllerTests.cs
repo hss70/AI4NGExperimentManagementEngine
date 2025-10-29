@@ -16,26 +16,10 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
     private (Mock<IExperimentService> mockService, ExperimentsController controller, Mock<IAuthenticationService> authMock) CreateController(bool isLocal = true)
         => CreateControllerWithMocks<IExperimentService>((svc, auth) => new ExperimentsController(svc, auth), isLocal);
 
-    [Fact]
-    public async Task GetExperiments_ShouldReturnOk_WithExperiments()
-    {
-        // Arrange
-        var (mockService, controller, _) = CreateController();
-        var experiments = new List<object> { new { id = "test-id", name = "Test Experiment" } };
-        mockService.Setup(x => x.GetExperimentsAsync()).ReturnsAsync(experiments);
-
-        // Act
-        var result = await controller.GetExperiments();
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(experiments, okResult.Value);
-    }
-
     [Theory]
     [InlineData(true, TestDataBuilder.TestUserId, true)]
     [InlineData(false, TestDataBuilder.NonExistentId, false)]
-    public async Task GetExperiment_ShouldReturnExpectedResult(bool exists, string id, bool expectOk)
+    public async Task GetById_ShouldReturnExpectedResult(bool exists, string id, bool expectOk)
     {
         // Arrange
         var (mockService, controller, _) = CreateController();
@@ -46,7 +30,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
             mockService.Setup(x => x.GetExperimentAsync(id)).ReturnsAsync((object?)null);
 
         // Act
-        var result = await controller.GetExperiment(id);
+        var result = await controller.GetById(id);
 
         // Assert
         if (expectOk)
@@ -87,7 +71,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
         mockService.Setup(x => x.UpdateExperimentAsync(TestDataBuilder.TestUserId, data, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
 
         // Act
-        var result = await controller.UpdateExperiment(TestDataBuilder.TestUserId, data);
+        var result = await controller.Update(TestDataBuilder.TestUserId, data);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -96,7 +80,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
     }
 
     [Fact]
-    public async Task GetExperimentMembers_ShouldReturnOk_WithMembers()
+    public async Task GetByIdMembers_ShouldReturnOk_WithMembers()
     {
         // Arrange
         var (mockService, controller, _) = CreateController();
@@ -108,7 +92,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
         mockService.Setup(x => x.GetExperimentMembersAsync(TestDataBuilder.TestUserId)).ReturnsAsync(members);
 
         // Act
-        var result = await controller.GetExperimentMembers(TestDataBuilder.TestUserId);
+        var result = await controller.GetMembers(TestDataBuilder.TestUserId);
 
         // Assert
         var ok = Assert.IsType<OkObjectResult>(result);

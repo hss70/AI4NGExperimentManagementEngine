@@ -25,7 +25,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
         mockService.Setup(x => x.GetResponsesAsync(null, null)).ReturnsAsync(responses);
 
         // Act
-        var result = await controller.GetResponses();
+        var result = await controller.GetAll();
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -46,7 +46,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
             mockService.Setup(x => x.GetResponseAsync(id)).ReturnsAsync((object?)null);
 
         // Act
-        var result = await controller.GetResponse(id);
+        var result = await controller.GetById(id);
 
         // Assert
         if (expectOk)
@@ -62,7 +62,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
     }
 
     [Fact]
-    public async Task CreateResponse_ShouldReturnOk_WhenValid()
+    public async Task Create_ShouldReturnOk_WhenValid()
     {
         // Arrange
         var (mockService, controller, _) = CreateController();
@@ -74,7 +74,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
         mockService.Setup(x => x.CreateResponseAsync(response, TestDataBuilder.TestUsername)).ReturnsAsync(expectedResult);
 
         // Act
-        var result = await controller.CreateResponse(response);
+        var result = await controller.Create(response);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -82,7 +82,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
     }
 
     [Fact]
-    public async Task UpdateResponse_ShouldReturnOk_WhenValid()
+    public async Task Update_ShouldReturnOk_WhenValid()
     {
         // Arrange
         using var _ = TestEnvironmentHelper.SetLocalTestingMode();
@@ -91,7 +91,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
         mockService.Setup(x => x.UpdateResponseAsync(TestDataBuilder.TestUserId, data, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
 
         // Act
-        var result = await controller.UpdateResponse(TestDataBuilder.TestUserId, data);
+        var result = await controller.Update(TestDataBuilder.TestUserId, data);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -108,7 +108,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
         mockService.Setup(x => x.DeleteResponseAsync(TestDataBuilder.TestUserId, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
 
         // Act
-        var result = await controller.DeleteResponse(TestDataBuilder.TestUserId);
+        var result = await controller.Delete(TestDataBuilder.TestUserId);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -125,7 +125,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
         mockService.Setup(x => x.GetResponsesAsync("test-experiment", null)).ReturnsAsync(responses);
 
         // Act
-        var result = await controller.GetResponses("test-experiment");
+        var result = await controller.GetAll("test-experiment");
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -141,7 +141,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
         mockService.Setup(x => x.GetResponsesAsync("test-experiment", "test-session")).ReturnsAsync(responses);
 
         // Act
-        var result = await controller.GetResponses("test-experiment", "test-session");
+        var result = await controller.GetAll("test-experiment", "test-session");
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -149,7 +149,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
     }
 
     [Fact]
-    public async Task CreateResponse_ShouldReturnUnauthorized_WhenNoAuthInNonLocalMode()
+    public async Task Create_ShouldReturnUnauthorized_WhenNoAuthInNonLocalMode()
     {
         // Arrange
         var (mockService, controller, authMock) = CreateController(isLocal: false);
@@ -157,14 +157,14 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
         var response = new Response();
 
         // Act
-        var result = await controller.CreateResponse(response);
+        var result = await controller.Create(response);
 
         // Assert
         Assert.IsType<UnauthorizedObjectResult>(result);
     }
 
     [Fact]
-    public async Task UpdateResponse_ShouldReturnUnauthorized_WhenNoAuthInNonLocalMode()
+    public async Task Update_ShouldReturnUnauthorized_WhenNoAuthInNonLocalMode()
     {
         // Arrange
         var (mockService, controller, authMock) = CreateController(isLocal: false);
@@ -172,7 +172,7 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
         var data = new ResponseData();
 
         // Act
-        var result = await controller.UpdateResponse("test-id", data);
+        var result = await controller.Update("test-id", data);
 
         // Assert
         Assert.IsType<UnauthorizedObjectResult>(result);

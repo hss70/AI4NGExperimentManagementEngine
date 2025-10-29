@@ -168,8 +168,9 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         mockService.Setup(x => x.UpdateAsync(TestDataBuilder.TestUserId, data, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
+        var request = new CreateQuestionnaireRequest { Id = "asfasf", Data= data};
         // Act
-        var result = await controller.Update(TestDataBuilder.TestUserId, data);
+        var result = await controller.Update(TestDataBuilder.TestUserId, request);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -256,10 +257,10 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var (mockService, controller, auth) = CreateController(isLocal: false);
         auth.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Authorization header is required"));
         controller.ControllerContext.HttpContext.Request.Headers.Clear();
-        var data = new QuestionnaireData { Name = "Test" };
+        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireData { Name = "Test" } };
 
         // Act
-        var result = await controller.Update("test-id", data);
+        var result = await controller.Update("test-id", request);
 
         // Assert
         Assert.IsType<UnauthorizedObjectResult>(result);

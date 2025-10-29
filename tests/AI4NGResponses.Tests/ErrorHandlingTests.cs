@@ -48,7 +48,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResponsesController>
 
 
     [Fact]
-    public async Task CreateResponse_ShouldReturn401_WhenNoAuthHeader()
+    public async Task Create_ShouldReturn401_WhenNoAuthHeader()
     {
         // Arrange
         var (mockService, controller, authMock) = CreateController(isLocal: false);
@@ -56,7 +56,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResponsesController>
         var response = new Response();
 
         // Act
-        var result = await controller.CreateResponse(response);
+        var result = await controller.Create(response);
 
         // Assert
         Assert.IsType<UnauthorizedObjectResult>(result);

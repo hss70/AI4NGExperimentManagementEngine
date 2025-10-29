@@ -113,24 +113,5 @@ namespace AI4NGResponsesLambda.Controllers
                 return HandleException(ex, "deleting response");
             }
         }
-
-        /// <summary>
-        /// Synchronizes responses for the authenticated participant since the last sync time.
-        /// </summary>
-        /// <param name="lastSyncTime">The last time responses were synced.</param>
-        [HttpGet("/api/sync/responses")]
-        public async Task<IActionResult> Sync([FromQuery] DateTime? lastSyncTime = null)
-        {
-            try
-            {
-                var username = GetAuthenticatedUsername();
-                var result = await _responseService.SyncResponsesAsync(lastSyncTime, username);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex, "syncing responses");
-            }
-        }
     }
 }
