@@ -24,6 +24,12 @@ public class Question
     public string Type { get; set; } = string.Empty;
     public List<string> Options { get; set; } = new();
     public bool Required { get; set; } = true;
+    public Scale? Scale { get; set; } = null;
+}
+public class Scale
+{
+    public int Min { get; set; }
+    public int Max { get; set; }
 }
 
 public class CreateQuestionnaireRequest
@@ -31,3 +37,9 @@ public class CreateQuestionnaireRequest
     public string Id { get; set; } = string.Empty;
     public QuestionnaireData Data { get; set; } = new();
 }
+
+public record BatchSummary(int Processed, int Successful, int Failed);
+
+public record BatchItemResult(string Id, string Status, string? Error = null);
+
+public record BatchResult(BatchSummary Summary, List<BatchItemResult> Results);

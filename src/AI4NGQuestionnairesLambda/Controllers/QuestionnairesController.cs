@@ -10,7 +10,7 @@ public class QuestionnairesController : BaseApiController
 {
     private readonly IQuestionnaireService _questionnaireService;
 
-    public QuestionnairesController(IQuestionnaireService questionnaireService, IAuthenticationService authService) 
+    public QuestionnairesController(IQuestionnaireService questionnaireService, IAuthenticationService authService)
         : base(authService)
     {
         _questionnaireService = questionnaireService;
@@ -29,7 +29,7 @@ public class QuestionnairesController : BaseApiController
         var questionnaire = await _questionnaireService.GetByIdAsync(id);
         if (questionnaire == null)
             return NotFound("Questionnaire not found");
-        
+
         return Ok(questionnaire);
     }
 
@@ -97,13 +97,20 @@ public class QuestionnairesController : BaseApiController
             if (researcherCheck != null) return researcherCheck;
 
             var result = await _questionnaireService.CreateBatchAsync(requests, username);
-            return Ok(result);
+
+            if (result.Summary.Failed == 0)
+                return Ok(result);
+            if (result.Summary.Successful == 0)
+                return BadRequest(result);
+            return StatusCode(207, result); // Partial success
         }
         catch (Exception ex)
         {
             return HandleException(ex, "creating batch questionnaires");
         }
     }
+
+
 
 
 }

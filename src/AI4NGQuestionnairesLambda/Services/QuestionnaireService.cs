@@ -24,8 +24,8 @@ public class QuestionnaireService : IQuestionnaireService
             TableName = _tableName,
             FilterExpression = "#type = :type AND (attribute_not_exists(syncMetadata.isDeleted) OR syncMetadata.isDeleted = :notDeleted)",
             ExpressionAttributeNames = new Dictionary<string, string> { ["#type"] = "type" },
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue> 
-            { 
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
                 [":type"] = new("Questionnaire"),
                 [":notDeleted"] = new AttributeValue { BOOL = false }
             }
@@ -34,13 +34,7 @@ public class QuestionnaireService : IQuestionnaireService
         return response.Items.Select(item => new Questionnaire
         {
             Id = item["PK"].S.Replace("QUESTIONNAIRE#", ""),
-            Data = new QuestionnaireData
-            {
-                Name = item["data"].M["name"].S,
-                Description = item["data"].M.GetValueOrDefault("description")?.S ?? "",
-                Version = item["data"].M.GetValueOrDefault("version")?.S ?? "1.0",
-                EstimatedTime = int.Parse(item["data"].M.GetValueOrDefault("estimatedTime")?.N ?? "0")
-            }
+            Data = ConvertAttributeValueToQuestionnaireData(item["data"])
         });
     }
 
@@ -48,7 +42,7 @@ public class QuestionnaireService : IQuestionnaireService
     {
         if (string.IsNullOrWhiteSpace(id))
             return null;
-            
+
         var response = await _dynamoClient.GetItemAsync(new GetItemRequest
         {
             TableName = _tableName,
@@ -63,7 +57,7 @@ public class QuestionnaireService : IQuestionnaireService
 
         if (!response.Item.ContainsKey("data"))
             return null;
-            
+
         // Check if item is soft-deleted
         var isDeleted = response.Item.GetValueOrDefault("syncMetadata")?.M?.GetValueOrDefault("isDeleted")?.BOOL ?? false;
         if (isDeleted) return null;
@@ -82,7 +76,7 @@ public class QuestionnaireService : IQuestionnaireService
         // Input validation
         if (request?.Data == null)
             throw new ArgumentException("Request data cannot be null");
-            
+
         if (string.IsNullOrWhiteSpace(request.Data.Name))
             throw new ArgumentException("Questionnaire name cannot be empty");
 
@@ -106,7 +100,7 @@ public class QuestionnaireService : IQuestionnaireService
             var isDeleted = existingItem.Item.GetValueOrDefault("syncMetadata")?.M?.GetValueOrDefault("isDeleted")?.BOOL ?? false;
             if (!isDeleted)
                 throw new DuplicateItemException($"Questionnaire with ID '{request.Id}' already exists");
-            
+
             // If soft-deleted, we can reuse the ID by overwriting
         }
 
@@ -132,12 +126,15 @@ public class QuestionnaireService : IQuestionnaireService
                 ["createdAt"] = new(timestamp),
                 ["updatedBy"] = new(username),
                 ["updatedAt"] = new(timestamp),
-                ["syncMetadata"] = new AttributeValue { M = new Dictionary<string, AttributeValue>
+                ["syncMetadata"] = new AttributeValue
                 {
-                    ["version"] = new AttributeValue { N = "1" },
-                    ["lastModified"] = new(timestamp),
-                    ["isDeleted"] = new AttributeValue { BOOL = false }
-                }}
+                    M = new Dictionary<string, AttributeValue>
+                    {
+                        ["version"] = new AttributeValue { N = "1" },
+                        ["lastModified"] = new(timestamp),
+                        ["isDeleted"] = new AttributeValue { BOOL = false }
+                    }
+                }
             }
         });
 
@@ -175,7 +172,7 @@ public class QuestionnaireService : IQuestionnaireService
     public async Task DeleteAsync(string id, string username)
     {
         var timestamp = DateTime.UtcNow.ToString("O");
-        
+
         // Soft delete by updating syncMetadata
         await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
         {
@@ -199,42 +196,64 @@ public class QuestionnaireService : IQuestionnaireService
         });
     }
 
-    public async Task<Dictionary<string, object>> CreateBatchAsync(List<CreateQuestionnaireRequest> requests, string username)
+    public async Task<BatchResult> CreateBatchAsync(List<CreateQuestionnaireRequest> requests, string username)
     {
-        var results = new List<object>();
-        var timestamp = DateTime.UtcNow.ToString("O");
+        if (requests == null || !requests.Any())
+            throw new ArgumentException("No questionnaires provided for batch import.");
 
-        foreach (var request in requests)
+        var timestamp = DateTime.UtcNow.ToString("O");
+        async Task<BatchItemResult> ProcessOneAsync(CreateQuestionnaireRequest request)
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(request.Id))
+                    throw new ArgumentException("Questionnaire ID cannot be empty.");
+
+                if (request.Data == null)
+                    throw new ArgumentException("Questionnaire data cannot be null.");
+
+                ValidateQuestions(request.Data.Questions);
                 await CreateAsync(request, username);
-                results.Add(new { id = request.Id, status = "success" });
+
+                return new BatchItemResult(request.Id, "success");
             }
             catch (Exception ex)
             {
-                results.Add(new { id = request.Id, status = "error", error = ex.Message });
+                var message = ex switch
+                {
+                    DuplicateItemException => $"Questionnaire with ID '{request.Id}' already exists.",
+                    ArgumentException => $"Invalid questionnaire '{request.Id}': {ex.Message}",
+                    _ => $"Unexpected error creating '{request.Id}': {ex.Message}"
+                };
+
+                return new BatchItemResult(request.Id, "error", message);
             }
         }
 
-        return new Dictionary<string, object>
-        {
-            ["message"] = $"Processed {requests.Count} questionnaires",
-            ["results"] = results
-        };
+        // Run each create in parallel for speed & isolation
+        var tasks = requests.Select(ProcessOneAsync);
+
+        var results = await Task.WhenAll(tasks);
+        var successes = results.Count(r => r.Status == "success");
+        var failures = results.Length - successes;
+
+        return new BatchResult(
+            new BatchSummary(results.Length, successes, failures),
+            results.ToList()
+        );
     }
 
     private void ValidateQuestions(List<Question> questions)
     {
         if (questions == null) return;
-        
+
         var questionIds = new HashSet<string>();
         var validTypes = new[] { "text", "choice", "select", "scale", "number", "boolean" };
 
         foreach (var question in questions)
         {
             if (question == null) continue;
-            
+
             // Check question ID uniqueness
             if (!questionIds.Add(question.Id ?? ""))
                 throw new ArgumentException($"Question ID '{question.Id}' is not unique");
@@ -255,31 +274,53 @@ public class QuestionnaireService : IQuestionnaireService
 
     private AttributeValue ConvertQuestionnaireDataToAttributeValue(QuestionnaireData data)
     {
-        return new AttributeValue
+        var map = new Dictionary<string, AttributeValue>
         {
-            M = new Dictionary<string, AttributeValue>
+            ["name"] = new(data.Name),
+            ["description"] = new(data.Description),
+            ["estimatedTime"] = new AttributeValue { N = data.EstimatedTime.ToString() },
+            ["version"] = new(data.Version),
+            ["questions"] = new AttributeValue
             {
-                ["name"] = new(data.Name),
-                ["description"] = new(data.Description),
-                ["estimatedTime"] = new AttributeValue { N = data.EstimatedTime.ToString() },
-                ["version"] = new(data.Version),
-                ["questions"] = new AttributeValue
-                {
-                    L = (data.Questions ?? new List<Question>()).Select(q => new AttributeValue
+                L = (data.Questions ?? new List<Question>())
+                    .Select(q =>
                     {
-                        M = new Dictionary<string, AttributeValue>
+                        var qMap = new Dictionary<string, AttributeValue>
                         {
                             ["id"] = new(q.Id),
                             ["text"] = new(q.Text),
                             ["type"] = new(q.Type),
-                            ["options"] = new AttributeValue { L = q.Options.Select(o => new AttributeValue(o)).ToList() },
+                            ["options"] = new AttributeValue
+                            {
+                                L = (q.Options ?? new List<string>())
+                                    .Select(o => new AttributeValue(o))
+                                    .ToList()
+                            },
                             ["required"] = new AttributeValue { BOOL = q.Required }
+                        };
+
+                        // Only include scale if it actually exists
+                        if (q.Scale != null)
+                        {
+                            qMap["scale"] = new AttributeValue
+                            {
+                                M = new Dictionary<string, AttributeValue>
+                                {
+                                    ["min"] = new AttributeValue { N = q.Scale.Min.ToString() },
+                                    ["max"] = new AttributeValue { N = q.Scale.Max.ToString() }
+                                }
+                            };
                         }
-                    }).ToList()
-                }
+
+                        return new AttributeValue { M = qMap };
+                    })
+                    .ToList()
             }
         };
+
+        return new AttributeValue { M = map };
     }
+
 
     private QuestionnaireData ConvertAttributeValueToQuestionnaireData(AttributeValue attributeValue)
     {
@@ -296,7 +337,14 @@ public class QuestionnaireService : IQuestionnaireService
                 Text = q.M["text"].S,
                 Type = q.M["type"].S,
                 Options = q.M.GetValueOrDefault("options")?.L?.Select(o => o.S).ToList() ?? new(),
-                Required = q.M.GetValueOrDefault("required")?.BOOL ?? true
+                Required = q.M.GetValueOrDefault("required")?.BOOL ?? true,
+                Scale = q.M.ContainsKey("scale") && q.M["scale"].M != null
+                    ? new Scale
+                    {
+                        Min = int.Parse(q.M["scale"].M.GetValueOrDefault("min")?.N ?? "0"),
+                        Max = int.Parse(q.M["scale"].M.GetValueOrDefault("max")?.N ?? "0")
+                    }
+                    : null
             }).ToList() ?? new()
         };
     }
