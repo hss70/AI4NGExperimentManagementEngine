@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 
 namespace AI4NGExperimentManagement.Shared;
 
@@ -27,23 +28,22 @@ public abstract class BaseStartup
             services.AddSingleton<IAmazonDynamoDB, AmazonDynamoDBClient>();
         }
 
-        // Ensure authentication is added
         services.AddAuthentication("Bearer")
             .AddJwtBearer("Bearer", options =>
             {
-                //options.Authority = "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_EaNz6cSp0";
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidIssuer = "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_EaNz6cSp0",
                     ValidateAudience = false,
-                    ValidAudience = "517s6c84jo5i3lqste5idb0o4c", //Cognito app client ID (safe default)
+                    ValidAudience = "517s6c84jo5i3lqste5idb0o4c", // Cognito App Client ID
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
                     {
                         var assembly = typeof(BaseStartup).Assembly;
-                        using var stream = assembly.GetManifestResourceStream("AI4NGExperimentManagement.Shared.Resources.jwks.json");
+                        using var stream = assembly.GetManifestResourceStream(
+                            "AI4NGExperimentManagement.Shared.Resources.jwks.json");
                         if (stream == null)
                             throw new FileNotFoundException("Embedded JWKS resource not found.");
 
@@ -51,14 +51,27 @@ public abstract class BaseStartup
                         var jwksJson = reader.ReadToEnd();
                         var jwks = new JsonWebKeySet(jwksJson);
                         return jwks.Keys;
-                    };
-                    NameClaimType = "username",
-                    RoleClaimType = "cognito:groups"
+                    },
+                    NameClaimType = "cognito:username",
+                    RoleClaimType = "cognito:groups",
                 };
 
-                // optional: adds group claims automatically to User.Claims
-                options.TokenValidationParameters.NameClaimType = "username";
-                options.TokenValidationParameters.RoleClaimType = "cognito:groups";
+                //Fallback logic for tokens that use "username" instead of "cognito:username"
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = context =>
+                    {
+                        var identity = context.Principal.Identity as ClaimsIdentity;
+                        var usernameClaim = identity?.FindFirst("cognito:username") ??
+                                            identity?.FindFirst("username");
+                        if (usernameClaim != null)
+                        {
+                            // Add a standard Name claim so User.Identity.Name is always populated
+                            identity.AddClaim(new Claim(ClaimTypes.Name, usernameClaim.Value));
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
 

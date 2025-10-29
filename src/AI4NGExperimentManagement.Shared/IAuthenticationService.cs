@@ -4,4 +4,5 @@ public interface IAuthenticationService
 {
     string GetUsernameFromRequest();
     bool IsResearcher();
+    bool IsParticipant();
 }

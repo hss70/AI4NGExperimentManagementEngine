@@ -15,9 +15,13 @@ public abstract class BaseApiController : ControllerBase
 
     protected ActionResult HandleException(Exception ex, string operation)
     {
+        Console.Error.WriteLine($"Error during {operation}: {ex}");
+
         return ex switch
         {
             UnauthorizedAccessException => Unauthorized(new { error = ex.Message }),
+            Amazon.DynamoDBv2.AmazonDynamoDBException => StatusCode(503, new { error = "Database temporarily unavailable" }),
+            TimeoutException => StatusCode(408, new { error = "Request timeout" }),
             _ => StatusCode(500, new { error = "Internal server error", details = ex.Message })
         };
     }
@@ -35,6 +39,7 @@ public abstract class BaseApiController : ControllerBase
         if (!_authService.IsResearcher())
             return StatusCode(StatusCodes.Status403Forbidden,
                 new { message = "Participants cannot perform this action" });
+
         return null!;
     }
 }

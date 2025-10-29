@@ -1,11 +1,15 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace AI4NGExperimentManagement.Shared;
 
 public class AuthenticationService : IAuthenticationService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+
+    private ClaimsPrincipal GetUser() =>
+        _httpContextAccessor.HttpContext?.User
+        ?? throw new InvalidOperationException("User context not available");
 
     public AuthenticationService(IHttpContextAccessor httpContextAccessor)
     {
@@ -14,42 +18,35 @@ public class AuthenticationService : IAuthenticationService
 
     public string GetUsernameFromRequest()
     {
-        var context = _httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext not available");
-        
-        // For local testing, return a test user
+        var user = GetUser();
+
+        // ✅ For local testing
         if (Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL") != null)
-        {
             return "testuser";
-        }
 
-        var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
-        if (string.IsNullOrEmpty(authHeader))
-            throw new UnauthorizedAccessException("Authorization header is required");
+        var username = user.FindFirst("cognito:username")?.Value
+                    ?? user.FindFirst("username")?.Value
+                    ?? user.FindFirst("sub")?.Value;
 
-        if (!authHeader.StartsWith("Bearer "))
-            throw new UnauthorizedAccessException("Bearer token required");
+        if (string.IsNullOrEmpty(username))
+            throw new UnauthorizedAccessException("Authenticated user has no username claim");
 
-        var token = authHeader.Substring(7);
-        try
-        {
-            var handler = new JwtSecurityTokenHandler();
-            var jwtToken = handler.ReadJwtToken(token);
-            var username = jwtToken.Claims.FirstOrDefault(c => c.Type == "username" || c.Type == "cognito:username")?.Value;
-            
-            if (string.IsNullOrEmpty(username))
-                throw new UnauthorizedAccessException("Invalid token: no username claim");
-            
-            return username;
-        }
-        catch (Exception ex) when (!(ex is UnauthorizedAccessException))
-        {
-            throw new UnauthorizedAccessException("Invalid token format");
-        }
+        return username;
     }
 
     public bool IsResearcher()
     {
-        var context = _httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext not available");
-        return context.Request.Path.StartsWithSegments("/api/researcher");
+        var user = GetUser();
+
+        return user.IsInRole("Researcher") ||
+               user.Claims.Any(c => c.Type == "cognito:groups" && c.Value == "Researcher");
+    }
+
+    public bool IsParticipant()
+    {
+        var user = GetUser();
+
+        return user.IsInRole("Participant") ||
+               user.Claims.Any(c => c.Type == "cognito:groups" && (c.Value == "Researcher" || c.Value == "Participant"));
     }
 }
