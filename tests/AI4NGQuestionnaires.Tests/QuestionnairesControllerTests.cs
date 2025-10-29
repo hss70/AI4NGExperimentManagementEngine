@@ -208,7 +208,12 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var result = await controller.Create(request);
 
         // Assert
-        Assert.IsType<ForbidResult>(result);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, objectResult.StatusCode);
+        var messageProperty = objectResult.Value?.GetType().GetProperty("message");
+        var message = messageProperty?.GetValue(objectResult.Value)?.ToString();
+
+        Assert.Equal("Participants cannot perform this action", message);
     }
 
     [Fact]
