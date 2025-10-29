@@ -16,4 +16,10 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <Content Include="Resources\jwks.json" CopyToOutputDirectory="Always" />
   </ItemGroup>
+
+  <!-- ✅ JWKS file configuration -->
+  <ItemGroup>
+    <Content Include="Resources\jwks.json" CopyToOutputDirectory="Always" />
+    <EmbeddedResource Include="Resources\jwks.json" />
+  </ItemGroup>
 </Project>
