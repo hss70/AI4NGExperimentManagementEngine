@@ -60,6 +60,9 @@ sam deploy --guided
 - [Test Source of Truth](docs/Test-Source-Of-Truth.md) - Business rules and expected behaviors
 - [Scripts Documentation](docs/Scripts-Documentation.md) - PowerShell automation scripts guide
 
+### Notable recent change
+- Expanded QuestionnaireService test coverage (serialization round-trip for Scale, batch import flow, update expression verification). See `tests/AI4NGQuestionnaires.Tests/QuestionnaireServiceTests.cs`.
+
 ## Key Features
 - **ASP.NET Core MVC Architecture** - Clean separation of concerns
 - **Local Testing Support** - DynamoDB Local integration

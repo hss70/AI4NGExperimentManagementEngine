@@ -25,6 +25,23 @@
 | `GetByIdAsync_ShouldReturnNull_WhenNotFound` | Non-existent ID | null | Not found handling |
 | `GetByIdAsync_ShouldValidateId_WhenEmpty` | Empty/null ID | Validation exception | Input validation |
 
+#### ✅ Serialization & Round-trip
+| Test Case | Input | Expected Output | Validates |
+|-----------|-------|-----------------|-----------|
+| `CreateAsync_ShouldSerializeAndDeserializeQuestionsAndScale` | Questionnaire with scale question | Scale min/max preserved in persisted data | JSON serialization integrity |
+| `CreateAsync_ShouldRoundTripDataCorrectly_FromImportJson` | Entry from `questionnaires_batch_import.json` | Deserialized data matches original | End-to-end round-trip |
+
+#### ✅ Batch Creation
+| Test Case | Input | Expected Output | Validates |
+|-----------|-------|-----------------|-----------|
+| `CreateBatchAsync_ShouldProcessAllRequests_FromJson` | Valid batch JSON list | All requests succeed; summary reflects counts | Batch processing (happy path) |
+| `CreateBatchAsync_ShouldContinue_WhenSomeRequestsFail` | Mixed valid/invalid entries | Partial success; errors captured | Fault tolerance in batch |
+
+#### ✅ Update Verification
+| Test Case | Input | Expected Output | Validates |
+|-----------|-------|-----------------|-----------|
+| `UpdateAsync_ShouldUpdateDataCorrectly` | Valid update payload from `update_questionnaire.json` | Update expression maps fields correctly | Update expression correctness |
+
 ### QuestionnairesController Tests
 
 #### ✅ Authentication Tests

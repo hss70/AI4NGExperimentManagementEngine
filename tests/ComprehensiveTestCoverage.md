@@ -31,11 +31,14 @@ All three APIs now have **equivalent comprehensive test coverage** with identica
 - ErrorHandlingTests.cs: 13 tests
 
 ### Questionnaires API: **80+ Test Methods**
-- QuestionnaireServiceTests.cs: 12 tests
+ QuestionnaireServiceTests.cs: 17+ tests (added serialization, batch processing, and update verification)
 - QuestionnairesControllerTests.cs: 16 tests
 - BusinessRuleTests.cs: 15 tests
-- ValidationTests.cs: 11 tests
-- ReferentialIntegrityTests.cs: 4 tests
+
+### ✅ QuestionnaireService Enhancements
+- Serialization & round-trip verification for nested question scales
+- Batch creation happy path and partial failure handling with summary assertions
+- Update expression correctness validated against DynamoDB attribute mappings
 - DynamoDBFormatTests.cs: 14 tests
 - DbSchemaComplianceTests.cs: 8 tests
 - IntegrationTests.cs: 5 tests

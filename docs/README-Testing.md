@@ -1,5 +1,13 @@
 # AI4NG Question Engine - Testing Guide
 
+## Recent updates
+- Expanded QuestionnaireService unit tests covering:
+   - CRUD paths (create/read/update/delete)
+   - JSON serialization round-trip for Questions and Scale
+   - Strongly typed batch import from questionnaires_batch_import.json (success and partial failure paths)
+   - Update expression verification to ensure data structure integrity
+- See `tests/AI4NGQuestionnaires.Tests/QuestionnaireServiceTests.cs` for details and examples.
+
 ## Local Testing
 
 ### Prerequisites
@@ -114,6 +122,9 @@ Add `X-Debug: true` to any request for detailed logging:
 2. **Unit tests**: `.\scripts\run-tests.ps1 -Coverage`
 3. **Integration tests**: `.\scripts\run-tests.ps1` (with DynamoDB Local)
 4. **Full pipeline**: `.\scripts\ci-pipeline.ps1`
+
+### Service-specific notes
+- QuestionnaireService tests assume `QUESTIONNAIRES_TABLE` is set (defaults are provided in test setup). If running manually, ensure your environment variables align with the values in `docs/Testing-Documentation.md`.
 
 ## Test Infrastructure Notes
 

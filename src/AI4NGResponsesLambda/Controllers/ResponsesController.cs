@@ -3,77 +3,134 @@ using AI4NGResponsesLambda.Interfaces;
 using AI4NGResponsesLambda.Models;
 using AI4NGExperimentManagement.Shared;
 
-namespace AI4NGResponsesLambda.Controllers;
-
-[Route("api")]
-public class ResponsesController : BaseApiController
+namespace AI4NGResponsesLambda.Controllers
 {
-    private readonly IResponseService _responseService;
-
-    public ResponsesController(IResponseService responseService, IAuthenticationService authService)
-        : base(authService)
+    /// <summary>
+    /// Controller for managing questionnaire and experiment responses.
+    /// </summary>
+    [Route("api/responses")]
+    public class ResponsesController : BaseApiController
     {
-        _responseService = responseService;
-    }
+        private readonly IResponseService _responseService;
 
-    [HttpGet("responses")]
-    public async Task<IActionResult> GetResponses([FromQuery] string? experimentId = null, [FromQuery] string? sessionId = null)
-    {
-        var responses = await _responseService.GetResponsesAsync(experimentId, sessionId);
-        return Ok(responses);
-    }
-
-    [HttpGet("responses/id/{responseId}")]
-    public async Task<IActionResult> GetResponse(string responseId)
-    {
-        var response = await _responseService.GetResponseAsync(responseId);
-        return response == null ? NotFound("Response not found") : Ok(response);
-    }
-
-    [HttpPost("responses")]
-    public async Task<IActionResult> CreateResponse([FromBody] Response response)
-    {
-        try
+        public ResponsesController(IResponseService responseService, IAuthenticationService authService)
+            : base(authService)
         {
-            var username = GetAuthenticatedUsername();
-            var result = await _responseService.CreateResponseAsync(response, username);
-            return Ok(result);
+            _responseService = responseService;
         }
-        catch (Exception ex)
+
+        /// <summary>
+        /// Retrieves all responses for the current user, optionally filtered by experiment or session ID.
+        /// </summary>
+        /// <param name="experimentId">Optional experiment ID to filter responses.</param>
+        /// <param name="sessionId">Optional session ID to filter responses.</param>
+        [HttpGet]
+        public async Task<IActionResult> GetAll([FromQuery] string? experimentId = null, [FromQuery] string? sessionId = null)
         {
-            return HandleException(ex, "creating response");
+            try
+            {
+                var responses = await _responseService.GetResponsesAsync(experimentId, sessionId);
+                return Ok(responses);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "retrieving responses");
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a specific response by its ID.
+        /// </summary>
+        /// <param name="responseId">The unique ID of the response.</param>
+        [HttpGet("{responseId}")]
+        public async Task<IActionResult> GetById(string responseId)
+        {
+            try
+            {
+                var response = await _responseService.GetResponseAsync(responseId);
+                return response == null ? NotFound("Response not found") : Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "retrieving response");
+            }
+        }
+
+        /// <summary>
+        /// Creates a new response for a questionnaire or experiment session.
+        /// </summary>
+        /// <param name="response">The response data to create.</param>
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] Response response)
+        {
+            try
+            {
+                var username = GetAuthenticatedUsername();
+                var result = await _responseService.CreateResponseAsync(response, username);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "creating response");
+            }
+        }
+
+        /// <summary>
+        /// Updates an existing response.
+        /// </summary>
+        /// <param name="responseId">The ID of the response to update.</param>
+        /// <param name="data">The updated response data.</param>
+        [HttpPut("{responseId}")]
+        public async Task<IActionResult> Update(string responseId, [FromBody] ResponseData data)
+        {
+            try
+            {
+                var username = GetAuthenticatedUsername();
+                await _responseService.UpdateResponseAsync(responseId, data, username);
+                return Ok(new { message = "Response updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "updating response");
+            }
+        }
+
+        /// <summary>
+        /// Deletes a response (soft delete).
+        /// </summary>
+        /// <param name="responseId">The ID of the response to delete.</param>
+        [HttpDelete("{responseId}")]
+        public async Task<IActionResult> Delete(string responseId)
+        {
+            try
+            {
+                var username = GetAuthenticatedUsername();
+                await _responseService.DeleteResponseAsync(responseId, username);
+                return Ok(new { message = "Response deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "deleting response");
+            }
+        }
+
+        /// <summary>
+        /// Synchronizes responses for the authenticated participant since the last sync time.
+        /// </summary>
+        /// <param name="lastSyncTime">The last time responses were synced.</param>
+        [HttpGet("/api/sync/responses")]
+        public async Task<IActionResult> Sync([FromQuery] DateTime? lastSyncTime = null)
+        {
+            try
+            {
+                var username = GetAuthenticatedUsername();
+                var result = await _responseService.SyncResponsesAsync(lastSyncTime, username);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "syncing responses");
+            }
         }
     }
-
-    [HttpPut("responses/id/{responseId}")]
-    public async Task<IActionResult> UpdateResponse(string responseId, [FromBody] ResponseData data)
-    {
-        try
-        {
-            var username = GetAuthenticatedUsername();
-            await _responseService.UpdateResponseAsync(responseId, data, username);
-            return Ok(new { message = "Response updated successfully" });
-        }
-        catch (Exception ex)
-        {
-            return HandleException(ex, "updating response");
-        }
-    }
-
-    [HttpDelete("responses/id/{responseId}")]
-    public async Task<IActionResult> DeleteResponse(string responseId)
-    {
-        try
-        {
-            var username = GetAuthenticatedUsername();
-            await _responseService.DeleteResponseAsync(responseId, username);
-            return Ok(new { message = "Response deleted successfully" });
-        }
-        catch (Exception ex)
-        {
-            return HandleException(ex, "deleting response");
-        }
-    }
-
-
 }

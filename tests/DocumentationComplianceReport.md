@@ -16,6 +16,11 @@
 | `GetByIdAsync_ShouldReturnQuestionnaire_WhenExists` | ✅ Implemented | QuestionnaireServiceTests.cs |
 | `GetByIdAsync_ShouldReturnNull_WhenNotFound` | ✅ Implemented | QuestionnaireServiceTests.cs |
 | `GetByIdAsync_ShouldValidateId_WhenEmpty` | ✅ Implemented | ValidationTests.cs |
+| `CreateAsync_ShouldSerializeAndDeserializeQuestionsAndScale` | ✅ Implemented | QuestionnaireServiceTests.cs |
+| `CreateAsync_ShouldRoundTripDataCorrectly_FromImportJson` | ✅ Implemented | QuestionnaireServiceTests.cs |
+| `CreateBatchAsync_ShouldProcessAllRequests_FromJson` | ✅ Implemented | QuestionnaireServiceTests.cs |
+| `CreateBatchAsync_ShouldContinue_WhenSomeRequestsFail` | ✅ Implemented | QuestionnaireServiceTests.cs |
+| `UpdateAsync_ShouldUpdateDataCorrectly` | ✅ Implemented | QuestionnaireServiceTests.cs |
 
 #### QuestionnairesController Tests
 | Documentation Test Case | Implementation Status | File Location |

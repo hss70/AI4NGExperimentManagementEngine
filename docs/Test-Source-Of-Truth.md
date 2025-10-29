@@ -18,6 +18,9 @@
 - **Question ID Uniqueness**: Question IDs must be unique within a questionnaire
 - **Required Field Validation**: All required fields must be present and valid
 - **Researcher Authorization**: Only researchers can create/update/delete questionnaires
+ - **Serialization Integrity**: Questionnaire questions with nested scale objects must serialize/deserialize without data loss (e.g., scale.min/scale.max)
+ - **Batch Import Behavior**: Batch uploads must process all entries, producing a summary with processed/success/failed counts; failures in one entry must not stop others
+ - **Update Expression Correctness**: Updates must map fields to the correct DynamoDB attributes preserving existing audit metadata
 
 ### Experiment Management
 

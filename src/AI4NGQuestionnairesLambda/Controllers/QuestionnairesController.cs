@@ -52,7 +52,7 @@ public class QuestionnairesController : BaseApiController
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult> Update(string id, [FromBody] QuestionnaireData data)
+    public async Task<ActionResult> Update(string id, [FromBody] CreateQuestionnaireRequest request)
     {
         try
         {
@@ -60,12 +60,23 @@ public class QuestionnairesController : BaseApiController
             var researcherCheck = RequireResearcher();
             if (researcherCheck != null) return researcherCheck;
 
-            await _questionnaireService.UpdateAsync(id, data, username);
-            return Ok(new { message = "Questionnaire updated successfully" });
+            if (request == null || request.Data == null)
+                return BadRequest("Invalid questionnaire update request.");
+
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest("Questionnaire ID cannot be empty.");
+
+            await _questionnaireService.UpdateAsync(id, request.Data, username);
+
+            return Ok(new { message = $"Questionnaire '{id}' updated successfully." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
         }
         catch (Exception ex)
         {
-            return HandleException(ex, "updating questionnaire");
+            return HandleException(ex, $"Error updating questionnaire {id}");
         }
     }
 

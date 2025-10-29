@@ -2,7 +2,6 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Interfaces;
 using AI4NGQuestionnairesLambda.Models;
-using System.Text.Json;
 
 namespace AI4NGQuestionnairesLambda.Services;
 
@@ -17,6 +16,10 @@ public class QuestionnaireService : IQuestionnaireService
         _tableName = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? "";
     }
 
+    // === Utility ===
+    private static string NowIso() => DateTime.UtcNow.ToString("O");
+
+    // === READ ===
     public async Task<IEnumerable<Questionnaire>> GetAllAsync()
     {
         var response = await _dynamoClient.ScanAsync(new ScanRequest
@@ -34,7 +37,11 @@ public class QuestionnaireService : IQuestionnaireService
         return response.Items.Select(item => new Questionnaire
         {
             Id = item["PK"].S.Replace("QUESTIONNAIRE#", ""),
-            Data = ConvertAttributeValueToQuestionnaireData(item["data"])
+            Data = ConvertAttributeValueToQuestionnaireData(item["data"]),
+            CreatedAt = DateTime.TryParse(item.GetValueOrDefault("createdAt")?.S, out var created)
+                ? created : DateTime.MinValue,
+            UpdatedAt = DateTime.TryParse(item.GetValueOrDefault("updatedAt")?.S, out var updated)
+                ? updated : DateTime.MinValue
         });
     }
 
@@ -53,12 +60,9 @@ public class QuestionnaireService : IQuestionnaireService
             }
         });
 
-        if (!response.IsItemSet) return null;
-
-        if (!response.Item.ContainsKey("data"))
+        if (!response.IsItemSet || !response.Item.ContainsKey("data"))
             return null;
 
-        // Check if item is soft-deleted
         var isDeleted = response.Item.GetValueOrDefault("syncMetadata")?.M?.GetValueOrDefault("isDeleted")?.BOOL ?? false;
         if (isDeleted) return null;
 
@@ -66,25 +70,26 @@ public class QuestionnaireService : IQuestionnaireService
         {
             Id = id,
             Data = ConvertAttributeValueToQuestionnaireData(response.Item["data"]),
-            CreatedAt = DateTime.Parse(response.Item.GetValueOrDefault("createdAt")?.S ?? DateTime.UtcNow.ToString("O")),
-            UpdatedAt = DateTime.Parse(response.Item.GetValueOrDefault("updatedAt")?.S ?? DateTime.UtcNow.ToString("O"))
+            CreatedAt = DateTime.TryParse(response.Item.GetValueOrDefault("createdAt")?.S, out var created)
+                ? created : DateTime.MinValue,
+            UpdatedAt = DateTime.TryParse(response.Item.GetValueOrDefault("updatedAt")?.S, out var updated)
+                ? updated : DateTime.MinValue
         };
     }
 
+    // === CREATE ===
     public async Task<string> CreateAsync(CreateQuestionnaireRequest request, string username)
     {
-        // Input validation
         if (request?.Data == null)
             throw new ArgumentException("Request data cannot be null");
 
         if (string.IsNullOrWhiteSpace(request.Data.Name))
             throw new ArgumentException("Questionnaire name cannot be empty");
 
-        // Validate ID
         if (string.IsNullOrWhiteSpace(request.Id))
             throw new ArgumentException("Questionnaire ID cannot be empty");
 
-        // Check for duplicate questionnaire ID (excluding soft-deleted items)
+        // Check for existing active record
         var existingItem = await _dynamoClient.GetItemAsync(new GetItemRequest
         {
             TableName = _tableName,
@@ -100,50 +105,56 @@ public class QuestionnaireService : IQuestionnaireService
             var isDeleted = existingItem.Item.GetValueOrDefault("syncMetadata")?.M?.GetValueOrDefault("isDeleted")?.BOOL ?? false;
             if (!isDeleted)
                 throw new DuplicateItemException($"Questionnaire with ID '{request.Id}' already exists");
-
-            // If soft-deleted, we can reuse the ID by overwriting
         }
 
-        // Validate question structure
-        if (request.Data?.Questions != null)
-            ValidateQuestions(request.Data.Questions);
+        ValidateQuestions(request.Data.Questions);
 
-        var questionnaireId = request.Id;
-        var timestamp = DateTime.UtcNow.ToString("O");
+        var timestamp = NowIso();
+
+        var item = new Dictionary<string, AttributeValue>
+        {
+            ["PK"] = new($"QUESTIONNAIRE#{request.Id}"),
+            ["SK"] = new("CONFIG"),
+            ["GSI3PK"] = new("QUESTIONNAIRE"),
+            ["GSI3SK"] = new(timestamp),
+            ["type"] = new("Questionnaire"),
+            ["data"] = ConvertQuestionnaireDataToAttributeValue(request.Data),
+            ["createdBy"] = new(username),
+            ["createdAt"] = new(timestamp),
+            ["updatedBy"] = new(username),
+            ["updatedAt"] = new(timestamp),
+            ["syncMetadata"] = new AttributeValue
+            {
+                M = new Dictionary<string, AttributeValue>
+                {
+                    ["version"] = new AttributeValue { N = "1" },
+                    ["lastModified"] = new(timestamp),
+                    ["isDeleted"] = new AttributeValue { BOOL = false }
+                }
+            }
+        };
 
         await _dynamoClient.PutItemAsync(new PutItemRequest
         {
             TableName = _tableName,
-            Item = new Dictionary<string, AttributeValue>
-            {
-                ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
-                ["SK"] = new("CONFIG"),
-                ["GSI3PK"] = new("QUESTIONNAIRE"),
-                ["GSI3SK"] = new(timestamp),
-                ["type"] = new("Questionnaire"),
-                ["data"] = ConvertQuestionnaireDataToAttributeValue(request.Data!),
-                ["createdBy"] = new(username),
-                ["createdAt"] = new(timestamp),
-                ["updatedBy"] = new(username),
-                ["updatedAt"] = new(timestamp),
-                ["syncMetadata"] = new AttributeValue
-                {
-                    M = new Dictionary<string, AttributeValue>
-                    {
-                        ["version"] = new AttributeValue { N = "1" },
-                        ["lastModified"] = new(timestamp),
-                        ["isDeleted"] = new AttributeValue { BOOL = false }
-                    }
-                }
-            }
+            Item = item
         });
 
-        return questionnaireId;
+        return request.Id;
     }
 
+    // === UPDATE ===
     public async Task UpdateAsync(string id, QuestionnaireData data, string username)
     {
-        var timestamp = DateTime.UtcNow.ToString("O");
+        if (data == null)
+            throw new ArgumentException("Questionnaire data cannot be null");
+
+        if (string.IsNullOrWhiteSpace(data.Name))
+            throw new ArgumentException("Questionnaire name cannot be empty");
+
+        ValidateQuestions(data.Questions);
+
+        var timestamp = NowIso();
 
         await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
         {
@@ -153,7 +164,13 @@ public class QuestionnaireService : IQuestionnaireService
                 ["PK"] = new($"QUESTIONNAIRE#{id}"),
                 ["SK"] = new("CONFIG")
             },
-            UpdateExpression = "SET #data = :data, updatedBy = :user, updatedAt = :timestamp, GSI3SK = :timestamp, syncMetadata.#version = syncMetadata.#version + :inc, syncMetadata.lastModified = :timestamp",
+            UpdateExpression = @"
+                SET #data = :data,
+                    updatedBy = :user,
+                    updatedAt = :timestamp,
+                    GSI3SK = :timestamp,
+                    syncMetadata.#version = syncMetadata.#version + :inc,
+                    syncMetadata.lastModified = :timestamp",
             ExpressionAttributeNames = new Dictionary<string, string>
             {
                 ["#data"] = "data",
@@ -169,11 +186,11 @@ public class QuestionnaireService : IQuestionnaireService
         });
     }
 
+    // === DELETE (soft) ===
     public async Task DeleteAsync(string id, string username)
     {
-        var timestamp = DateTime.UtcNow.ToString("O");
+        var timestamp = NowIso();
 
-        // Soft delete by updating syncMetadata
         await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = _tableName,
@@ -196,12 +213,12 @@ public class QuestionnaireService : IQuestionnaireService
         });
     }
 
+    // === BATCH CREATE ===
     public async Task<BatchResult> CreateBatchAsync(List<CreateQuestionnaireRequest> requests, string username)
     {
         if (requests == null || !requests.Any())
             throw new ArgumentException("No questionnaires provided for batch import.");
 
-        var timestamp = DateTime.UtcNow.ToString("O");
         async Task<BatchItemResult> ProcessOneAsync(CreateQuestionnaireRequest request)
         {
             try
@@ -230,10 +247,7 @@ public class QuestionnaireService : IQuestionnaireService
             }
         }
 
-        // Run each create in parallel for speed & isolation
-        var tasks = requests.Select(ProcessOneAsync);
-
-        var results = await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(requests.Select(ProcessOneAsync));
         var successes = results.Count(r => r.Status == "success");
         var failures = results.Length - successes;
 
@@ -243,6 +257,7 @@ public class QuestionnaireService : IQuestionnaireService
         );
     }
 
+    // === VALIDATION ===
     private void ValidateQuestions(List<Question> questions)
     {
         if (questions == null) return;
@@ -254,24 +269,21 @@ public class QuestionnaireService : IQuestionnaireService
         {
             if (question == null) continue;
 
-            // Check question ID uniqueness
             if (!questionIds.Add(question.Id ?? ""))
                 throw new ArgumentException($"Question ID '{question.Id}' is not unique");
 
-            // Validate required fields
             if (string.IsNullOrWhiteSpace(question.Text))
                 throw new ArgumentException($"Question '{question.Id}' text cannot be empty");
 
-            // Validate question type
             if (string.IsNullOrWhiteSpace(question.Type) || !validTypes.Contains(question.Type))
                 throw new ArgumentException($"Question '{question.Id}' has invalid type '{question.Type}'");
 
-            // Validate options for select type
             if (question.Type == "select" && (question.Options == null || !question.Options.Any()))
                 throw new ArgumentException($"Question '{question.Id}' of type 'select' must have options");
         }
     }
 
+    // === CONVERSIONS ===
     private AttributeValue ConvertQuestionnaireDataToAttributeValue(QuestionnaireData data)
     {
         var map = new Dictionary<string, AttributeValue>
@@ -299,7 +311,6 @@ public class QuestionnaireService : IQuestionnaireService
                             ["required"] = new AttributeValue { BOOL = q.Required }
                         };
 
-                        // Only include scale if it actually exists
                         if (q.Scale != null)
                         {
                             qMap["scale"] = new AttributeValue
@@ -320,7 +331,6 @@ public class QuestionnaireService : IQuestionnaireService
 
         return new AttributeValue { M = map };
     }
-
 
     private QuestionnaireData ConvertAttributeValueToQuestionnaireData(AttributeValue attributeValue)
     {

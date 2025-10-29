@@ -71,6 +71,18 @@ docker run -p 8000:8000 amazon/dynamodb-local
 - **Microsoft.AspNetCore.Mvc.Testing**: Integration testing
 - **Amazon.Lambda.TestUtilities**: Lambda-specific testing utilities
 
+## Service coverage highlights
+
+### QuestionnaireService
+- CRUD operations fully covered, including not-found and validation paths
+- JSON serialization integrity for nested Question and Scale objects (round-trip validated)
+- Batch creation from `questionnaires_batch_import.json` with summary reporting (processed/success/failed)
+- Partial failure handling in batch mode (continues processing while capturing errors)
+- Update expression verification to ensure correct attribute mapping in DynamoDB
+
+Environment notes:
+- Tests set `QUESTIONNAIRES_TABLE` via environment variables during execution; align with values in the "Environment Setup" section when running locally.
+
 ## Environment Setup
 
 ### Test Environment Variables

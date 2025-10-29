@@ -282,9 +282,8 @@ Resources:
       PayloadFormatVersion: "2.0"
       IntegrationMethod: POST
 
-  # Routes
-  # Removed POST /api/experiments (no corresponding controller route)
-
+  ## Routes:
+  # Experiments
   GetExperimentsRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -294,20 +293,11 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
-  GetExperimentRoute:
+  GetExperimentByIdRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
       RouteKey: GET /api/experiments/{experimentId}
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${ExperimentsIntegration}
-
-  SyncExperimentRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: GET /api/experiments/{experimentId}/sync
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
@@ -321,30 +311,38 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
-  # Researcher Routes (Admin)
-  CreateExperimentResearcherRoute:
+  CreateExperimentRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: POST /api/researcher/experiments
+      RouteKey: POST /api/experiments
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
-  UpdateExperimentResearcherRoute:
+  UpdateExperimentRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: PUT /api/researcher/experiments/{experimentId}
+      RouteKey: PUT /api/experiments/{experimentId}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
-  DeleteExperimentResearcherRoute:
+  DeleteExperimentRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: DELETE /api/researcher/experiments/{experimentId}
+      RouteKey: DELETE /api/experiments/{experimentId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  SyncExperimentsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/experiments/sync
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
@@ -358,7 +356,7 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
-  AddMemberRoute:
+  AddExperimentMemberRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
@@ -367,7 +365,7 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
-  RemoveMemberRoute:
+  RemoveExperimentMemberRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
@@ -376,15 +374,7 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
-  SubmitResponseRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: POST /api/responses
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${ResponsesIntegration}
-
+  # Responses Routes
   GetResponsesRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -398,7 +388,16 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: GET /api/responses/id/{responseId}
+      RouteKey: GET /api/responses/{responseId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ResponsesIntegration}
+
+  CreateResponseRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: POST /api/responses
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ResponsesIntegration}
@@ -407,7 +406,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: PUT /api/responses/id/{responseId}
+      RouteKey: PUT /api/responses/{responseId}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ResponsesIntegration}
@@ -416,7 +415,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: DELETE /api/responses/id/{responseId}
+      RouteKey: DELETE /api/responses/{responseId}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ResponsesIntegration}
@@ -496,15 +495,6 @@ Resources:
       Target: !Sub integrations/${QuestionnairesIntegration}
 
   # Mobile Sync Routes
-  SyncExperimentsRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: GET /api/sync/experiments
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${ExperimentsIntegration}
-
   SyncQuestionnairesRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:

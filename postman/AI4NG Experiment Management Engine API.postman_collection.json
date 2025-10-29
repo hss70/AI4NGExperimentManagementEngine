@@ -1,0 +1,379 @@
+{
+	"info": {
+		"name": "AI4NG Experiment Management Engine API",
+		"_postman_id": "ai4ng-experiment-management",
+		"description": "Postman collection for AI4NG Experiment Management Engine (Experiments, Questionnaires, and Responses APIs)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Experiments",
+			"item": [
+				{
+					"name": "Get All Experiments (Researcher)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/experiments",
+						"description": "Retrieve all experiments (researcher access only)."
+					}
+				},
+				{
+					"name": "Get Experiment By Id (Researcher)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/experiments/{{experimentId}}",
+						"description": "Retrieve a specific experiment by its ID (researcher access only)."
+					}
+				},
+				{
+					"name": "Get My Experiments (Participant)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/me/experiments",
+						"description": "Retrieve experiments for the authenticated participant."
+					}
+				},
+				{
+					"name": "Create Experiment (Researcher)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"EXP001\",\n  \"data\": {\n    \"name\": \"Example Experiment\",\n    \"description\": \"Cognitive load testing\",\n    \"questionnaireIds\": [\"PQ1\"],\n    \"status\": \"draft\"\n  }\n}"
+						},
+						"url": "{{baseUrl}}/api/experiments",
+						"description": "Create a new experiment (researcher access only)."
+					}
+				},
+				{
+					"name": "Update Experiment (Researcher)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Experiment Name\",\n  \"description\": \"Updated experiment description.\",\n  \"status\": \"published\"\n}"
+						},
+						"url": "{{baseUrl}}/api/experiments/{{experimentId}}",
+						"description": "Update an experiment (researcher access only)."
+					}
+				},
+				{
+					"name": "Delete Experiment (Researcher)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/experiments/{{experimentId}}",
+						"description": "Delete an experiment (researcher access only)."
+					}
+				},
+				{
+					"name": "Sync Experiments (Participant)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/experiments/sync",
+						"description": "Synchronize experiments for the authenticated participant."
+					}
+				},
+				{
+					"name": "Get Experiment Members (Researcher)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/experiments/{{experimentId}}/members",
+						"description": "Retrieve members of an experiment (researcher access only)."
+					}
+				},
+				{
+					"name": "Add Member to Experiment (Researcher)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"participant\",\n  \"status\": \"active\"\n}"
+						},
+						"url": "{{baseUrl}}/api/experiments/{{experimentId}}/members/{{userSub}}",
+						"description": "Add a member to an experiment (researcher access only)."
+					}
+				},
+				{
+					"name": "Remove Member from Experiment (Researcher)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/experiments/{{experimentId}}/members/{{userSub}}",
+						"description": "Remove a member from an experiment (researcher access only)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Responses",
+			"item": [
+				{
+					"name": "Get All Responses",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/responses",
+						"description": "Retrieve all responses for the authenticated user, optionally filtered by experiment or session."
+					}
+				},
+				{
+					"name": "Get Response By Id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/responses/{{responseId}}",
+						"description": "Retrieve a specific response by ID."
+					}
+				},
+				{
+					"name": "Create Response",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"experimentId\": \"EXP001\",\n  \"questionnaireId\": \"PQ1\",\n  \"answers\": [\n    { \"questionId\": \"1\", \"value\": \"5\" },\n    { \"questionId\": \"2\", \"value\": \"3\" }\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/api/responses",
+						"description": "Create a new response."
+					}
+				},
+				{
+					"name": "Update Response",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"answers\": [\n    { \"questionId\": \"1\", \"value\": \"6\" }\n  ]\n}"
+						},
+						"url": "{{baseUrl}}/api/responses/{{responseId}}",
+						"description": "Update an existing response."
+					}
+				},
+				{
+					"name": "Delete Response",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/responses/{{responseId}}",
+						"description": "Delete a response (soft delete)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Questionnaires",
+			"item": [
+				{
+					"name": "Get All Questionnaires",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/questionnaires",
+						"description": "Retrieve all questionnaires."
+					}
+				},
+				{
+					"name": "Get Questionnaire By Id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/questionnaires/{{questionnaireId}}",
+						"description": "Retrieve a specific questionnaire by ID."
+					}
+				},
+				{
+					"name": "Create Questionnaire",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"PQ1\",\n  \"data\": {\n    \"name\": \"Presence Questionnaire\",\n    \"description\": \"Measures presence in VR\",\n    \"estimatedTime\": 180,\n    \"version\": \"1.0\",\n    \"questions\": [\n      { \"id\": \"1\", \"text\": \"How much were you able to control events?\", \"type\": \"scale\", \"scale\": { \"min\": 1, \"max\": 7 }, \"required\": true }\n    ]\n  }\n}"
+						},
+						"url": "{{baseUrl}}/api/questionnaires",
+						"description": "Create a new questionnaire."
+					}
+				},
+				{
+					"name": "Update Questionnaire",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Presence Questionnaire\",\n  \"description\": \"Updated description\",\n  \"estimatedTime\": 200,\n  \"version\": \"1.1\",\n  \"questions\": []\n}"
+						},
+						"url": "{{baseUrl}}/api/questionnaires/{{questionnaireId}}",
+						"description": "Update an existing questionnaire."
+					}
+				},
+				{
+					"name": "Delete Questionnaire",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt}}",
+								"type": "text"
+							}
+						],
+						"url": "{{baseUrl}}/api/questionnaires/{{questionnaireId}}",
+						"description": "Delete a questionnaire (soft delete)."
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://your-api-id.execute-api.your-region.amazonaws.com"
+		},
+		{
+			"key": "jwt",
+			"value": "YOUR_JWT_TOKEN"
+		},
+		{
+			"key": "experimentId",
+			"value": "EXP001"
+		},
+		{
+			"key": "questionnaireId",
+			"value": "PQ1"
+		},
+		{
+			"key": "responseId",
+			"value": "RESP001"
+		},
+		{
+			"key": "userSub",
+			"value": "user-123"
+		}
+	]
+}
