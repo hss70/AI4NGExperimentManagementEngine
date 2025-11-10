@@ -1,0 +1,251 @@
+{
+    "info": {
+        "_postman_id": "d50f7de1-2a87-4a7e-9b83-6576a531d201",
+        "name": "AI4NG Experiment Mini Manual Tests",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "description": "Create an experiment, add member hss70, and submit responses for PQ and ati-scale. Uses {{apiGateWayUrl}} and {{idToken}} from your environment."
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{idToken}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "experimentId",
+            "value": ""
+        },
+        {
+            "key": "sessionId",
+            "value": "session-1"
+        },
+        {
+            "key": "userSub",
+            "value": "hss70"
+        },
+        {
+            "key": "pqResponseId",
+            "value": ""
+        },
+        {
+            "key": "atiResponseId",
+            "value": ""
+        }
+    ],
+    "item": [
+        {
+            "name": "1) Create Experiment (PQ + ati-scale)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{apiGateWayUrl}}/api/experiments",
+                    "host": [
+                        "{{apiGateWayUrl}}"
+                    ],
+                    "path": [
+                        "/api/experiments"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"data\": {\n    \"name\": \"Manual Test Experiment\",\n    \"description\": \"Created via Postman mini script\"\n  },\n  \"questionnaireConfig\": {\n    \"questionnaireIds\": [\n      \"PQ\",\n      \"ati-scale\"\n    ]\n  },\n  \"sessions\": []\n}"
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "const json = pm.response.json();",
+                            "pm.environment.set('experimentId', json.id);",
+                            "pm.test('experimentId set', () => pm.expect(pm.environment.get('experimentId')).to.be.ok);"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2) Add Member hss70",
+            "request": {
+                "method": "PUT",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{apiGateWayUrl}}/api/experiments/{{experimentId}}/members/{{userSub}}",
+                    "host": [
+                        "{{apiGateWayUrl}}"
+                    ],
+                    "path": [
+                        "/api/experiments/{{experimentId}}/members/{{userSub}}"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"role\": \"participant\"\n}"
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3) Create PQ Response",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{apiGateWayUrl}}/api/responses",
+                    "host": [
+                        "{{apiGateWayUrl}}"
+                    ],
+                    "path": [
+                        "/api/responses"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"data\": {\n    \"experimentId\": \"{{experimentId}}\",\n    \"sessionId\": \"{{sessionId}}\",\n    \"questionnaireId\": \"PQ\",\n    \"responses\": [\n      { \"questionId\": \"PQ_Q1\", \"answer\": \"Sometimes\", \"timestamp\": \"{{$isoTimestamp}}\" },\n      { \"questionId\": \"PQ_Q2\", \"answer\": 3, \"timestamp\": \"{{$isoTimestamp}}\" }\n    ]\n  }\n}"
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "const json = pm.response.json(); if (json && json.id) pm.environment.set('pqResponseId', json.id);",
+                            "pm.test('pqResponseId set', () => pm.expect(pm.environment.get('pqResponseId')).to.be.ok);"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "4) Create ATI Response",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{apiGateWayUrl}}/api/responses",
+                    "host": [
+                        "{{apiGateWayUrl}}"
+                    ],
+                    "path": [
+                        "/api/responses"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"data\": {\n    \"experimentId\": \"{{experimentId}}\",\n    \"sessionId\": \"{{sessionId}}\",\n    \"questionnaireId\": \"ati-scale\",\n    \"responses\": [\n      { \"questionId\": \"ATI_Q1\", \"answer\": 5, \"timestamp\": \"{{$isoTimestamp}}\" },\n      { \"questionId\": \"ATI_Q2\", \"answer\": \"Agree\", \"timestamp\": \"{{$isoTimestamp}}\" }\n    ]\n  }\n}"
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "const json = pm.response.json(); if (json && json.id) pm.environment.set('atiResponseId', json.id);",
+                            "pm.test('atiResponseId set', () => pm.expect(pm.environment.get('atiResponseId')).to.be.ok);"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5) List Responses for Experiment",
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "{{apiGateWayUrl}}/api/responses?experimentId={{experimentId}}",
+                    "host": [
+                        "{{apiGateWayUrl}}"
+                    ],
+                    "path": [
+                        "/api/responses"
+                    ],
+                    "query": [
+                        {
+                            "key": "experimentId",
+                            "value": "{{experimentId}}"
+                        }
+                    ]
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "6) Get PQ Response by Id",
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "{{apiGateWayUrl}}/api/responses/{{pqResponseId}}",
+                    "host": [
+                        "{{apiGateWayUrl}}"
+                    ],
+                    "path": [
+                        "/api/responses/{{pqResponseId}}"
+                    ]
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,1287 @@
+{
+	"info": {
+		"_postman_id": "22b56fc0-b19f-4c34-8188-d6feca00deff",
+		"name": "AI4NG Aws",
+		"description": "This collection is used to test the endpoints for the AI4NG cloud integration with neuroprecise\n\nThe spec can be found here:  \n[https://hss70.github.io/AI4NGApiDoc/](https://hss70.github.io/AI4NGApiDoc/)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "44794076",
+		"_collection_link": "https://neuroprecise.postman.co/workspace/Neuroprecise-Workspace~2e0d0202-a508-432f-8638-7e1d265ffdcd/collection/44794076-22b56fc0-b19f-4c34-8188-d6feca00deff?action=share&source=collection_link&creator=44794076"
+	},
+	"item": [
+		{
+			"name": "Auth Flow",
+			"item": [
+				{
+					"name": "GetToken",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the response body\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.AuthenticationResult) {\r",
+									"    let authResult = responseJson.AuthenticationResult;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"accessToken\", authResult.AccessToken);\r",
+									"    pm.environment.set(\"idToken\", authResult.IdToken);\r",
+									"    pm.environment.set(\"refreshToken\", authResult.RefreshToken);\r",
+									"\r",
+									"    // Calculate expiry time in milliseconds\r",
+									"    let expiryTime = new Date().getTime() + (authResult.ExpiresIn * 1000);\r",
+									"    pm.environment.set(\"accessTokenExpiry\", expiryTime);\r",
+									"\r",
+									"    console.log(\"Tokens set successfully in environment variables.\");\r",
+									"} else if (responseJson.ChallengeName == \"NEW_PASSWORD_REQUIRED\")\r",
+									"{\r",
+									"    pm.environment.set(\"authSessionId\", responseJson.Session);\r",
+									"}\r",
+									"else {\r",
+									"    console.log(\"AuthenticationResult not found in response.\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"accept-encoding": true,
+							"accept": true,
+							"user-agent": true,
+							"content-type": true,
+							"connection": true
+						}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-amz-json-1.1"
+							},
+							{
+								"key": "X-Amz-Date",
+								"value": "{{$isoTimestamp}}",
+								"disabled": true
+							},
+							{
+								"key": "X-Amz-Target",
+								"value": "AWSCognitoIdentityProviderService.InitiateAuth"
+							},
+							{
+								"key": "Authorization",
+								"value": "AWS4-HMAC-SHA256 Credential=<Credential>, SignedHeaders=<Headers>, Signature=<Signature>",
+								"disabled": true
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "UTF8",
+								"disabled": true
+							},
+							{
+								"key": "User-Agent",
+								"value": "<UserAgentString>",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"AuthFlow\": \"USER_PASSWORD_AUTH\",\r\n    \"ClientId\": \"{{client_id}}\",\r\n    \"AuthParameters\": {\r\n        \"USERNAME\": \"{{usernameR}}\",\r\n        \"PASSWORD\": \"{{password}}\"\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://cognito-idp.eu-west-2.amazonaws.com",
+							"protocol": "https",
+							"host": [
+								"cognito-idp",
+								"eu-west-2",
+								"amazonaws",
+								"com"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "GetToken",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x-amz-json-1.1"
+									},
+									{
+										"key": "X-Amz-Date",
+										"value": "{{$isoTimestamp}}",
+										"disabled": true
+									},
+									{
+										"key": "X-Amz-Target",
+										"value": "AWSCognitoIdentityProviderService.InitiateAuth"
+									},
+									{
+										"key": "Authorization",
+										"value": "AWS4-HMAC-SHA256 Credential=<Credential>, SignedHeaders=<Headers>, Signature=<Signature>",
+										"disabled": true
+									},
+									{
+										"key": "Accept-Encoding",
+										"value": "gzip, deflate, br"
+									},
+									{
+										"key": "User-Agent",
+										"value": "<UserAgentString>",
+										"disabled": true
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"AuthFlow\": \"USER_PASSWORD_AUTH\",\r\n    \"ClientId\": \"{{client_id}}\",\r\n    \"AuthParameters\": {\r\n        \"USERNAME\": \"{{username}}\",\r\n        \"PASSWORD\": \"{{password}}\"\r\n    }\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://cognito-idp.eu-west-2.amazonaws.com",
+									"protocol": "https",
+									"host": [
+										"cognito-idp",
+										"eu-west-2",
+										"amazonaws",
+										"com"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						}
+					]
+				},
+				{
+					"name": "GetToken New Password required",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the response body\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.AuthenticationResult) {\r",
+									"    let authResult = responseJson.AuthenticationResult;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"accessToken\", authResult.AccessToken);\r",
+									"    pm.environment.set(\"idToken\", authResult.IdToken);\r",
+									"    pm.environment.set(\"refreshToken\", authResult.RefreshToken);\r",
+									"\r",
+									"    // Calculate expiry time in milliseconds\r",
+									"    let expiryTime = new Date().getTime() + (authResult.ExpiresIn * 1000);\r",
+									"    pm.environment.set(\"accessTokenExpiry\", expiryTime);\r",
+									"\r",
+									"    console.log(\"Tokens set successfully in environment variables.\");\r",
+									"} else {\r",
+									"    console.log(\"AuthenticationResult not found in response.\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"accept-encoding": true,
+							"accept": true,
+							"user-agent": true,
+							"content-type": true,
+							"connection": true
+						}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-amz-json-1.1"
+							},
+							{
+								"key": "X-Amz-Date",
+								"value": "{{$isoTimestamp}}",
+								"disabled": true
+							},
+							{
+								"key": "X-Amz-Target",
+								"value": "AWSCognitoIdentityProviderService.RespondToAuthChallenge"
+							},
+							{
+								"key": "Authorization",
+								"value": "AWS4-HMAC-SHA256 Credential=<Credential>, SignedHeaders=<Headers>, Signature=<Signature>",
+								"disabled": true
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "UTF8",
+								"disabled": true
+							},
+							{
+								"key": "User-Agent",
+								"value": "<UserAgentString>",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"ChallengeName\": \"NEW_PASSWORD_REQUIRED\",\r\n    \"ClientId\": \"{{client_id}}\",\r\n    \"ChallengeResponses\": {\r\n        \"USERNAME\": \"{{username}}\",\r\n        \"NEW_PASSWORD\": \"{{password}}\"\r\n    },\r\n    \"Session\":\"{{authSessionId}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://cognito-idp.eu-west-2.amazonaws.com",
+							"protocol": "https",
+							"host": [
+								"cognito-idp",
+								"eu-west-2",
+								"amazonaws",
+								"com"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "GetToken",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x-amz-json-1.1"
+									},
+									{
+										"key": "X-Amz-Date",
+										"value": "{{$isoTimestamp}}",
+										"disabled": true
+									},
+									{
+										"key": "X-Amz-Target",
+										"value": "AWSCognitoIdentityProviderService.InitiateAuth"
+									},
+									{
+										"key": "Authorization",
+										"value": "AWS4-HMAC-SHA256 Credential=<Credential>, SignedHeaders=<Headers>, Signature=<Signature>",
+										"disabled": true
+									},
+									{
+										"key": "Accept-Encoding",
+										"value": "gzip, deflate, br"
+									},
+									{
+										"key": "User-Agent",
+										"value": "<UserAgentString>",
+										"disabled": true
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"AuthFlow\": \"USER_PASSWORD_AUTH\",\r\n    \"ClientId\": \"{{client_id}}\",\r\n    \"AuthParameters\": {\r\n        \"USERNAME\": \"{{username}}\",\r\n        \"PASSWORD\": \"{{password}}\"\r\n    }\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://cognito-idp.eu-west-2.amazonaws.com",
+									"protocol": "https",
+									"host": [
+										"cognito-idp",
+										"eu-west-2",
+										"amazonaws",
+										"com"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						}
+					]
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the response body\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.AuthenticationResult) {\r",
+									"    let authResult = responseJson.AuthenticationResult;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"accessToken\", authResult.AccessToken);\r",
+									"    pm.environment.set(\"idToken\", authResult.IdToken);\r",
+									"    pm.environment.set(\"refreshToken\", authResult.RefreshToken);\r",
+									"\r",
+									"    // Calculate expiry time in milliseconds\r",
+									"    let expiryTime = new Date().getTime() + (authResult.ExpiresIn * 1000);\r",
+									"    pm.environment.set(\"accessTokenExpiry\", expiryTime);\r",
+									"\r",
+									"    console.log(\"Tokens set successfully in environment variables.\");\r",
+									"} else {\r",
+									"    console.log(\"AuthenticationResult not found in response.\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-amz-json-1.1"
+							},
+							{
+								"key": "X-Amz-Date",
+								"value": "{{$isoTimestamp}}",
+								"disabled": true
+							},
+							{
+								"key": "X-Amz-Target",
+								"value": "AWSCognitoIdentityProviderService.GetTokensFromRefreshToken"
+							},
+							{
+								"key": "Authorization",
+								"value": "AWS4-HMAC-SHA256 Credential=<Credential>, SignedHeaders=<Headers>, Signature=<Signature>",
+								"disabled": true
+							},
+							{
+								"key": "Accept-Encoding",
+								"value": "gzip, deflate, br"
+							},
+							{
+								"key": "User-Agent",
+								"value": "<UserAgentString>",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"AuthFlow\": \"USER_PASSWORD_AUTH\",\r\n    \"ClientId\": \"{{client_id}}\",\r\n    \"RefreshToken\": \"{{refreshToken}}\"\r\n}"
+						},
+						"url": {
+							"raw": "https://cognito-idp.eu-west-2.amazonaws.com",
+							"protocol": "https",
+							"host": [
+								"cognito-idp",
+								"eu-west-2",
+								"amazonaws",
+								"com"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Upload Flow",
+			"item": [
+				{
+					"name": "Get presigned lambda url (local)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"    // Set environment variables\r",
+									"        // Set environment variables\r",
+									"    let username = pm.environment.get(\"username\");\r",
+									"    let sessionName = pm.environment.get(\"sessionName\");\r",
+									"    //let fileSaveLocation = `${username}/${sessionName}`\r",
+									"    //pm.environment.set(\"fileSaveLocation\", fileSaveLocation );"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the response body\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.presigned_url) {\r",
+									"    let presigned_url = responseJson.presigned_url;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"uploadUrl\", presigned_url);\r",
+									"\r",
+									"    // Calculate expiry time in milliseconds\r",
+									"    let presignedUrlExpiry = new Date().getTime() + (60*60 * 1000);\r",
+									"    pm.environment.set(\"uploadUrlExpiry\", presignedUrlExpiry);\r",
+									"\r",
+									"    console.log(\"Presigned URl set\");\r",
+									"} else {\r",
+									"    console.log(\"AuthenticationResult not found in response.\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:3000/api/upload?fileName={{fileName}}&saveLocation={{fileSaveLocation}}",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"upload"
+							],
+							"query": [
+								{
+									"key": "fileName",
+									"value": "{{fileName}}"
+								},
+								{
+									"key": "saveLocation",
+									"value": "{{fileSaveLocation}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get presigned lambda url",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"    // Set environment variables\r",
+									"        // Set environment variables\r",
+									"    let username = pm.environment.get(\"username\");\r",
+									"    let sessionName = pm.environment.get(\"sessionName\");\r",
+									"    //let fileSaveLocation = `${username}/${sessionName}`\r",
+									"    //pm.environment.set(\"fileSaveLocation\", fileSaveLocation );"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the response body\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.presigned_url) {\r",
+									"    let presigned_url = responseJson.presigned_url;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"uploadUrl\", presigned_url);\r",
+									"\r",
+									"    // Calculate expiry time in milliseconds\r",
+									"    let presignedUrlExpiry = new Date().getTime() + (60*60 * 1000);\r",
+									"    pm.environment.set(\"uploadUrlExpiry\", presignedUrlExpiry);\r",
+									"\r",
+									"    console.log(\"Presigned URl set\");\r",
+									"} else {\r",
+									"    console.log(\"AuthenticationResult not found in response.\");\r",
+									"}\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.session_id) {\r",
+									"    let sessionId = responseJson.session_id;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"sessionId\", sessionId);\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{apiGateWayUrl}}api/upload?fileName={{fileName}}&saveLocation={{fileSaveLocation}}",
+							"host": [
+								"{{apiGateWayUrl}}api"
+							],
+							"path": [
+								"upload"
+							],
+							"query": [
+								{
+									"key": "fileName",
+									"value": "{{fileName}}"
+								},
+								{
+									"key": "saveLocation",
+									"value": "{{fileSaveLocation}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "uploadFileToPresignedUrl",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "file",
+							"file": {
+								"src": "/C:/Users/Hardeep/Downloads/TestUpload_20250625160819.zip"
+							}
+						},
+						"url": {
+							"raw": "{{uploadUrl}}",
+							"host": [
+								"{{uploadUrl}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Classifiers",
+			"item": [
+				{
+					"name": "Get all Classifiers for user",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{idToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{apiGateWayUrl}}api/classifiers",
+							"host": [
+								"{{apiGateWayUrl}}api"
+							],
+							"path": [
+								"classifiers"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get all Classifiers for user",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{apiGateWayUrl}}api/classifiers",
+									"host": [
+										"{{apiGateWayUrl}}api"
+									],
+									"path": [
+										"classifiers"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Thu, 21 Aug 2025 19:40:58 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "3102"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Apigw-Requestid",
+									"value": "Pq9rCijKLPEEMdA="
+								}
+							],
+							"cookie": [],
+							"body": "[\n    {\n        \"classifierId\": 0,\n        \"status\": \"Ready\",\n        \"uploadDate\": \"1970-01-01T00:00:00\",\n        \"lastUpdated\": \"1970-01-01T00:00:00\",\n        \"sessionId\": 0,\n        \"sessionName\": \"S8R11_28_May_12_07_NoFeedback_meta (1)\",\n        \"peakAccuracy\": 0,\n        \"errorMargin\": 0,\n        \"parameters\": null,\n        \"graphs\": [\n            {\n                \"name\": \"Classifier\",\n                \"data\": \"FBCSP_online_setup_prep_01 [online].json\"\n            },\n            {\n                \"name\": \"DA Plot\",\n                \"data\": \"hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/Offline/hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/DA.png\"\n            }\n        ]\n    },\n    {\n        \"classifierId\": 0,\n        \"status\": \"Ready\",\n        \"uploadDate\": \"1970-01-01T00:00:00\",\n        \"lastUpdated\": \"1970-01-01T00:00:00\",\n        \"sessionId\": 0,\n        \"sessionName\": \"S8R11_28_May_12_07_NoFeedback_meta (1)\",\n        \"peakAccuracy\": 0,\n        \"errorMargin\": 0,\n        \"parameters\": null,\n        \"graphs\": [\n            {\n                \"name\": \"Classifier\",\n                \"data\": \"FBCSP_online_setup_prep_01 [online].json\"\n            },\n            {\n                \"name\": \"DA Plot\",\n                \"data\": \"hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/Offline/hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/DA.png\"\n            }\n        ]\n    },\n    {\n        \"classifierId\": 0,\n        \"status\": \"Ready\",\n        \"uploadDate\": \"1970-01-01T00:00:00\",\n        \"lastUpdated\": \"1970-01-01T00:00:00\",\n        \"sessionId\": 0,\n        \"sessionName\": \"S8R11_28_May_12_07_NoFeedback_meta (1)\",\n        \"peakAccuracy\": 0,\n        \"errorMargin\": 0,\n        \"parameters\": null,\n        \"graphs\": [\n            {\n                \"name\": \"Classifier\",\n                \"data\": \"FBCSP_online_setup_prep_01 [online].json\"\n            },\n            {\n                \"name\": \"DA Plot\",\n                \"data\": \"hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/Offline/hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/DA.png\"\n            }\n        ]\n    },\n    {\n        \"classifierId\": 0,\n        \"status\": \"Ready\",\n        \"uploadDate\": \"1970-01-01T00:00:00\",\n        \"lastUpdated\": \"1970-01-01T00:00:00\",\n        \"sessionId\": 0,\n        \"sessionName\": \"S8R11_28_May_12_07_NoFeedback_meta (1)\",\n        \"peakAccuracy\": 0,\n        \"errorMargin\": 0,\n        \"parameters\": null,\n        \"graphs\": [\n            {\n                \"name\": \"Classifier\",\n                \"data\": \"FBCSP_online_setup_prep_01 [online].json\"\n            },\n            {\n                \"name\": \"DA Plot\",\n                \"data\": \"hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/Offline/hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/DA.png\"\n            }\n        ]\n    },\n    {\n        \"classifierId\": 0,\n        \"status\": \"Ready\",\n        \"uploadDate\": \"1970-01-01T00:00:00\",\n        \"lastUpdated\": \"1970-01-01T00:00:00\",\n        \"sessionId\": 0,\n        \"sessionName\": \"S8R11_28_May_12_07_NoFeedback_meta (1)\",\n        \"peakAccuracy\": 0,\n        \"errorMargin\": 0,\n        \"parameters\": null,\n        \"graphs\": [\n            {\n                \"name\": \"Classifier\",\n                \"data\": \"FBCSP_online_setup_prep_01 [online].json\"\n            },\n            {\n                \"name\": \"DA Plot\",\n                \"data\": \"hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/Offline/hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/DA.png\"\n            }\n        ]\n    },\n    {\n        \"classifierId\": 0,\n        \"status\": \"Ready\",\n        \"uploadDate\": \"1970-01-01T00:00:00\",\n        \"lastUpdated\": \"1970-01-01T00:00:00\",\n        \"sessionId\": 0,\n        \"sessionName\": \"S8R11_28_May_12_07_NoFeedback_meta (1)\",\n        \"peakAccuracy\": 0,\n        \"errorMargin\": 0,\n        \"parameters\": null,\n        \"graphs\": [\n            {\n                \"name\": \"Classifier\",\n                \"data\": \"FBCSP_online_setup_prep_01 [online].json\"\n            },\n            {\n                \"name\": \"DA Plot\",\n                \"data\": \"hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/Offline/hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/DA.png\"\n            }\n        ]\n    },\n    {\n        \"classifierId\": 0,\n        \"status\": \"Ready\",\n        \"uploadDate\": \"1970-01-01T00:00:00\",\n        \"lastUpdated\": \"1970-01-01T00:00:00\",\n        \"sessionId\": 0,\n        \"sessionName\": \"S8R11_28_May_12_07_NoFeedback_meta (1)\",\n        \"peakAccuracy\": 0,\n        \"errorMargin\": 0,\n        \"parameters\": null,\n        \"graphs\": [\n            {\n                \"name\": \"Classifier\",\n                \"data\": \"FBCSP_online_setup_prep_01 [online].json\"\n            },\n            {\n                \"name\": \"DA Plot\",\n                \"data\": \"hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/Offline/hss70/S8R11_28_May_12_07_NoFeedback_meta (1)/DA.png\"\n            }\n        ]\n    }\n]"
+						}
+					]
+				},
+				{
+					"name": "Get Classifier by ID {specific to user}",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the response body\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.presigned_url) {\r",
+									"    let presigned_url = responseJson.presigned_url;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"uploadUrl\", presigned_url);\r",
+									"\r",
+									"    // Calculate expiry time in milliseconds\r",
+									"    let presignedUrlExpiry = new Date().getTime() + (60*60 * 1000);\r",
+									"    pm.environment.set(\"uploadUrlExpiry\", presignedUrlExpiry);\r",
+									"\r",
+									"    console.log(\"Presigned URl set\");\r",
+									"} else {\r",
+									"    console.log(\"AuthenticationResult not found in response.\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{apiGateWayUrl}}api/classifiers/1",
+							"host": [
+								"{{apiGateWayUrl}}api"
+							],
+							"path": [
+								"classifiers",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Classifier Graphs by ClassifierId {specific to user}",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the response body\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.presigned_url) {\r",
+									"    let presigned_url = responseJson.presigned_url;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"uploadUrl\", presigned_url);\r",
+									"\r",
+									"    // Calculate expiry time in milliseconds\r",
+									"    let presignedUrlExpiry = new Date().getTime() + (60*60 * 1000);\r",
+									"    pm.environment.set(\"uploadUrlExpiry\", presignedUrlExpiry);\r",
+									"\r",
+									"    console.log(\"Presigned URl set\");\r",
+									"} else {\r",
+									"    console.log(\"AuthenticationResult not found in response.\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{apiGateWayUrl}}api/classifiers/1/graphs",
+							"host": [
+								"{{apiGateWayUrl}}api"
+							],
+							"path": [
+								"classifiers",
+								"1",
+								"graphs"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get specific graph",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the response body\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.presigned_url) {\r",
+									"    let presigned_url = responseJson.presigned_url;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"uploadUrl\", presigned_url);\r",
+									"\r",
+									"    // Calculate expiry time in milliseconds\r",
+									"    let presignedUrlExpiry = new Date().getTime() + (60*60 * 1000);\r",
+									"    pm.environment.set(\"uploadUrlExpiry\", presignedUrlExpiry);\r",
+									"\r",
+									"    console.log(\"Presigned URl set\");\r",
+									"} else {\r",
+									"    console.log(\"AuthenticationResult not found in response.\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{apiGateWayUrl}}api/classifiers/1/graphs/DaAccuracy",
+							"host": [
+								"{{apiGateWayUrl}}api"
+							],
+							"path": [
+								"classifiers",
+								"1",
+								"graphs",
+								"DaAccuracy"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetStatus",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the response body\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.presigned_url) {\r",
+									"    let presigned_url = responseJson.presigned_url;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"uploadUrl\", presigned_url);\r",
+									"\r",
+									"    // Calculate expiry time in milliseconds\r",
+									"    let presignedUrlExpiry = new Date().getTime() + (60*60 * 1000);\r",
+									"    pm.environment.set(\"uploadUrlExpiry\", presignedUrlExpiry);\r",
+									"\r",
+									"    console.log(\"Presigned URl set\");\r",
+									"} else {\r",
+									"    console.log(\"AuthenticationResult not found in response.\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{apiGateWayUrl}}api/status/{{sessionId}}",
+							"host": [
+								"{{apiGateWayUrl}}api"
+							],
+							"path": [
+								"status",
+								"{{sessionId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getClassifiersLocal",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse the response body\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if AuthenticationResult is present\r",
+									"if (responseJson.presigned_url) {\r",
+									"    let presigned_url = responseJson.presigned_url;\r",
+									"\r",
+									"    // Set environment variables\r",
+									"    pm.environment.set(\"uploadUrl\", presigned_url);\r",
+									"\r",
+									"    // Calculate expiry time in milliseconds\r",
+									"    let presignedUrlExpiry = new Date().getTime() + (60*60 * 1000);\r",
+									"    pm.environment.set(\"uploadUrlExpiry\", presignedUrlExpiry);\r",
+									"\r",
+									"    console.log(\"Presigned URl set\");\r",
+									"} else {\r",
+									"    console.log(\"AuthenticationResult not found in response.\");\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://localhost:5001/api/classifiers",
+							"protocol": "https",
+							"host": [
+								"localhost"
+							],
+							"port": "5001",
+							"path": [
+								"api",
+								"classifiers"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "This folder details the endpoints for the Classifier api. Use AuthFlow/GetToken to populate your authToken for authentication\n\nSpec is here:  \n[https://hss70.github.io/AI4NGApiDoc/?spec=Classifiers.yaml](https://hss70.github.io/AI4NGApiDoc/?spec=Classifiers.yaml)"
+		},
+		{
+			"name": "ClassifiersNew",
+			"item": [
+				{
+					"name": "Get All Classifiers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/classifiers",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"classifiers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Classifier by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/classifiers/{{classifierId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"classifiers",
+								"{{classifierId}}"
+							],
+							"variable": [
+								{
+									"key": "classifierId",
+									"value": "123",
+									"description": "The classifier ID to retrieve"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Classifier by Session ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/classifiers/session/{{sessionId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"classifiers",
+								"session",
+								"{{sessionId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Graphs for Session",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/classifiers/session/{{sessionId}}/graphs",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"classifiers",
+								"session",
+								"{{sessionId}}",
+								"graphs"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Graph Data for Session",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/classifiers/session/{{sessionId}}/graphdata",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"classifiers",
+								"session",
+								"{{sessionId}}",
+								"graphdata"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Graph Names for Session",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/classifiers/session/{{sessionId}}/graphnames",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"classifiers",
+								"session",
+								"{{sessionId}}",
+								"graphnames"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific Graph by Name",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/classifiers/session/{{sessionId}}/graphs/{{graphName}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"classifiers",
+								"session",
+								"{{sessionId}}",
+								"graphs",
+								"{{graphName}}"
+							],
+							"variable": [
+								{
+									"key": "graphName",
+									"value": "DA plot",
+									"description": "The name of the graph to retrieve"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific Graph Data by Name",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/classifiers/session/{{sessionId}}/graphdata/{{graphName}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"classifiers",
+								"session",
+								"{{sessionId}}",
+								"graphdata",
+								"{{graphName}}"
+							],
+							"variable": [
+								{
+									"key": "graphName",
+									"value": "DA plot (smoothed).json",
+									"description": "The name of the graph data to retrieve"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

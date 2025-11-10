@@ -1,9 +1,11 @@
 {
 	"info": {
-		"name": "AI4NG Experiment Management Engine API",
-		"_postman_id": "ai4ng-experiment-management",
+		"_postman_id": "5eb94088-cf62-439d-a874-43006c506b9a",
+		"name": "AI4NG Experiment Management Engine API V2",
 		"description": "Postman collection for AI4NG Experiment Management Engine (Experiments, Questionnaires, and Responses APIs)",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "44794076",
+		"_collection_link": "https://neuroprecise.postman.co/workspace/Neuroprecise-Workspace~2e0d0202-a508-432f-8638-7e1d265ffdcd/collection/44794076-5eb94088-cf62-439d-a874-43006c506b9a?action=share&source=collection_link&creator=44794076"
 	},
 	"item": [
 		{
@@ -16,13 +18,23 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/experiments",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/experiments",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"experiments"
+							]
+						},
 						"description": "Retrieve all experiments (researcher access only)."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Get Experiment By Id (Researcher)",
@@ -31,13 +43,24 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/experiments/{{experimentId}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/experiments/{{experimentId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"experiments",
+								"{{experimentId}}"
+							]
+						},
 						"description": "Retrieve a specific experiment by its ID (researcher access only)."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Get My Experiments (Participant)",
@@ -46,13 +69,24 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/me/experiments",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/me/experiments",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"me",
+								"experiments"
+							]
+						},
 						"description": "Retrieve experiments for the authenticated participant."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Create Experiment (Researcher)",
@@ -61,17 +95,32 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"id\": \"EXP001\",\n  \"data\": {\n    \"name\": \"Example Experiment\",\n    \"description\": \"Cognitive load testing\",\n    \"questionnaireIds\": [\"PQ1\"],\n    \"status\": \"draft\"\n  }\n}"
+							"raw": "{\n  \"id\": \"EXP001\",\n  \"data\": {\n    \"name\": \"Example Experiment\",\n    \"description\": \"Cognitive load testing\",\n    \"questionnaireIds\": [\"PQ1\"],\n    \"status\": \"draft\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
 						},
-						"url": "{{baseUrl}}/api/experiments",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/experiments",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"experiments"
+							]
+						},
 						"description": "Create a new experiment (researcher access only)."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Update Experiment (Researcher)",
@@ -80,7 +129,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
@@ -88,9 +137,20 @@
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"Updated Experiment Name\",\n  \"description\": \"Updated experiment description.\",\n  \"status\": \"published\"\n}"
 						},
-						"url": "{{baseUrl}}/api/experiments/{{experimentId}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/experiments/{{experimentId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"experiments",
+								"{{experimentId}}"
+							]
+						},
 						"description": "Update an experiment (researcher access only)."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Delete Experiment (Researcher)",
@@ -99,13 +159,24 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/experiments/{{experimentId}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/experiments/{{experimentId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"experiments",
+								"{{experimentId}}"
+							]
+						},
 						"description": "Delete an experiment (researcher access only)."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Sync Experiments (Participant)",
@@ -114,13 +185,24 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/experiments/sync",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/experiments/sync",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"experiments",
+								"sync"
+							]
+						},
 						"description": "Synchronize experiments for the authenticated participant."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Get Experiment Members (Researcher)",
@@ -129,13 +211,25 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/experiments/{{experimentId}}/members",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/experiments/{{experimentId}}/members",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"experiments",
+								"{{experimentId}}",
+								"members"
+							]
+						},
 						"description": "Retrieve members of an experiment (researcher access only)."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Add Member to Experiment (Researcher)",
@@ -144,7 +238,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
@@ -152,9 +246,22 @@
 							"mode": "raw",
 							"raw": "{\n  \"role\": \"participant\",\n  \"status\": \"active\"\n}"
 						},
-						"url": "{{baseUrl}}/api/experiments/{{experimentId}}/members/{{userSub}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/experiments/{{experimentId}}/members/{{userSub}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"experiments",
+								"{{experimentId}}",
+								"members",
+								"{{userSub}}"
+							]
+						},
 						"description": "Add a member to an experiment (researcher access only)."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Remove Member from Experiment (Researcher)",
@@ -163,13 +270,26 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/experiments/{{experimentId}}/members/{{userSub}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/experiments/{{experimentId}}/members/{{userSub}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"experiments",
+								"{{experimentId}}",
+								"members",
+								"{{userSub}}"
+							]
+						},
 						"description": "Remove a member from an experiment (researcher access only)."
-					}
+					},
+					"response": []
 				}
 			]
 		},
@@ -183,13 +303,23 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/responses",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/responses",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"responses"
+							]
+						},
 						"description": "Retrieve all responses for the authenticated user, optionally filtered by experiment or session."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Get Response By Id",
@@ -198,13 +328,24 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/responses/{{responseId}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/responses/{{responseId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"responses",
+								"{{responseId}}"
+							]
+						},
 						"description": "Retrieve a specific response by ID."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Create Response",
@@ -213,7 +354,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
@@ -221,9 +362,19 @@
 							"mode": "raw",
 							"raw": "{\n  \"experimentId\": \"EXP001\",\n  \"questionnaireId\": \"PQ1\",\n  \"answers\": [\n    { \"questionId\": \"1\", \"value\": \"5\" },\n    { \"questionId\": \"2\", \"value\": \"3\" }\n  ]\n}"
 						},
-						"url": "{{baseUrl}}/api/responses",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/responses",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"responses"
+							]
+						},
 						"description": "Create a new response."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Update Response",
@@ -232,7 +383,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
@@ -240,9 +391,20 @@
 							"mode": "raw",
 							"raw": "{\n  \"answers\": [\n    { \"questionId\": \"1\", \"value\": \"6\" }\n  ]\n}"
 						},
-						"url": "{{baseUrl}}/api/responses/{{responseId}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/responses/{{responseId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"responses",
+								"{{responseId}}"
+							]
+						},
 						"description": "Update an existing response."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Delete Response",
@@ -251,13 +413,24 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/responses/{{responseId}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/responses/{{responseId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"responses",
+								"{{responseId}}"
+							]
+						},
 						"description": "Delete a response (soft delete)."
-					}
+					},
+					"response": []
 				}
 			]
 		},
@@ -271,13 +444,23 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/questionnaires",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/questionnaires",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"questionnaires"
+							]
+						},
 						"description": "Retrieve all questionnaires."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Get Questionnaire By Id",
@@ -286,13 +469,24 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/questionnaires/{{questionnaireId}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/questionnaires/{{questionnaireId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"questionnaires",
+								"{{questionnaireId}}"
+							]
+						},
 						"description": "Retrieve a specific questionnaire by ID."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Create Questionnaire",
@@ -301,7 +495,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
@@ -309,9 +503,19 @@
 							"mode": "raw",
 							"raw": "{\n  \"id\": \"PQ1\",\n  \"data\": {\n    \"name\": \"Presence Questionnaire\",\n    \"description\": \"Measures presence in VR\",\n    \"estimatedTime\": 180,\n    \"version\": \"1.0\",\n    \"questions\": [\n      { \"id\": \"1\", \"text\": \"How much were you able to control events?\", \"type\": \"scale\", \"scale\": { \"min\": 1, \"max\": 7 }, \"required\": true }\n    ]\n  }\n}"
 						},
-						"url": "{{baseUrl}}/api/questionnaires",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/questionnaires",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"questionnaires"
+							]
+						},
 						"description": "Create a new questionnaire."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Update Questionnaire",
@@ -320,7 +524,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
@@ -328,9 +532,20 @@
 							"mode": "raw",
 							"raw": "{\n  \"name\": \"Updated Presence Questionnaire\",\n  \"description\": \"Updated description\",\n  \"estimatedTime\": 200,\n  \"version\": \"1.1\",\n  \"questions\": []\n}"
 						},
-						"url": "{{baseUrl}}/api/questionnaires/{{questionnaireId}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/questionnaires/{{questionnaireId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"questionnaires",
+								"{{questionnaireId}}"
+							]
+						},
 						"description": "Update an existing questionnaire."
-					}
+					},
+					"response": []
 				},
 				{
 					"name": "Delete Questionnaire",
@@ -339,26 +554,63 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{jwt}}",
+								"value": "Bearer {{idToken}}",
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/questionnaires/{{questionnaireId}}",
+						"url": {
+							"raw": "{{apiGateWayUrl}}/api/questionnaires/{{questionnaireId}}",
+							"host": [
+								"{{apiGateWayUrl}}"
+							],
+							"path": [
+								"api",
+								"questionnaires",
+								"{{questionnaireId}}"
+							]
+						},
 						"description": "Delete a questionnaire (soft delete)."
-					}
+					},
+					"response": []
 				}
 			]
 		}
 	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{idToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
 	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "https://your-api-id.execute-api.your-region.amazonaws.com"
-		},
-		{
-			"key": "jwt",
-			"value": "YOUR_JWT_TOKEN"
-		},
 		{
 			"key": "experimentId",
 			"value": "EXP001"

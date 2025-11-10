@@ -1,0 +1,13 @@
+{
+    "data": {
+        "name": "Manual Test Experiment",
+        "description": "Created via Postman mini script"
+    },
+    "questionnaireConfig": {
+        "questionnaireIds": [
+            "PQ",
+            "ati-scale"
+        ]
+    },
+    "sessions": []
+}

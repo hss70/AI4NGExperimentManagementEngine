@@ -295,6 +295,7 @@ Resources:
 
   GetExperimentByIdRoute:
     Type: AWS::ApiGatewayV2::Route
+    DeletionPolicy: Delete
     Properties:
       ApiId: !Ref SharedApiId
       RouteKey: GET /api/experiments/{experimentId}
@@ -358,6 +359,7 @@ Resources:
 
   AddExperimentMemberRoute:
     Type: AWS::ApiGatewayV2::Route
+    DeletionPolicy: Delete
     Properties:
       ApiId: !Ref SharedApiId
       RouteKey: PUT /api/experiments/{experimentId}/members/{userSub}
@@ -367,6 +369,7 @@ Resources:
 
   RemoveExperimentMemberRoute:
     Type: AWS::ApiGatewayV2::Route
+    DeletionPolicy: Delete
     Properties:
       ApiId: !Ref SharedApiId
       RouteKey: DELETE /api/experiments/{experimentId}/members/{userSub}
@@ -395,6 +398,7 @@ Resources:
 
   CreateResponseRoute:
     Type: AWS::ApiGatewayV2::Route
+    DeletionPolicy: Delete
     Properties:
       ApiId: !Ref SharedApiId
       RouteKey: POST /api/responses

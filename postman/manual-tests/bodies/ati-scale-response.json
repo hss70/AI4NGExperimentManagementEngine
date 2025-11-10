@@ -1,0 +1,19 @@
+{
+    "data": {
+        "experimentId": "{{experimentId}}",
+        "sessionId": "session-1",
+        "questionnaireId": "ati-scale",
+        "responses": [
+            {
+                "questionId": "ATI_Q1",
+                "answer": 5,
+                "timestamp": "{{$isoTimestamp}}"
+            },
+            {
+                "questionId": "ATI_Q2",
+                "answer": "Agree",
+                "timestamp": "{{$isoTimestamp}}"
+            }
+        ]
+    }
+}

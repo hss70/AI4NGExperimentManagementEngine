@@ -1,0 +1,19 @@
+{
+    "data": {
+        "experimentId": "{{experimentId}}",
+        "sessionId": "session-1",
+        "questionnaireId": "PQ",
+        "responses": [
+            {
+                "questionId": "PQ_Q1",
+                "answer": "Sometimes",
+                "timestamp": "{{$isoTimestamp}}"
+            },
+            {
+                "questionId": "PQ_Q2",
+                "answer": 3,
+                "timestamp": "{{$isoTimestamp}}"
+            }
+        ]
+    }
+}
