@@ -1,0 +1,576 @@
+{
+	"info": {
+		"name": "AI4NG Automated Test Suite",
+		"description": "Automated test suite for AI4NG API - Run with Collection Runner",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Authentication successful', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response.AuthenticationResult).to.have.property('IdToken');",
+							"    pm.collectionVariables.set('idToken', response.AuthenticationResult.IdToken);",
+							"    console.log('✅ Authentication successful');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/x-amz-json-1.1"
+					},
+					{
+						"key": "X-Amz-Target",
+						"value": "AWSCognitoIdentityProviderService.InitiateAuth"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"AuthFlow\": \"USER_PASSWORD_AUTH\",\n    \"ClientId\": \"{{cognitoClientId}}\",\n    \"AuthParameters\": {\n        \"USERNAME\": \"{{username}}\",\n        \"PASSWORD\": \"{{password}}\"\n    }\n}"
+				},
+				"url": "https://cognito-idp.eu-west-2.amazonaws.com"
+			}
+		},
+		{
+			"name": "📋 Create Task",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Store original task data for validation",
+							"const taskData = {",
+							"  name: 'Test EEG Training',",
+							"  type: 'TRAIN_EEG',",
+							"  description: 'Automated test task',",
+							"  configuration: { duration: 300 },",
+							"  estimatedDuration: 300",
+							"};",
+							"pm.collectionVariables.set('originalTaskData', JSON.stringify(taskData));"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Task created successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.have.property('id');",
+							"    pm.collectionVariables.set('taskId', response.id);",
+							"    console.log('✅ Task created:', response.id);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Test EEG Training\",\n  \"type\": \"TRAIN_EEG\",\n  \"description\": \"Automated test task\",\n  \"configuration\": {\n    \"duration\": 300\n  },\n  \"estimatedDuration\": 300\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/tasks",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "tasks"]
+				}
+			}
+		},
+		{
+			"name": "🧪 Create Experiment",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Store original experiment data for validation",
+							"const expData = {",
+							"  name: 'Automated Test Experiment',",
+							"  description: 'Test experiment for API validation',",
+							"  sessionTypes: {",
+							"    DAILY: {",
+							"      name: 'Daily Session',",
+							"      questionnaires: ['PQ'],",
+							"      tasks: ['TRAIN_EEG'],",
+							"      estimatedDuration: 25",
+							"    }",
+							"  }",
+							"};",
+							"pm.collectionVariables.set('originalExpData', JSON.stringify(expData));"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Experiment created successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.have.property('id');",
+							"    pm.collectionVariables.set('experimentId', response.id);",
+							"    console.log('✅ Experiment created:', response.id);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"data\": {\n    \"name\": \"Automated Test Experiment\",\n    \"description\": \"Test experiment for API validation\",\n    \"sessionTypes\": {\n      \"DAILY\": {\n        \"name\": \"Daily Session\",\n        \"questionnaires\": [\"PQ\"],\n        \"tasks\": [\"TRAIN_EEG\"],\n        \"estimatedDuration\": 25\n      }\n    }\n  },\n  \"questionnaireConfig\": {\n    \"schedule\": {\n      \"PQ\": \"every_session\"\n    }\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments"]
+				}
+			}
+		},
+		{
+			"name": "📅 Create Session",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Session created successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.have.property('sessionId');",
+							"    pm.collectionVariables.set('sessionId', response.sessionId);",
+							"    console.log('✅ Session created:', response.sessionId);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"sessionType\": \"DAILY\",\n  \"date\": \"2024-01-15\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sessions",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "{{experimentId}}", "sessions"]
+				}
+			}
+		},
+		{
+			"name": "📊 Get All Experiments",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Get experiments successful', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.be.an('array');",
+							"    console.log('✅ Retrieved', response.length, 'experiments');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments"]
+				}
+			}
+		},
+		{
+			"name": "✅ Validate Task Data",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Task data matches uploaded data', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    const original = JSON.parse(pm.collectionVariables.get('originalTaskData'));",
+							"    ",
+							"    pm.expect(response.data.name).to.equal(original.name);",
+							"    pm.expect(response.data.type).to.equal(original.type);",
+							"    pm.expect(response.data.description).to.equal(original.description);",
+							"    pm.expect(response.data.estimatedDuration).to.equal(original.estimatedDuration);",
+							"    pm.expect(response.data.configuration.duration).to.equal(original.configuration.duration);",
+							"    ",
+							"    console.log('✅ Task data validation passed');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/tasks/{{taskId}}",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "tasks", "{{taskId}}"]
+				}
+			}
+		},
+		{
+			"name": "✅ Validate Experiment Data",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Experiment data matches uploaded data', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    const original = JSON.parse(pm.collectionVariables.get('originalExpData'));",
+							"    ",
+							"    pm.expect(response.data.name).to.equal(original.name);",
+							"    pm.expect(response.data.description).to.equal(original.description);",
+							"    pm.expect(response.data.sessionTypes.DAILY.name).to.equal(original.sessionTypes.DAILY.name);",
+							"    pm.expect(response.data.sessionTypes.DAILY.estimatedDuration).to.equal(original.sessionTypes.DAILY.estimatedDuration);",
+							"    ",
+							"    console.log('✅ Experiment data validation passed');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "{{experimentId}}"]
+				}
+			}
+		},
+		{
+			"name": "📊 Get All Tasks",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Get tasks successful', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.be.an('array');",
+							"    console.log('✅ Retrieved', response.length, 'tasks');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/tasks",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "tasks"]
+				}
+			}
+		},
+		{
+			"name": "✅ Validate Session Data",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Session data matches created session', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    ",
+							"    pm.expect(response.data.date).to.equal('2024-01-15');",
+							"    pm.expect(response.data.sessionType).to.equal('DAILY');",
+							"    pm.expect(response.sessionId).to.equal(pm.collectionVariables.get('sessionId'));",
+							"    ",
+							"    console.log('✅ Session data validation passed');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sessions/{{sessionId}}",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "{{experimentId}}", "sessions", "{{sessionId}}"]
+				}
+			}
+		},
+		{
+			"name": "📊 Get Sessions",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Get sessions successful', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.be.an('array');",
+							"    console.log('✅ Retrieved', response.length, 'sessions');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sessions",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "{{experimentId}}", "sessions"]
+				}
+			}
+		},
+		{
+			"name": "🔄 Sync Experiment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Sync successful and data integrity maintained', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    const original = JSON.parse(pm.collectionVariables.get('originalExpData'));",
+							"    ",
+							"    // Validate sync structure",
+							"    pm.expect(response).to.have.property('syncTimestamp');",
+							"    pm.expect(response).to.have.property('experiment');",
+							"    pm.expect(response).to.have.property('sessions');",
+							"    ",
+							"    // Validate experiment data in sync response",
+							"    pm.expect(response.experiment.data.name).to.equal(original.name);",
+							"    pm.expect(response.experiment.data.description).to.equal(original.description);",
+							"    ",
+							"    // Validate session data in sync response",
+							"    pm.expect(response.sessions).to.be.an('array');",
+							"    if (response.sessions.length > 0) {",
+							"        const session = response.sessions[0];",
+							"        pm.expect(session.data.date).to.equal('2024-01-15');",
+							"        pm.expect(session.data.sessionType).to.equal('DAILY');",
+							"    }",
+							"    ",
+							"    console.log('✅ Sync data validation passed');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sync",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "{{experimentId}}", "sync"]
+				}
+			}
+		},
+		{
+			"name": "🧹 Cleanup - Delete Session",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Session deleted successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    console.log('✅ Session deleted');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sessions/{{sessionId}}",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "{{experimentId}}", "sessions", "{{sessionId}}"]
+				}
+			}
+		},
+		{
+			"name": "🧹 Cleanup - Delete Task",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Task deleted successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    console.log('✅ Task deleted');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/tasks/{{taskId}}",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "tasks", "{{taskId}}"]
+				}
+			}
+		},
+		{
+			"name": "🧹 Cleanup - Delete Experiment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Experiment deleted successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    console.log('✅ Experiment deleted');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "{{experimentId}}"]
+				}
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "apiGatewayUrl",
+			"value": "https://3mybicfkv2.execute-api.eu-west-2.amazonaws.com/dev"
+		},
+		{
+			"key": "cognitoClientId",
+			"value": "517s6c84jo5i3lqste5idb0o4c"
+		},
+		{
+			"key": "username",
+			"value": "hss702"
+		},
+		{
+			"key": "password",
+			"value": "Hardeep123!"
+		}
+	]
+}

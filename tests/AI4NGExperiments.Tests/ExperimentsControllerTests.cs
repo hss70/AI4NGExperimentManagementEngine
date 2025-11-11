@@ -68,7 +68,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
         using var _ = TestEnvironmentHelper.SetLocalTestingMode();
         var (mockService, controller, _) = CreateController();
         var data = new ExperimentData { Name = "Updated Experiment" };
-        mockService.Setup(x => x.UpdateExperimentAsync(TestDataBuilder.TestUserId, data, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
+        mockService.Setup(x => x.UpdateExperimentAsync(TestDataBuilder.TestUserId, data, TestDataBuilder.TestUsername)).Returns(System.Threading.Tasks.Task.CompletedTask);
 
         // Act
         var result = await controller.Update(TestDataBuilder.TestUserId, data);
@@ -107,7 +107,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
         var member = new MemberRequest { Role = "participant" };
         mockService
             .Setup(x => x.AddMemberAsync(TestDataBuilder.TestUserId, TestDataBuilder.TestUserId, member, TestDataBuilder.TestUsername))
-            .Returns(Task.CompletedTask);
+            .Returns(System.Threading.Tasks.Task.CompletedTask);
 
         // Act
         var result = await controller.AddMember(TestDataBuilder.TestUserId, TestDataBuilder.TestUserId, member);
@@ -142,7 +142,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
         var (mockService, controller, _) = CreateController();
         mockService
             .Setup(x => x.RemoveMemberAsync(TestDataBuilder.TestUserId, TestDataBuilder.NonExistentId, TestDataBuilder.TestUsername))
-            .Returns(Task.CompletedTask);
+            .Returns(System.Threading.Tasks.Task.CompletedTask);
 
         // Act
         var result = await controller.RemoveMember(TestDataBuilder.TestUserId, TestDataBuilder.NonExistentId);

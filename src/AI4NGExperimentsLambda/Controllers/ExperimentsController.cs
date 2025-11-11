@@ -133,18 +133,18 @@ namespace AI4NGExperimentsLambda.Controllers
         /// <summary>
         /// Synchronizes experiment data for a participant.
         /// </summary>
-        [HttpGet("sync")]
-        public async Task<IActionResult> Sync([FromQuery] DateTime? lastSyncTime = null)
+        [HttpGet("{experimentId}/sync")]
+        public async Task<IActionResult> Sync(string experimentId, [FromQuery] DateTime? lastSyncTime = null)
         {
             try
             {
                 var username = GetAuthenticatedUsername();
-                var result = await _experimentService.SyncExperimentAsync(null, lastSyncTime, username);
+                var result = await _experimentService.SyncExperimentAsync(experimentId, lastSyncTime, username);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                return HandleException(ex, "syncing experiments");
+                return HandleException(ex, "syncing experiment");
             }
         }
 
@@ -201,6 +201,100 @@ namespace AI4NGExperimentsLambda.Controllers
             catch (Exception ex)
             {
                 return HandleException(ex, "removing experiment member");
+            }
+        }
+
+        /// <summary>
+        /// Retrieves all sessions for an experiment (researcher-only).
+        /// </summary>
+        [HttpGet("{experimentId}/sessions")]
+        public async Task<IActionResult> GetSessions(string experimentId)
+        {
+            try
+            {
+                RequireResearcher();
+                var sessions = await _experimentService.GetExperimentSessionsAsync(experimentId);
+                return Ok(sessions);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "retrieving experiment sessions");
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a specific session by ID (researcher-only).
+        /// </summary>
+        [HttpGet("{experimentId}/sessions/{sessionId}")]
+        public async Task<IActionResult> GetSession(string experimentId, string sessionId)
+        {
+            try
+            {
+                RequireResearcher();
+                var session = await _experimentService.GetSessionAsync(experimentId, sessionId);
+                return session == null ? NotFound("Session not found") : Ok(session);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "retrieving session");
+            }
+        }
+
+        /// <summary>
+        /// Creates a new session for an experiment (researcher-only).
+        /// </summary>
+        [HttpPost("{experimentId}/sessions")]
+        public async Task<IActionResult> CreateSession(string experimentId, [FromBody] CreateSessionRequest request)
+        {
+            try
+            {
+                RequireResearcher();
+                request.ExperimentId = experimentId;
+                var username = GetAuthenticatedUsername();
+                var result = await _experimentService.CreateSessionAsync(experimentId, request, username);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "creating session");
+            }
+        }
+
+        /// <summary>
+        /// Updates an existing session (researcher-only).
+        /// </summary>
+        [HttpPut("{experimentId}/sessions/{sessionId}")]
+        public async Task<IActionResult> UpdateSession(string experimentId, string sessionId, [FromBody] SessionData data)
+        {
+            try
+            {
+                RequireResearcher();
+                var username = GetAuthenticatedUsername();
+                await _experimentService.UpdateSessionAsync(experimentId, sessionId, data, username);
+                return Ok(new { message = "Session updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "updating session");
+            }
+        }
+
+        /// <summary>
+        /// Deletes a session (researcher-only).
+        /// </summary>
+        [HttpDelete("{experimentId}/sessions/{sessionId}")]
+        public async Task<IActionResult> DeleteSession(string experimentId, string sessionId)
+        {
+            try
+            {
+                RequireResearcher();
+                var username = GetAuthenticatedUsername();
+                await _experimentService.DeleteSessionAsync(experimentId, sessionId, username);
+                return Ok(new { message = "Session deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "deleting session");
             }
         }
     }

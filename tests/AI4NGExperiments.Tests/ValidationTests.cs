@@ -64,10 +64,7 @@ public class ValidationTests
                 Name = "Valid Experiment Name",
                 Description = "Valid description"
             },
-            QuestionnaireConfig = new QuestionnaireConfig
-            {
-                QuestionnaireIds = new List<string>()
-            }
+            QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))

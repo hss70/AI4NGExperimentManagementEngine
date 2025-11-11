@@ -18,12 +18,12 @@ public class ExperimentServiceTests
         Environment.SetEnvironmentVariable("EXPERIMENTS_TABLE", "experiments-test");
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "responses-test");
         Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "questionnaires-test");
-        
+
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
             .ReturnsAsync(new GetItemResponse { IsItemSet = false });
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
-            
+
         _service = new ExperimentService(_mockDynamoClient.Object);
     }
 
@@ -33,9 +33,29 @@ public class ExperimentServiceTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig { QuestionnaireIds = new List<string>() }
+            Data = new ExperimentData 
+            { 
+                Name = "Test Experiment",
+                SessionTypes = new Dictionary<string, SessionType>
+                {
+                    ["DAILY"] = new SessionType
+                    {
+                        Name = "Daily Session",
+                        Questionnaires = new List<string> { "PQ" },
+                        Tasks = new List<string> { "TRAIN_EEG" }
+                    }
+                }
+            },
+            QuestionnaireConfig = new QuestionnaireConfig 
+            { 
+                Schedule = new Dictionary<string, string> { ["PQ"] = "every_session" }
+            }
         };
+
+        // Mock questionnaire exists
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.Is<GetItemRequest>(r => 
+            r.Key["PK"].S == "QUESTIONNAIRE#PQ"), default))
+            .ReturnsAsync(new GetItemResponse { IsItemSet = true });
 
         // Act
         var result = await _service.CreateExperimentAsync(experiment, "testuser");
@@ -143,7 +163,7 @@ public class ExperimentServiceTests
                     {
                         M = new Dictionary<string, AttributeValue>
                         {
-                            ["name"] = new AttributeValue("My Experiment")
+                            ["Name"] = new AttributeValue("My Experiment")
                         }
                     },
                     ["role"] = new AttributeValue("researcher")
@@ -195,14 +215,14 @@ public class ExperimentServiceTests
     {
         // Arrange
         var lastSyncTime = DateTime.UtcNow.AddHours(-1);
-        
+
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
+            .ReturnsAsync(new GetItemResponse
+            {
                 IsItemSet = true,
                 Item = new Dictionary<string, AttributeValue> { ["PK"] = new AttributeValue("EXPERIMENT#test-id") }
             });
-            
+
         _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
             .ReturnsAsync(new QueryResponse
             {

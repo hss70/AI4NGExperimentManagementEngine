@@ -343,7 +343,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: GET /api/experiments/sync
+      RouteKey: GET /api/experiments/{experimentId}/sync
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
@@ -373,6 +373,98 @@ Resources:
     Properties:
       ApiId: !Ref SharedApiId
       RouteKey: DELETE /api/experiments/{experimentId}/members/{userSub}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  # Session Management Routes
+  GetExperimentSessionsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/experiments/{experimentId}/sessions
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetSessionByIdRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/experiments/{experimentId}/sessions/{sessionId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  CreateSessionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: POST /api/experiments/{experimentId}/sessions
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  UpdateSessionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: PUT /api/experiments/{experimentId}/sessions/{sessionId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  DeleteSessionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: DELETE /api/experiments/{experimentId}/sessions/{sessionId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  # Task Management Routes
+  GetTasksRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/tasks
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetTaskByIdRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/tasks/{taskId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  CreateTaskRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: POST /api/tasks
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  UpdateTaskRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: PUT /api/tasks/{taskId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  DeleteTaskRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: DELETE /api/tasks/{taskId}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}

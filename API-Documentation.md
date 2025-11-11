@@ -18,16 +18,39 @@ Authorization: Bearer {jwt-token}
 ### POST /api/researcher/experiments
 Create new experiment (researchers only).
 
-**Request Body:**
+**Important**: Questionnaires must be created first using `POST /api/questionnaires` before referencing them in experiments.
+
+**Request Body:
 ```json
 {
   "data": {
     "name": "BCI Learning Study",
-    "description": "A 21-day study on BCI skill acquisition"
+    "description": "A 21-day study on BCI skill acquisition",
+    "sessionTypes": {
+      "START": {
+        "name": "Initial Session",
+        "questionnaires": ["PreState", "PhysicalState", "VVIQ", "16PF5"],
+        "tasks": ["TRAIN_EEG_BASELINE", "BASELINE_QUESTIONS"],
+        "estimatedDuration": 45
+      },
+      "DAILY": {
+        "name": "Daily Training Session",
+        "questionnaires": ["PreState", "PhysicalState", "CurrentState", "EndState", "PQ", "TLX"],
+        "tasks": ["TRAIN_EEG", "POST_SESSION_QUESTIONS"],
+        "estimatedDuration": 25,
+        "schedule": "daily"
+      }
+    }
   },
   "questionnaireConfig": {
     "schedule": {
+      "PreState": "every_session",
+      "PhysicalState": "every_session",
+      "CurrentState": "every_session",
+      "EndState": "every_session",
       "PQ": "every_session",
+      "TLX": "every_session",
+      "VVIQ": "once",
       "16PF5": "once"
     }
   }
@@ -180,6 +203,230 @@ Example Response:
     { "data": { "sessionId": "2025-10-12", "type": "daily" }, "updatedAt": "2025-10-12T10:00:00Z" }
   ],
   "syncTimestamp": "2025-10-13T10:00:00Z"
+}
+```
+
+## Session Management API (Researcher Only)
+
+**Note**: Sessions are managed through dedicated endpoints with proper task ordering and session type integration.
+
+### GET /api/experiments/{experimentId}/sessions
+Retrieve all sessions for an experiment (researchers only).
+
+**Response:**
+```json
+[
+  {
+    "sessionId": "2023-11-07",
+    "data": {
+      "date": "2023-11-07",
+      "sessionType": "DAILY",
+      "sequenceNumber": 5,
+      "status": "completed",
+      "userId": "USER_456",
+      "startTime": "2023-11-07T10:00:00Z",
+      "endTime": "2023-11-07T10:25:00Z",
+      "metadata": {
+        "dayOfStudy": 5,
+        "weekOfStudy": 1,
+        "isRescheduled": false
+      }
+    },
+    "taskOrder": ["TASK#TRAIN_EEG", "TASK#POST_SESSION_QUESTIONS"],
+    "createdAt": "2023-11-07T08:00:00Z",
+    "updatedAt": "2023-11-07T10:25:00Z"
+  }
+]
+```
+
+### GET /api/experiments/{experimentId}/sessions/{sessionId}
+Retrieve a specific session by ID (researchers only).
+
+**Response:**
+```json
+{
+  "sessionId": "2023-11-07",
+  "experimentId": "EXP_001",
+  "data": {
+    "date": "2023-11-07",
+    "sessionType": "DAILY",
+    "sequenceNumber": 5,
+    "status": "completed",
+    "userId": "USER_456",
+    "startTime": "2023-11-07T10:00:00Z",
+    "endTime": "2023-11-07T10:25:00Z",
+    "metadata": {
+      "dayOfStudy": 5,
+      "weekOfStudy": 1,
+      "isRescheduled": false
+    }
+  },
+  "taskOrder": ["TASK#TRAIN_EEG", "TASK#POST_SESSION_QUESTIONS"],
+  "createdAt": "2023-11-07T08:00:00Z",
+  "updatedAt": "2023-11-07T10:25:00Z"
+}
+```
+
+### POST /api/experiments/{experimentId}/sessions
+Create a new session for an experiment (researchers only).
+
+**Request Body:**
+```json
+{
+  "sessionType": "DAILY",
+  "date": "2023-11-08"
+}
+```
+
+**Response:**
+```json
+{
+  "sessionId": "2023-11-08",
+  "experimentId": "EXP_001"
+}
+```
+
+### PUT /api/experiments/{experimentId}/sessions/{sessionId}
+Update an existing session (researchers only).
+
+**Request Body:**
+```json
+{
+  "date": "2023-11-08",
+  "sessionType": "DAILY",
+  "sequenceNumber": 6,
+  "status": "scheduled",
+  "userId": "USER_456",
+  "metadata": {
+    "dayOfStudy": 6,
+    "weekOfStudy": 1,
+    "isRescheduled": false
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Session updated successfully"
+}
+```
+
+### DELETE /api/experiments/{experimentId}/sessions/{sessionId}
+Delete a session (researchers only).
+
+**Response:**
+```json
+{
+  "message": "Session deleted successfully"
+}
+```
+
+## Task Management API (Researcher Only)
+
+**Note**: Tasks are reusable components that can be referenced in session types and ordered within sessions.
+
+### GET /api/tasks
+Retrieve all tasks (researchers only).
+
+**Response:**
+```json
+[
+  {
+    "id": "task-uuid",
+    "data": {
+      "name": "EEG Training",
+      "type": "TRAIN_EEG",
+      "description": "Basic EEG neurofeedback training",
+      "configuration": {
+        "duration": 300,
+        "difficulty": "beginner"
+      },
+      "estimatedDuration": 300
+    },
+    "createdAt": "2023-11-01T09:00:00Z",
+    "updatedAt": "2023-11-01T09:00:00Z"
+  }
+]
+```
+
+### GET /api/tasks/{taskId}
+Retrieve a specific task by ID (researchers only).
+
+**Response:**
+```json
+{
+  "id": "task-uuid",
+  "data": {
+    "name": "EEG Training",
+    "type": "TRAIN_EEG",
+    "description": "Basic EEG neurofeedback training",
+    "configuration": {
+      "duration": 300,
+      "difficulty": "beginner"
+    },
+    "estimatedDuration": 300
+  },
+  "createdAt": "2023-11-01T09:00:00Z",
+  "updatedAt": "2023-11-01T09:00:00Z"
+}
+```
+
+### POST /api/tasks
+Create a new task (researchers only).
+
+**Request Body:**
+```json
+{
+  "name": "EEG Training",
+  "type": "TRAIN_EEG",
+  "description": "Basic EEG neurofeedback training",
+  "configuration": {
+    "duration": 300,
+    "difficulty": "beginner"
+  },
+  "estimatedDuration": 300
+}
+```
+
+**Response:**
+```json
+{
+  "id": "task-uuid"
+}
+```
+
+### PUT /api/tasks/{taskId}
+Update an existing task (researchers only).
+
+**Request Body:**
+```json
+{
+  "name": "Advanced EEG Training",
+  "type": "TRAIN_EEG",
+  "description": "Advanced EEG neurofeedback training",
+  "configuration": {
+    "duration": 600,
+    "difficulty": "advanced"
+  },
+  "estimatedDuration": 600
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Task updated successfully"
+}
+```
+
+### DELETE /api/tasks/{taskId}
+Delete a task (researchers only).
+
+**Response:**
+```json
+{
+  "message": "Task deleted successfully"
 }
 ```
 

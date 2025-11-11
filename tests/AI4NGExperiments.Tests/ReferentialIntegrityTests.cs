@@ -27,11 +27,15 @@ public class ReferentialIntegrityTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig 
+            Data = new ExperimentData 
             { 
-                QuestionnaireIds = new List<string> { "non-existent-questionnaire" }
-            }
+                Name = "Test Experiment",
+                SessionTypes = new Dictionary<string, SessionType>
+                {
+                    ["daily"] = new SessionType { Questionnaires = new List<string> { "non-existent-questionnaire" } }
+                }
+            },
+            QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         // Mock questionnaire not found
@@ -55,11 +59,15 @@ public class ReferentialIntegrityTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig 
+            Data = new ExperimentData 
             { 
-                QuestionnaireIds = new List<string> { "questionnaire-1", "questionnaire-2" }
-            }
+                Name = "Test Experiment",
+                SessionTypes = new Dictionary<string, SessionType>
+                {
+                    ["daily"] = new SessionType { Questionnaires = new List<string> { "questionnaire-1", "questionnaire-2" } }
+                }
+            },
+            QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         // Mock questionnaires exist

@@ -50,11 +50,15 @@ public class BusinessRuleTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig
+            Data = new ExperimentData
             {
-                QuestionnaireIds = new List<string> { "non-existent-questionnaire" }
-            }
+                Name = "Test Experiment",
+                SessionTypes = new Dictionary<string, SessionType>
+                {
+                    ["daily"] = new SessionType { Questionnaires = new List<string> { "non-existent-questionnaire" } }
+                }
+            },
+            QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         // Mock questionnaire not found
@@ -75,11 +79,15 @@ public class BusinessRuleTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Valid Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig
+            Data = new ExperimentData
             {
-                QuestionnaireIds = new List<string> { "questionnaire-1", "questionnaire-2" }
-            }
+                Name = "Valid Experiment",
+                SessionTypes = new Dictionary<string, SessionType>
+                {
+                    ["daily"] = new SessionType { Questionnaires = new List<string> { "questionnaire-1", "questionnaire-2" } }
+                }
+            },
+            QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         // Mock questionnaires exist
@@ -112,10 +120,7 @@ public class BusinessRuleTests
         var experiment = new Experiment
         {
             Data = new ExperimentData { Name = "Experiment Without Questionnaires" },
-            QuestionnaireConfig = new QuestionnaireConfig
-            {
-                QuestionnaireIds = new List<string>() // Empty list
-            }
+            QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
@@ -246,11 +251,10 @@ public class BusinessRuleTests
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
-        // Act - Currently this passes but should validate role
+        // Act
         await _service.AddMemberAsync("test-id", "user123", memberData, "testuser");
 
-        // Assert - For now, just verify it doesn't crash
-        // TODO: Should throw ArgumentException when validation is implemented
+        // Assert
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
     }
 

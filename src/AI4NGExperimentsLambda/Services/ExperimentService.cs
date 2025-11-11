@@ -36,8 +36,8 @@ public class ExperimentService : IExperimentService
         return response.Items.Select(item => new
         {
             id = item.ContainsKey("PK") ? item["PK"].S.Replace("EXPERIMENT#", "") : string.Empty,
-            name = item.ContainsKey("data") && item["data"].M.ContainsKey("name") ? item["data"].M["name"].S : string.Empty,
-            description = item.ContainsKey("data") && item["data"].M.ContainsKey("description") ? item["data"].M["description"].S : string.Empty
+            name = item.ContainsKey("data") && item["data"].M.ContainsKey("Name") ? item["data"].M["Name"].S : string.Empty,
+            description = item.ContainsKey("data") && item["data"].M.ContainsKey("Description") ? item["data"].M["Description"].S : string.Empty
         });
     }
 
@@ -87,35 +87,59 @@ public class ExperimentService : IExperimentService
         return response.Items.Select(item => new
         {
             id = item["PK"].S.Replace("EXPERIMENT#", ""),
-            name = item["data"].M["name"].S,
-            description = item["data"].M.GetValueOrDefault("description")?.S ?? "",
+            name = item["data"].M["Name"].S,
+            description = item["data"].M.GetValueOrDefault("Description")?.S ?? "",
             role = item["role"]?.S ?? "participant"
         });
     }
 
     public async Task<object> CreateExperimentAsync(Experiment experiment, string username)
     {
-        // Validate questionnaire existence
-        if (experiment.QuestionnaireConfig?.QuestionnaireIds != null)
-        {
-            foreach (var questionnaireId in experiment.QuestionnaireConfig.QuestionnaireIds)
-            {
-                var questionnaireExists = await _dynamoClient.GetItemAsync(new GetItemRequest
-                {
-                    TableName = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? "AI4NGQuestionnaires-dev",
-                    Key = new Dictionary<string, AttributeValue>
-                    {
-                        ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
-                        ["SK"] = new("CONFIG")
-                    }
-                });
+        // Collect all questionnaire IDs from sessionTypes and questionnaireConfig
+        var questionnaireIds = new HashSet<string>();
 
-                if (!questionnaireExists.IsItemSet)
-                    throw new InvalidOperationException($"Questionnaire '{questionnaireId}' not found");
+        // From sessionTypes
+        if (experiment.Data.SessionTypes != null)
+        {
+            foreach (var sessionType in experiment.Data.SessionTypes.Values)
+            {
+                if (sessionType.Questionnaires != null)
+                {
+                    foreach (var qId in sessionType.Questionnaires)
+                    {
+                        questionnaireIds.Add(qId);
+                    }
+                }
             }
         }
 
-        var experimentId = Guid.NewGuid().ToString();
+        // From questionnaireConfig.schedule
+        if (experiment.QuestionnaireConfig?.Schedule != null)
+        {
+            foreach (var qId in experiment.QuestionnaireConfig.Schedule.Keys)
+            {
+                questionnaireIds.Add(qId);
+            }
+        }
+
+        // Validate questionnaire existence
+        foreach (var questionnaireId in questionnaireIds)
+        {
+            var questionnaireExists = await _dynamoClient.GetItemAsync(new GetItemRequest
+            {
+                TableName = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? "AI4NGQuestionnaires-dev",
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
+                    ["SK"] = new("CONFIG")
+                }
+            });
+
+            if (!questionnaireExists.IsItemSet)
+                throw new InvalidOperationException($"Questionnaire '{questionnaireId}' not found");
+        }
+
+        var experimentId = experiment.Id ?? Guid.NewGuid().ToString();
 
         await _dynamoClient.PutItemAsync(new PutItemRequest
         {
@@ -169,8 +193,11 @@ public class ExperimentService : IExperimentService
         });
     }
 
-    public async Task<object> SyncExperimentAsync(string experimentId, DateTime? lastSyncTime, string username)
+    public async Task<object> SyncExperimentAsync(string? experimentId, DateTime? lastSyncTime, string username)
     {
+        if (string.IsNullOrWhiteSpace(experimentId))
+            throw new ArgumentException("Experiment ID is required");
+
         // Validate experiment exists
         var experimentExists = await _dynamoClient.GetItemAsync(new GetItemRequest
         {
@@ -273,6 +300,127 @@ public class ExperimentService : IExperimentService
             {
                 ["PK"] = new($"EXPERIMENT#{experimentId}"),
                 ["SK"] = new($"MEMBER#{userSub}")
+            }
+        });
+    }
+
+    // Session management methods
+    public async Task<IEnumerable<object>> GetExperimentSessionsAsync(string experimentId)
+    {
+        var response = await _dynamoClient.QueryAsync(new QueryRequest
+        {
+            TableName = _experimentsTable,
+            IndexName = "GSI1",
+            KeyConditionExpression = "GSI1PK = :pk",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":pk"] = new($"EXPERIMENT#{experimentId}")
+            }
+        });
+
+        return response.Items.Where(i => i["type"].S == "Session").Select(item => new
+        {
+            sessionId = item["PK"].S,
+            data = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]),
+            taskOrder = item.ContainsKey("taskOrder") ? DynamoDBHelper.ConvertAttributeValueToObject(item["taskOrder"]) : new List<string>(),
+            createdAt = item["createdAt"]?.S,
+            updatedAt = item["updatedAt"]?.S
+        });
+    }
+
+    public async Task<object?> GetSessionAsync(string experimentId, string sessionId)
+    {
+        var response = await _dynamoClient.GetItemAsync(new GetItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"SESSION#{experimentId}#{sessionId}"),
+                ["SK"] = new("METADATA")
+            }
+        });
+
+        if (!response.IsItemSet)
+            return null;
+
+        return new
+        {
+            sessionId = sessionId,
+            experimentId = experimentId,
+            data = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]),
+            taskOrder = response.Item.ContainsKey("taskOrder") ? DynamoDBHelper.ConvertAttributeValueToObject(response.Item["taskOrder"]) : new List<string>(),
+            createdAt = response.Item["createdAt"]?.S,
+            updatedAt = response.Item["updatedAt"]?.S
+        };
+    }
+
+    public async Task<object> CreateSessionAsync(string experimentId, CreateSessionRequest request, string username)
+    {
+        var sessionId = $"{request.Date}";
+        var sessionPK = $"SESSION#{experimentId}#{sessionId}";
+
+        // Get experiment to determine session type configuration
+        var experiment = await GetExperimentAsync(experimentId);
+        if (experiment == null)
+            throw new InvalidOperationException($"Experiment '{experimentId}' not found");
+
+        var sessionData = new SessionData
+        {
+            Date = request.Date,
+            SessionType = request.SessionType,
+            Status = "scheduled",
+            UserId = username
+        };
+
+        await _dynamoClient.PutItemAsync(new PutItemRequest
+        {
+            TableName = _experimentsTable,
+            Item = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new(sessionPK),
+                ["SK"] = new("METADATA"),
+                ["GSI1PK"] = new($"EXPERIMENT#{experimentId}"),
+                ["GSI1SK"] = new(sessionPK),
+                ["type"] = new("Session"),
+                ["data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(sessionData)) },
+                ["taskOrder"] = new AttributeValue { L = new List<AttributeValue>() },
+                ["createdAt"] = new(DateTime.UtcNow.ToString("O")),
+                ["updatedAt"] = new(DateTime.UtcNow.ToString("O"))
+            }
+        });
+
+        return new { sessionId = sessionId, experimentId = experimentId };
+    }
+
+    public async Task UpdateSessionAsync(string experimentId, string sessionId, SessionData data, string username)
+    {
+        await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"SESSION#{experimentId}#{sessionId}"),
+                ["SK"] = new("METADATA")
+            },
+            UpdateExpression = "SET #data = :data, updatedAt = :timestamp",
+            ExpressionAttributeNames = new Dictionary<string, string> { ["#data"] = "data" },
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
+                [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
+            }
+        });
+    }
+
+    public async Task DeleteSessionAsync(string experimentId, string sessionId, string username)
+    {
+        await _dynamoClient.DeleteItemAsync(new DeleteItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"SESSION#{experimentId}#{sessionId}"),
+                ["SK"] = new("METADATA")
             }
         });
     }

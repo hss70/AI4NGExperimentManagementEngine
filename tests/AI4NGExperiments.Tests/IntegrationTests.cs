@@ -69,8 +69,15 @@ public class IntegrationTests
         // Act - Step 1: Create experiment
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Integration Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig { QuestionnaireIds = new List<string> { "test-questionnaire" } }
+            Data = new ExperimentData 
+            { 
+                Name = "Integration Test Experiment",
+                SessionTypes = new Dictionary<string, SessionType>
+                {
+                    ["daily"] = new SessionType { Questionnaires = new List<string> { "test-questionnaire" } }
+                }
+            },
+            QuestionnaireConfig = new QuestionnaireConfig()
         };
         var createResult = await _service.CreateExperimentAsync(experiment, "testuser");
 

@@ -1,0 +1,652 @@
+{
+	"info": {
+		"name": "AI4NG Complete API Test Collection",
+		"description": "Complete test collection for AI4NG Experiment Management API including Sessions and Tasks",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Get Auth Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('idToken', response.AuthenticationResult.IdToken);",
+									"    console.log('Token set successfully');",
+									"} else {",
+									"    console.log('Authentication failed');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-amz-json-1.1"
+							},
+							{
+								"key": "X-Amz-Target",
+								"value": "AWSCognitoIdentityProviderService.InitiateAuth"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"AuthFlow\": \"USER_PASSWORD_AUTH\",\n    \"ClientId\": \"{{cognitoClientId}}\",\n    \"AuthParameters\": {\n        \"USERNAME\": \"{{username}}\",\n        \"PASSWORD\": \"{{password}}\"\n    }\n}"
+						},
+						"url": {
+							"raw": "https://cognito-idp.eu-west-2.amazonaws.com",
+							"protocol": "https",
+							"host": ["cognito-idp", "eu-west-2", "amazonaws", "com"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Experiments",
+			"item": [
+				{
+					"name": "Create Experiment with Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('experimentId', response.id);",
+									"    console.log('Experiment created with ID:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"data\": {\n    \"name\": \"BCI Learning Study\",\n    \"description\": \"A 21-day study on BCI skill acquisition\",\n    \"sessionTypes\": {\n      \"START\": {\n        \"name\": \"Initial Session\",\n        \"questionnaires\": [\"PreState\", \"PhysicalState\", \"VVIQ\", \"16PF5\"],\n        \"tasks\": [\"TRAIN_EEG_BASELINE\", \"BASELINE_QUESTIONS\"],\n        \"estimatedDuration\": 45\n      },\n      \"DAILY\": {\n        \"name\": \"Daily Training Session\",\n        \"questionnaires\": [\"PreState\", \"PhysicalState\", \"CurrentState\", \"EndState\", \"PQ\", \"TLX\"],\n        \"tasks\": [\"TRAIN_EEG\", \"POST_SESSION_QUESTIONS\"],\n        \"estimatedDuration\": 25,\n        \"schedule\": \"daily\"\n      }\n    }\n  },\n  \"questionnaireConfig\": {\n    \"schedule\": {\n      \"PreState\": \"every_session\",\n      \"PhysicalState\": \"every_session\",\n      \"CurrentState\": \"every_session\",\n      \"EndState\": \"every_session\",\n      \"PQ\": \"every_session\",\n      \"TLX\": \"every_session\",\n      \"VVIQ\": \"once\",\n      \"16PF5\": \"once\"\n    }\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments"]
+						}
+					}
+				},
+				{
+					"name": "Get All Experiments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments"]
+						}
+					}
+				},
+				{
+					"name": "Get Experiment By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments", "{{experimentId}}"]
+						}
+					}
+				},
+				{
+					"name": "Sync Experiment",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sync",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments", "{{experimentId}}", "sync"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Tasks",
+			"item": [
+				{
+					"name": "Create EEG Training Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('taskId', response.id);",
+									"    console.log('Task created with ID:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"EEG Training\",\n  \"type\": \"TRAIN_EEG\",\n  \"description\": \"Basic EEG neurofeedback training\",\n  \"configuration\": {\n    \"duration\": 300,\n    \"difficulty\": \"beginner\",\n    \"feedbackType\": \"visual\"\n  },\n  \"estimatedDuration\": 300\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/tasks",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "tasks"]
+						}
+					}
+				},
+				{
+					"name": "Create Questionnaire Task",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Post Session Questions\",\n  \"type\": \"QUESTIONNAIRE\",\n  \"description\": \"Post-session questionnaire collection\",\n  \"configuration\": {\n    \"questionnaires\": [\"PQ\", \"TLX\"],\n    \"randomizeOrder\": false\n  },\n  \"estimatedDuration\": 120\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/tasks",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "tasks"]
+						}
+					}
+				},
+				{
+					"name": "Get All Tasks",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/tasks",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "tasks"]
+						}
+					}
+				},
+				{
+					"name": "Get Task By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/tasks/{{taskId}}",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "tasks", "{{taskId}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Task",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Advanced EEG Training\",\n  \"type\": \"TRAIN_EEG\",\n  \"description\": \"Advanced EEG neurofeedback training with increased difficulty\",\n  \"configuration\": {\n    \"duration\": 600,\n    \"difficulty\": \"advanced\",\n    \"feedbackType\": \"visual\"\n  },\n  \"estimatedDuration\": 600\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/tasks/{{taskId}}",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "tasks", "{{taskId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Sessions",
+			"item": [
+				{
+					"name": "Create Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('sessionId', response.sessionId);",
+									"    console.log('Session created with ID:', response.sessionId);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sessionType\": \"DAILY\",\n  \"date\": \"2024-01-15\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sessions",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments", "{{experimentId}}", "sessions"]
+						}
+					}
+				},
+				{
+					"name": "Get All Sessions for Experiment",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sessions",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments", "{{experimentId}}", "sessions"]
+						}
+					}
+				},
+				{
+					"name": "Get Session By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sessions/{{sessionId}}",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments", "{{experimentId}}", "sessions", "{{sessionId}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Session",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2024-01-15\",\n  \"sessionType\": \"DAILY\",\n  \"sequenceNumber\": 1,\n  \"status\": \"completed\",\n  \"userId\": \"test-user\",\n  \"startTime\": \"2024-01-15T10:00:00Z\",\n  \"endTime\": \"2024-01-15T10:25:00Z\",\n  \"metadata\": {\n    \"dayOfStudy\": 1,\n    \"weekOfStudy\": 1,\n    \"isRescheduled\": false\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sessions/{{sessionId}}",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments", "{{experimentId}}", "sessions", "{{sessionId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Member Management",
+			"item": [
+				{
+					"name": "Add Member to Experiment",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"participant\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/members/{{testUserSub}}",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments", "{{experimentId}}", "members", "{{testUserSub}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Experiment Members",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/members",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments", "{{experimentId}}", "members"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Questionnaires",
+			"item": [
+				{
+					"name": "Create Questionnaire",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('questionnaireId', response.id || 'PQ');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"id\": \"PQ\",\n  \"data\": {\n    \"name\": \"Presence Questionnaire\",\n    \"description\": \"Measures the sense of presence in a virtual environment\",\n    \"estimatedTime\": 120,\n    \"version\": \"1.0\",\n    \"questions\": [\n      {\n        \"id\": \"1\",\n        \"text\": \"Time seemed to go by\",\n        \"type\": \"scale\",\n        \"scale\": {\n          \"min\": 1,\n          \"max\": 10,\n          \"minLabel\": \"Quickly\",\n          \"maxLabel\": \"Slowly\"\n        },\n        \"required\": true\n      },\n      {\n        \"id\": \"2\",\n        \"text\": \"I felt\",\n        \"type\": \"scale\",\n        \"scale\": {\n          \"min\": 1,\n          \"max\": 10,\n          \"minLabel\": \"Calm\",\n          \"maxLabel\": \"Anxious\"\n        },\n        \"required\": true\n      }\n    ]\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/questionnaires",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "questionnaires"]
+						}
+					}
+				},
+				{
+					"name": "Get All Questionnaires",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/questionnaires",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "questionnaires"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Responses",
+			"item": [
+				{
+					"name": "Submit Response",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"data\": {\n    \"experimentId\": \"{{experimentId}}\",\n    \"questionnaireId\": \"PQ\",\n    \"sessionId\": \"{{sessionId}}\",\n    \"responses\": [\n      {\n        \"questionId\": \"1\",\n        \"answer\": 7,\n        \"timestamp\": \"2024-01-15T10:05:30Z\"\n      },\n      {\n        \"questionId\": \"2\",\n        \"answer\": 3,\n        \"timestamp\": \"2024-01-15T10:06:00Z\"\n      }\n    ]\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/responses",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "responses"]
+						}
+					}
+				},
+				{
+					"name": "Get All Responses",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/responses",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "responses"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Cleanup",
+			"item": [
+				{
+					"name": "Delete Session",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/sessions/{{sessionId}}",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments", "{{experimentId}}", "sessions", "{{sessionId}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Task",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/tasks/{{taskId}}",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "tasks", "{{taskId}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Experiment",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{idToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}",
+							"host": ["{{apiGatewayUrl}}"],
+							"path": ["api", "experiments", "{{experimentId}}"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "apiGatewayUrl",
+			"value": "https://your-api-gateway-url.execute-api.eu-west-2.amazonaws.com/dev",
+			"type": "string"
+		},
+		{
+			"key": "cognitoClientId",
+			"value": "517s6c84jo5i3lqste5idb0o4c",
+			"type": "string"
+		},
+		{
+			"key": "username",
+			"value": "hss702",
+			"type": "string"
+		},
+		{
+			"key": "password",
+			"value": "Hardeep123!",
+			"type": "string"
+		},
+		{
+			"key": "testUserSub",
+			"value": "test-user-sub-123",
+			"type": "string"
+		},
+		{
+			"key": "idToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "experimentId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "sessionId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "taskId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "questionnaireId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
