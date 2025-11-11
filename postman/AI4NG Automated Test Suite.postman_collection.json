@@ -43,7 +43,7 @@
 			}
 		},
 		{
-			"name": "📋 Create Task",
+			"name": "📋 Create EEG Training Task",
 			"event": [
 				{
 					"listen": "prerequest",
@@ -51,10 +51,10 @@
 						"exec": [
 							"// Store original task data for validation",
 							"const taskData = {",
-							"  name: 'Test EEG Training',",
-							"  type: 'TRAIN_EEG',",
-							"  description: 'Automated test task',",
-							"  configuration: { duration: 300 },",
+							"  name: 'EEG Training Session',",
+							"  type: 'eeg_training',",
+							"  description: 'EEG-based neurofeedback training session.',",
+							"  configuration: { duration: 300, protocol: 'alpha_enhancement' },",
 							"  estimatedDuration: 300",
 							"};",
 							"pm.collectionVariables.set('originalTaskData', JSON.stringify(taskData));"
@@ -86,7 +86,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"name\": \"Test EEG Training\",\n  \"type\": \"TRAIN_EEG\",\n  \"description\": \"Automated test task\",\n  \"configuration\": {\n    \"duration\": 300\n  },\n  \"estimatedDuration\": 300\n}",
+					"raw": "{\n  \"name\": \"EEG Training Session\",\n  \"type\": \"eeg_training\",\n  \"description\": \"EEG-based neurofeedback training session.\",\n  \"configuration\": {\n    \"duration\": 300,\n    \"protocol\": \"alpha_enhancement\"\n  },\n  \"estimatedDuration\": 300\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -101,7 +101,49 @@
 			}
 		},
 		{
-			"name": "🧪 Create Experiment",
+			"name": "📋 Create Questionnaire Task",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Questionnaire task created successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.have.property('id');",
+							"    pm.collectionVariables.set('questionnaireTaskId', response.id);",
+							"    console.log('✅ Questionnaire task created:', response.id);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Pre-Training State Questionnaire\",\n  \"type\": \"questionnaire\",\n  \"description\": \"Assesses emotional and cognitive readiness before BCI training.\",\n  \"configuration\": {\n    \"questionnaireId\": \"PreState\"\n  },\n  \"estimatedDuration\": 5\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/tasks",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "tasks"]
+				}
+			}
+		},
+		{
+			"name": "🧪 Create Complex BCI Experiment",
 			"event": [
 				{
 					"listen": "prerequest",
@@ -109,14 +151,23 @@
 						"exec": [
 							"// Store original experiment data for validation",
 							"const expData = {",
-							"  name: 'Automated Test Experiment',",
-							"  description: 'Test experiment for API validation',",
+							"  name: 'BCI Training Study',",
+							"  description: 'A 21-day protocol combining EEG training with daily, weekly, and trait questionnaires.',",
 							"  sessionTypes: {",
 							"    DAILY: {",
 							"      name: 'Daily Session',",
-							"      questionnaires: ['PQ'],",
-							"      tasks: ['TRAIN_EEG'],",
+							"      questionnaires: ['PreState', 'PhysicalState', 'CurrentState', 'EndState', 'PQ', 'TLX'],",
 							"      estimatedDuration: 25",
+							"    },",
+							"    WEEKLY: {",
+							"      name: 'Weekly Session',",
+							"      questionnaires: ['IPAQ'],",
+							"      estimatedDuration: 20",
+							"    },",
+							"    TRAIT: {",
+							"      name: 'Trait Questionnaire Session',",
+							"      questionnaires: ['VVIQ', 'ATI', 'FMI', 'MIQ-RS', 'Edinburgh', 'MentalRotation', '16PF5', 'IndexLearningStyles'],",
+							"      estimatedDuration: 115",
 							"    }",
 							"  }",
 							"};",
@@ -149,7 +200,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"data\": {\n    \"name\": \"Automated Test Experiment\",\n    \"description\": \"Test experiment for API validation\",\n    \"sessionTypes\": {\n      \"DAILY\": {\n        \"name\": \"Daily Session\",\n        \"questionnaires\": [\"PQ\"],\n        \"tasks\": [\"TRAIN_EEG\"],\n        \"estimatedDuration\": 25\n      }\n    }\n  },\n  \"questionnaireConfig\": {\n    \"schedule\": {\n      \"PQ\": \"every_session\"\n    }\n  }\n}",
+					"raw": "{\n  \"data\": {\n    \"name\": \"BCI Training Study\",\n    \"description\": \"A 21-day protocol combining EEG training with daily, weekly, and trait questionnaires.\",\n    \"sessionTypes\": {\n      \"DAILY\": {\n        \"name\": \"Daily Session\",\n        \"questionnaires\": [\"PreState\", \"PhysicalState\", \"CurrentState\", \"EndState\", \"PQ\", \"TLX\"],\n        \"tasks\": [\"TASK#PRE_STATE\", \"TASK#PHYSICAL_STATE\", \"TASK#TRAIN_EEG\", \"TASK#CURRENT_STATE\", \"TASK#END_STATE\", \"TASK#PQ\", \"TASK#TLX\"],\n        \"estimatedDuration\": 25,\n        \"schedule\": \"daily\"\n      },\n      \"WEEKLY\": {\n        \"name\": \"Weekly Session\",\n        \"questionnaires\": [\"IPAQ\"],\n        \"tasks\": [\"TASK#IPAQ\"],\n        \"estimatedDuration\": 20,\n        \"schedule\": \"weekly\"\n      },\n      \"TRAIT\": {\n        \"name\": \"Trait Questionnaire Session\",\n        \"questionnaires\": [\"VVIQ\", \"ATI\", \"FMI\", \"MIQ-RS\", \"Edinburgh\", \"MentalRotation\", \"16PF5\", \"IndexLearningStyles\"],\n        \"tasks\": [\"TASK#TRAIT_BANK\"],\n        \"estimatedDuration\": 115,\n        \"schedule\": \"once\"\n      }\n    }\n  },\n  \"questionnaireConfig\": {\n    \"schedule\": {\n      \"PreState\": \"every_session\",\n      \"PhysicalState\": \"every_session\",\n      \"CurrentState\": \"every_session\",\n      \"EndState\": \"every_session\",\n      \"PQ\": \"every_session\",\n      \"TLX\": \"every_session\",\n      \"IPAQ\": \"weekly\",\n      \"VVIQ\": \"once\",\n      \"ATI\": \"once\",\n      \"FMI\": \"once\",\n      \"MIQ-RS\": \"once\",\n      \"Edinburgh\": \"once\",\n      \"MentalRotation\": \"once\",\n      \"16PF5\": \"once\",\n      \"IndexLearningStyles\": \"once\"\n    }\n  }\n}",
 					"options": {
 						"raw": {
 							"language": "json"
