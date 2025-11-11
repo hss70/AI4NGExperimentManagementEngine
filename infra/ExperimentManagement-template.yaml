@@ -190,6 +190,7 @@ Resources:
         Variables:
           EXPERIMENTS_TABLE: !Ref AI4NGExperimentsTable
           RESPONSES_TABLE: !Ref AI4NGResponsesTable
+          QUESTIONNAIRES_TABLE: !Ref AI4NGQuestionnairesTable
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSLambdaVPCAccessExecutionRole
@@ -197,6 +198,8 @@ Resources:
             TableName: !Ref AI4NGExperimentsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref AI4NGResponsesTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref AI4NGQuestionnairesTable
 
   ResponsesApi:
     Type: AWS::Serverless::Function
