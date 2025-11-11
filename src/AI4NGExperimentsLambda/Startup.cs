@@ -10,5 +10,6 @@ public class Startup : BaseStartup
     protected override void ConfigureApplicationServices(IServiceCollection services)
     {
         services.AddScoped<IExperimentService, ExperimentService>();
+        services.AddScoped<ITaskService, TaskService>();
     }
 }
