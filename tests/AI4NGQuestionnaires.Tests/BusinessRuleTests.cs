@@ -63,7 +63,7 @@ public class BusinessRuleTests
         var service = SetUpMockService(duplicateTest: true);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DuplicateItemException>(
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateAsync(request, "testuser"));
 
         Assert.Contains("already exists", exception.Message);

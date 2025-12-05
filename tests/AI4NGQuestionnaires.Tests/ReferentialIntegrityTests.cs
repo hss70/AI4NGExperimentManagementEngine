@@ -40,7 +40,7 @@ public class ReferentialIntegrityTests
             });
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DuplicateItemException>(
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CreateAsync(request, "testuser"));
         
         Assert.Contains("already exists", exception.Message);

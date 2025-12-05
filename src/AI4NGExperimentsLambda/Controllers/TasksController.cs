@@ -68,6 +68,11 @@ namespace AI4NGExperimentsLambda.Controllers
                 var result = await _taskService.CreateTaskAsync(request, username);
                 return Ok(result);
             }
+            catch (ArgumentException ex) when (ex.Message.Contains("Missing questionnaires"))
+            {
+                var missing = ex.Message.Replace("Missing questionnaires: ", "").Split(", ");
+                return BadRequest(new { error = "ValidationError", missingQuestionnaires = missing });
+            }
             catch (Exception ex)
             {
                 return HandleException(ex, "creating task");

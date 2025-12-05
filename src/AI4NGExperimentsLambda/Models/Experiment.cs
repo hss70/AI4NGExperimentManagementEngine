@@ -46,6 +46,8 @@ public class SessionData
 {
     public string Date { get; set; } = string.Empty;
     public string SessionType { get; set; } = string.Empty;
+    public string SessionName { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
     public int SequenceNumber { get; set; }
     public string Status { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
@@ -85,6 +87,8 @@ public class CreateSessionRequest
 {
     public string ExperimentId { get; set; } = string.Empty;
     public string SessionType { get; set; } = string.Empty;
+    public string SessionName { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
     public string Date { get; set; } = string.Empty;
 }
 

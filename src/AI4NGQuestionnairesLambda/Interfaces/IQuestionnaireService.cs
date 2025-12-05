@@ -10,4 +10,5 @@ public interface IQuestionnaireService
     Task UpdateAsync(string id, QuestionnaireData data, string username);
     Task DeleteAsync(string id, string username);
     Task<BatchResult> CreateBatchAsync(List<CreateQuestionnaireRequest> requests, string username);
+    Task<IEnumerable<Questionnaire>> GetByIdsAsync(List<string> ids);
 }

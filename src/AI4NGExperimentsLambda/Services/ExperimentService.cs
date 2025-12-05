@@ -93,50 +93,32 @@ public class ExperimentService : IExperimentService
         });
     }
 
+    public async Task<object> ValidateExperimentAsync(Experiment experiment)
+    {
+        var questionnaireIds = CollectQuestionnaireIds(experiment);
+        var missingQuestionnaires = await ValidateQuestionnaires(questionnaireIds);
+        
+        return new
+        {
+            valid = !missingQuestionnaires.Any(),
+            referencedQuestionnaires = questionnaireIds.ToList(),
+            missingQuestionnaires = missingQuestionnaires,
+            message = missingQuestionnaires.Any() 
+                ? $"Missing questionnaires: {string.Join(", ", missingQuestionnaires)}"
+                : "All dependencies are valid"
+        };
+    }
+
     public async Task<object> CreateExperimentAsync(Experiment experiment, string username)
     {
-        // Collect all questionnaire IDs from sessionTypes and questionnaireConfig
-        var questionnaireIds = new HashSet<string>();
+        var questionnaireIds = CollectQuestionnaireIds(experiment);
+        var missingQuestionnaires = await ValidateQuestionnaires(questionnaireIds);
 
-        // From sessionTypes
-        if (experiment.Data.SessionTypes != null)
+        if (missingQuestionnaires.Any())
         {
-            foreach (var sessionType in experiment.Data.SessionTypes.Values)
-            {
-                if (sessionType.Questionnaires != null)
-                {
-                    foreach (var qId in sessionType.Questionnaires)
-                    {
-                        questionnaireIds.Add(qId);
-                    }
-                }
-            }
-        }
-
-        // From questionnaireConfig.schedule
-        if (experiment.QuestionnaireConfig?.Schedule != null)
-        {
-            foreach (var qId in experiment.QuestionnaireConfig.Schedule.Keys)
-            {
-                questionnaireIds.Add(qId);
-            }
-        }
-
-        // Validate questionnaire existence
-        foreach (var questionnaireId in questionnaireIds)
-        {
-            var questionnaireExists = await _dynamoClient.GetItemAsync(new GetItemRequest
-            {
-                TableName = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? "AI4NGQuestionnaires-dev",
-                Key = new Dictionary<string, AttributeValue>
-                {
-                    ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
-                    ["SK"] = new("CONFIG")
-                }
-            });
-
-            if (!questionnaireExists.IsItemSet)
-                throw new InvalidOperationException($"Questionnaire '{questionnaireId}' not found");
+            var errorMessage = $"Missing questionnaires: {string.Join(", ", missingQuestionnaires)}";
+            Console.Error.WriteLine($"Experiment creation failed: {errorMessage}");
+            throw new ArgumentException(errorMessage);
         }
 
         var experimentId = experiment.Id ?? Guid.NewGuid().ToString();
@@ -368,6 +350,8 @@ public class ExperimentService : IExperimentService
         {
             Date = request.Date,
             SessionType = request.SessionType,
+            SessionName = request.SessionName,
+            Description = request.Description,
             Status = "scheduled",
             UserId = username
         };
@@ -425,5 +409,67 @@ public class ExperimentService : IExperimentService
         });
     }
 
+    private HashSet<string> CollectQuestionnaireIds(Experiment experiment)
+    {
+        var questionnaireIds = new HashSet<string>();
 
+        // From sessionTypes
+        if (experiment.Data.SessionTypes != null)
+        {
+            foreach (var sessionType in experiment.Data.SessionTypes.Values)
+            {
+                if (sessionType.Questionnaires != null)
+                {
+                    foreach (var qId in sessionType.Questionnaires)
+                    {
+                        questionnaireIds.Add(qId);
+                    }
+                }
+            }
+        }
+
+        // From questionnaireConfig.schedule
+        if (experiment.QuestionnaireConfig?.Schedule != null)
+        {
+            foreach (var qId in experiment.QuestionnaireConfig.Schedule.Keys)
+            {
+                questionnaireIds.Add(qId);
+            }
+        }
+
+        return questionnaireIds;
+    }
+
+    private async Task<List<string>> ValidateQuestionnaires(HashSet<string> questionnaireIds)
+    {
+        var missingQuestionnaires = new List<string>();
+        
+        foreach (var questionnaireId in questionnaireIds)
+        {
+            try
+            {
+                var questionnaireExists = await _dynamoClient.GetItemAsync(new GetItemRequest
+                {
+                    TableName = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? "AI4NGQuestionnaires-dev",
+                    Key = new Dictionary<string, AttributeValue>
+                    {
+                        ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
+                        ["SK"] = new("CONFIG")
+                    }
+                });
+
+                if (!questionnaireExists.IsItemSet)
+                {
+                    missingQuestionnaires.Add(questionnaireId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error checking questionnaire '{questionnaireId}': {ex.Message}");
+                missingQuestionnaires.Add(questionnaireId);
+            }
+        }
+        
+        return missingQuestionnaires;
+    }
 }

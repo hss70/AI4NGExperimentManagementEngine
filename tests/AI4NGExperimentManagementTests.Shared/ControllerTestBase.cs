@@ -1,4 +1,6 @@
 using AI4NGExperimentManagement.Shared;
+using AI4NGResponsesLambda.Controllers;
+using AI4NGResponsesLambda.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -7,6 +9,64 @@ namespace AI4NGExperimentManagementTests.Shared;
 
 public abstract class ControllerTestBase<TController> where TController : ControllerBase
 {
+    public class TestableResponsesController : ResponsesController
+    {
+        public TestableResponsesController(IResponseService service, IAuthenticationService auth)
+            : base(service, auth)
+        {
+        }
+
+        public ActionResult InvokeHandleException(Exception ex, string operation)
+            => HandleException(ex, operation);
+    }
+
+    public class TestBaseApiController : BaseApiController
+    {
+        // Adjust the ctor to match your real BaseApiController ctor
+        public TestBaseApiController(IAuthenticationService auth)
+            : base( auth)
+        {
+        }
+
+        // Public wrapper around the protected method
+        public ActionResult InvokeHandleException(Exception ex, string operation)
+            => HandleException(ex, operation);
+    }
+
+    public static IEnumerable<object[]> ExceptionTestData =>
+        new List<object[]>
+        {
+        new object[]
+        {
+            new UnauthorizedAccessException("Unauthorized!"),
+            typeof(UnauthorizedObjectResult),
+            401,
+            "Unauthorized!"
+        },
+        new object[]
+        {
+            new Amazon.DynamoDBv2.AmazonDynamoDBException("Dynamo error"),
+            typeof(ObjectResult),
+            503,
+            "Database temporarily unavailable"
+        },
+        new object[]
+        {
+            new TimeoutException("Request timeout"),
+            typeof(ObjectResult),
+            408,
+            "Request timeout"
+        },
+        new object[]
+        {
+            new Exception("Something failed"),
+            typeof(ObjectResult),
+            500,
+            "Something failed"
+        }
+        };
+
+
     protected static Mock<IAuthenticationService> CreateAuthMock(bool isResearcher = true)
     {
         var authMock = new Mock<IAuthenticationService>();

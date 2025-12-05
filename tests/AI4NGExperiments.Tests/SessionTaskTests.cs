@@ -86,7 +86,7 @@ public class SessionTaskTests
         var testService = new ExperimentService(mockClient.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        await Assert.ThrowsAsync<ArgumentException>(() => 
             testService.CreateExperimentAsync(experiment, "testuser"));
     }
 

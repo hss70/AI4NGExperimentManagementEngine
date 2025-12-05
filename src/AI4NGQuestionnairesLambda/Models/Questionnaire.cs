@@ -40,6 +40,15 @@ public class CreateQuestionnaireRequest
 
 public record BatchSummary(int Processed, int Successful, int Failed);
 
-public record BatchItemResult(string Id, string Status, string? Error = null);
+public record BatchItemResult(string Id, string Status, string? Error = null)
+{
+    public bool Success => Status == "success";
+}
 
 public record BatchResult(BatchSummary Summary, List<BatchItemResult> Results);
+
+public class BatchCreateResult
+{
+    public BatchSummary Summary { get; set; } = new(0, 0, 0);
+    public List<BatchItemResult> Results { get; set; } = new();
+}

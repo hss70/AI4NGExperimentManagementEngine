@@ -74,6 +74,24 @@ namespace AI4NGExperimentsLambda.Controllers
         }
 
         /// <summary>
+        /// Validates experiment dependencies without creating it (researcher-only).
+        /// </summary>
+        [HttpPost("validate")]
+        public async Task<IActionResult> ValidateExperiment([FromBody] Experiment experiment)
+        {
+            try
+            {
+                RequireResearcher();
+                var result = await _experimentService.ValidateExperimentAsync(experiment);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "validating experiment");
+            }
+        }
+
+        /// <summary>
         /// Creates a new experiment (researcher-only).
         /// </summary>
         [HttpPost]
@@ -85,6 +103,11 @@ namespace AI4NGExperimentsLambda.Controllers
                 var username = GetAuthenticatedUsername();
                 var result = await _experimentService.CreateExperimentAsync(experiment, username);
                 return Ok(result);
+            }
+            catch (ArgumentException ex) when (ex.Message.Contains("Missing questionnaires"))
+            {
+                var missing = ex.Message.Replace("Missing questionnaires: ", "").Split(", ");
+                return BadRequest(new { error = "ValidationError", missingQuestionnaires = missing });
             }
             catch (Exception ex)
             {
@@ -253,6 +276,10 @@ namespace AI4NGExperimentsLambda.Controllers
                 var username = GetAuthenticatedUsername();
                 var result = await _experimentService.CreateSessionAsync(experimentId, request, username);
                 return Ok(result);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+            {
+                return BadRequest(new { error = "ValidationError", message = ex.Message });
             }
             catch (Exception ex)
             {

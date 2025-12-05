@@ -66,6 +66,20 @@ public class TaskService : ITaskService
 
     public async Task<object> CreateTaskAsync(CreateTaskRequest request, string username)
     {
+        // Validate questionnaire dependencies if task references questionnaires
+        if (request.Configuration?.ContainsKey("questionnaireId") == true)
+        {
+            var questionnaireId = request.Configuration["questionnaireId"].ToString();
+            if (!string.IsNullOrEmpty(questionnaireId))
+            {
+                var exists = await ValidateQuestionnaireExists(questionnaireId);
+                if (!exists)
+                {
+                    throw new ArgumentException($"Missing questionnaires: {questionnaireId}");
+                }
+            }
+        }
+
         var taskId = Guid.NewGuid().ToString();
         var taskData = new TaskData
         {
@@ -125,5 +139,26 @@ public class TaskService : ITaskService
                 ["SK"] = new("METADATA")
             }
         });
+    }
+
+    private async Task<bool> ValidateQuestionnaireExists(string questionnaireId)
+    {
+        try
+        {
+            var response = await _dynamoClient.GetItemAsync(new GetItemRequest
+            {
+                TableName = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? "AI4NGQuestionnaires-dev",
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
+                    ["SK"] = new("CONFIG")
+                }
+            });
+            return response.IsItemSet;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

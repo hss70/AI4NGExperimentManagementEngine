@@ -15,8 +15,8 @@ Authorization: Bearer {jwt-token}
 
 ## Researcher API (Admin Access)
 
-### POST /api/researcher/experiments
-Create new experiment (researchers only).
+### POST /api/experiments
+Create new experiment (researchers only; role enforced in controller).
 
 **Important**: Questionnaires must be created first using `POST /api/questionnaires` before referencing them in experiments.
 
@@ -57,11 +57,11 @@ Create new experiment (researchers only).
 }
 ```
 
-### PUT /api/researcher/experiments/{experimentId}
-Update experiment (researchers only).
+### PUT /api/experiments/{experimentId}
+Update experiment (researchers only; role enforced).
 
-### DELETE /api/researcher/experiments/{experimentId}
-Delete experiment (researchers only).
+### DELETE /api/experiments/{experimentId}
+Delete experiment (researchers only; role enforced).
 
 ### POST /api/questionnaires
 Create new questionnaire (researchers only). Note: Route does not include `researcher` segment; access is enforced via role check in the controller.
@@ -73,7 +73,7 @@ Update questionnaire (researchers only). Enforced via role check.
 Delete questionnaire (researchers only). Enforced via role check.
 
 ### PUT /api/experiments/{experimentId}/members/{userSub}
-Add user to experiment. Note: The current implementation does not explicitly enforce researcher role on this route.
+Add user to experiment (researchers only; role enforced).
 
 **Request Body:**
 ```json
@@ -89,7 +89,7 @@ Add user to experiment. Note: The current implementation does not explicitly enf
 ```
 
 ### DELETE /api/experiments/{experimentId}/members/{userSub}
-Remove user from experiment. Note: The current implementation does not explicitly enforce researcher role on this route.
+Remove user from experiment (researchers only; role enforced).
 
 ### GET /api/experiments/{experimentId}/members
 List experiment members.
@@ -100,17 +100,12 @@ List experiment members.
   {
     "userSub": "0b8b7c42-3f8b-4f22-9b7a-2f4f4b8a7e5a",
     "role": "participant",
-    "status": "active",
-    "assignedAt": "2023-11-01T09:00:00Z",
-    "cohort": "A",
-    "pseudoId": "P-7GQ2K1"
+    "addedAt": "2025-10-13T09:00:00Z"
   }
 ]
 ```
 
 ## Participant API (Read-Only + Responses)
-
-### Experiments API
 
 ### GET /api/me/experiments
 Get experiments assigned to the current user.
@@ -132,22 +127,10 @@ Get experiments assigned to the current user.
 ]
 ```
 
-### GET /api/experiments
-List all experiments.
-
-**Response:**
-```json
-[
-  {
-    "id": "experiment-uuid",
-    "name": "BCI Learning Study",
-    "description": "A 21-day study on BCI skill acquisition"
-  }
-]
-```
+> Note: Listing all experiments is a researcher-only capability. Participants should use `/api/me/experiments`.
 
 ### GET /api/experiments/{experimentId}
-Get experiment details with sessions.
+Get experiment details with sessions (researchers only).
 
 **Response:**
 ```json
@@ -175,17 +158,15 @@ Get experiment details with sessions.
 ```
 
 ### POST /api/experiments
-Not available. Use `POST /api/researcher/experiments` to create experiments.
+Researcher-only route (participants will receive 403 Forbidden).
 
-**Response:**
+**Response (success):**
 ```json
-{
-  "error": "Participants cannot create experiments"
-}
+{ "id": "experiment-uuid" }
 ```
 
-### GET /api/experiments/{experimentId}/sync
-Retrieve experiment metadata and sessions, optionally filtered by last sync time.
+### GET /api/experiments/sync
+Retrieve experiment metadata and sessions for the authenticated participant, optionally filtered by last sync time.
 
 Query Parameters:
 - `lastSyncTime` (optional, ISO-8601) — only return items updated after this timestamp.
@@ -206,121 +187,9 @@ Example Response:
 }
 ```
 
-## Session Management API (Researcher Only)
+## Session & Task APIs
 
-**Note**: Sessions are managed through dedicated endpoints with proper task ordering and session type integration.
-
-### GET /api/experiments/{experimentId}/sessions
-Retrieve all sessions for an experiment (researchers only).
-
-**Response:**
-```json
-[
-  {
-    "sessionId": "2023-11-07",
-    "data": {
-      "date": "2023-11-07",
-      "sessionType": "DAILY",
-      "sequenceNumber": 5,
-      "status": "completed",
-      "userId": "USER_456",
-      "startTime": "2023-11-07T10:00:00Z",
-      "endTime": "2023-11-07T10:25:00Z",
-      "metadata": {
-        "dayOfStudy": 5,
-        "weekOfStudy": 1,
-        "isRescheduled": false
-      }
-    },
-    "taskOrder": ["TASK#TRAIN_EEG", "TASK#POST_SESSION_QUESTIONS"],
-    "createdAt": "2023-11-07T08:00:00Z",
-    "updatedAt": "2023-11-07T10:25:00Z"
-  }
-]
-```
-
-### GET /api/experiments/{experimentId}/sessions/{sessionId}
-Retrieve a specific session by ID (researchers only).
-
-**Response:**
-```json
-{
-  "sessionId": "2023-11-07",
-  "experimentId": "EXP_001",
-  "data": {
-    "date": "2023-11-07",
-    "sessionType": "DAILY",
-    "sequenceNumber": 5,
-    "status": "completed",
-    "userId": "USER_456",
-    "startTime": "2023-11-07T10:00:00Z",
-    "endTime": "2023-11-07T10:25:00Z",
-    "metadata": {
-      "dayOfStudy": 5,
-      "weekOfStudy": 1,
-      "isRescheduled": false
-    }
-  },
-  "taskOrder": ["TASK#TRAIN_EEG", "TASK#POST_SESSION_QUESTIONS"],
-  "createdAt": "2023-11-07T08:00:00Z",
-  "updatedAt": "2023-11-07T10:25:00Z"
-}
-```
-
-### POST /api/experiments/{experimentId}/sessions
-Create a new session for an experiment (researchers only).
-
-**Request Body:**
-```json
-{
-  "sessionType": "DAILY",
-  "date": "2023-11-08"
-}
-```
-
-**Response:**
-```json
-{
-  "sessionId": "2023-11-08",
-  "experimentId": "EXP_001"
-}
-```
-
-### PUT /api/experiments/{experimentId}/sessions/{sessionId}
-Update an existing session (researchers only).
-
-**Request Body:**
-```json
-{
-  "date": "2023-11-08",
-  "sessionType": "DAILY",
-  "sequenceNumber": 6,
-  "status": "scheduled",
-  "userId": "USER_456",
-  "metadata": {
-    "dayOfStudy": 6,
-    "weekOfStudy": 1,
-    "isRescheduled": false
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Session updated successfully"
-}
-```
-
-### DELETE /api/experiments/{experimentId}/sessions/{sessionId}
-Delete a session (researchers only).
-
-**Response:**
-```json
-{
-  "message": "Session deleted successfully"
-}
-```
+> Note: Session and Task endpoints described previously are not implemented in the current service. They are planned and retained here only as reference for future work.
 
 ## Task Management API (Researcher Only)
 
@@ -534,9 +403,37 @@ Response items include metadata: `id`, `data`, `createdBy`, `createdAt`.
 ### GET /api/responses/{responseId}
 Get a single response by id.
 
+### PUT /api/responses/{responseId}
+Update an existing response (participants can only update their own).
+
+Request Body:
+```json
+{
+  "experimentId": "experiment-uuid",
+  "questionnaireId": "PQ",
+  "sessionId": "2025-10-13",
+  "responses": [
+    { "questionId": "1", "answer": 8, "timestamp": "2025-10-13T11:00:00Z" }
+  ]
+}
+```
+
+Response:
+```json
+{ "message": "Response updated successfully" }
+```
+
+### DELETE /api/responses/{responseId}
+Delete a response (soft delete).
+
+Response:
+```json
+{ "message": "Response deleted successfully" }
+```
+
 ## Mobile Sync API
 
-Use `GET /api/experiments/{experimentId}/sync` with `lastSyncTime` to drive mobile-side sync for experiments. Questionnaires and responses do not have dedicated sync endpoints; fetch via their standard list endpoints with app-level caching logic.
+Use `GET /api/experiments/sync?lastSyncTime=...` to drive mobile-side sync for experiments. Questionnaires and responses do not have dedicated sync endpoints; fetch via their standard list endpoints with app-level caching logic.
 
 ## Authentication Details
 

@@ -9,6 +9,7 @@ public interface IExperimentService
     Task<IEnumerable<object>> GetExperimentsAsync();
     Task<object?> GetExperimentAsync(string? experimentId);
     Task<IEnumerable<object>> GetMyExperimentsAsync(string username);
+    Task<object> ValidateExperimentAsync(Experiment experiment);
     Task<object> CreateExperimentAsync(Experiment experiment, string username);
     Task UpdateExperimentAsync(string experimentId, ExperimentData data, string username);
     Task DeleteExperimentAsync(string experimentId, string username);

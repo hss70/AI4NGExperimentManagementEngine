@@ -33,6 +33,32 @@ public class QuestionnairesController : BaseApiController
         return Ok(questionnaire);
     }
 
+    [HttpPost("by-ids")]
+    public async Task<ActionResult> GetByIds([FromBody] List<string> ids)
+    {
+        try
+        {
+            if (ids == null || ids.Count == 0)
+                return BadRequest("Provide at least one questionnaire id.");
+
+            var uniqueIds = ids
+                .Where(i => !string.IsNullOrWhiteSpace(i))
+                .Select(i => i.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (uniqueIds.Count == 0)
+                return BadRequest("Provide at least one valid questionnaire id.");
+
+            var result = await _questionnaireService.GetByIdsAsync(uniqueIds);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error fetching questionnaires: {ex.Message}");
+        }
+    }
+
     [HttpPost]
     public async Task<ActionResult> Create([FromBody] CreateQuestionnaireRequest request)
     {
@@ -44,6 +70,10 @@ public class QuestionnairesController : BaseApiController
 
             var id = await _questionnaireService.CreateAsync(request, username);
             return Ok(new { id });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("already exists"))
+        {
+            return Conflict(new { error = ex.Message });
         }
         catch (Exception ex)
         {
@@ -120,8 +150,4 @@ public class QuestionnairesController : BaseApiController
             return HandleException(ex, "creating batch questionnaires");
         }
     }
-
-
-
-
 }

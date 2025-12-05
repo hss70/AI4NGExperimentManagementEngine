@@ -9,10 +9,29 @@
 			"name": "🔐 Authentication",
 			"event": [
 				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Copy global variables to collection variables",
+							"pm.collectionVariables.set('apiGatewayUrl', pm.globals.get('apiGatewayUrl'));",
+							"pm.collectionVariables.set('cognitoClientId', pm.globals.get('cognitoClientId'));",
+							"pm.collectionVariables.set('username', pm.globals.get('username'));",
+							"pm.collectionVariables.set('password', pm.globals.get('password'));",
+							"console.log('Using ClientId:', pm.globals.get('cognitoClientId'));"
+						]
+					}
+				},
+				{
 					"listen": "test",
 					"script": {
 						"exec": [
 							"pm.test('Authentication successful', function () {",
+							"    if (pm.response.code !== 200) {",
+							"        const errorResponse = pm.response.json();",
+							"        console.error('❌ Authentication failed:', pm.response.code, errorResponse);",
+							"        throw new Error('Authentication failed with status ' + pm.response.code + ': ' + (errorResponse.message || errorResponse.__type || 'Unknown error'));",
+							"    }",
+							"    ",
 							"    pm.response.to.have.status(200);",
 							"    const response = pm.response.json();",
 							"    pm.expect(response.AuthenticationResult).to.have.property('IdToken');",
@@ -143,6 +162,169 @@
 			}
 		},
 		{
+			"name": "❌ Test Validation - Missing Questionnaire Task",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Task creation fails with missing questionnaire', function () {",
+							"    pm.response.to.have.status(400);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response.error).to.equal('ValidationError');",
+							"    pm.expect(response.missingQuestionnaires).to.include('NonExistentQuestionnaire');",
+							"    console.log('✅ Validation error correctly returned');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Invalid Task\",\n  \"type\": \"questionnaire\",\n  \"description\": \"Task with missing questionnaire\",\n  \"configuration\": {\n    \"questionnaireId\": \"NonExistentQuestionnaire\"\n  },\n  \"estimatedDuration\": 5\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/tasks",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "tasks"]
+				}
+			}
+		},
+		{
+			"name": "❌ Test Validation - Missing Questionnaire Experiment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Experiment creation fails with missing questionnaires', function () {",
+							"    pm.response.to.have.status(400);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response.error).to.equal('ValidationError');",
+							"    pm.expect(response.missingQuestionnaires).to.be.an('array');",
+							"    pm.expect(response.missingQuestionnaires.length).to.be.greaterThan(0);",
+							"    console.log('✅ Experiment validation error correctly returned');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"data\": {\n    \"name\": \"Invalid Experiment\",\n    \"description\": \"Experiment with missing questionnaires\",\n    \"sessionTypes\": {\n      \"DAILY\": {\n        \"name\": \"Daily Session\",\n        \"questionnaires\": [\"MissingQ1\", \"MissingQ2\"],\n        \"estimatedDuration\": 25\n      }\n    }\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments"]
+				}
+			}
+		},
+		{
+			"name": "📝 Create PreState Questionnaire",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('PreState questionnaire created successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    console.log('✅ PreState questionnaire created');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"id\": \"PreState\",\n  \"data\": {\n    \"name\": \"Pre-Training State\",\n    \"description\": \"Assesses emotional and cognitive readiness before BCI training\",\n    \"estimatedTime\": 5,\n    \"questions\": [\n      {\n        \"id\": \"mood\",\n        \"text\": \"How would you rate your current mood?\",\n        \"type\": \"scale\",\n        \"scale\": { \"min\": 1, \"max\": 7 },\n        \"required\": true\n      }\n    ]\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/questionnaires",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "questionnaires"]
+				}
+			}
+		},
+		{
+			"name": "📝 Create Required Questionnaires",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Required questionnaires created successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    console.log('✅ Required questionnaires created');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n  {\"id\": \"PhysicalState\", \"data\": {\"name\": \"Physical State\", \"description\": \"Physical readiness assessment\", \"estimatedTime\": 3, \"questions\": [{\"id\": \"energy\", \"text\": \"Energy level?\", \"type\": \"scale\", \"scale\": {\"min\": 1, \"max\": 7}, \"required\": true}]}},\n  {\"id\": \"CurrentState\", \"data\": {\"name\": \"Current State\", \"description\": \"Current mental state\", \"estimatedTime\": 3, \"questions\": [{\"id\": \"focus\", \"text\": \"Focus level?\", \"type\": \"scale\", \"scale\": {\"min\": 1, \"max\": 7}, \"required\": true}]}},\n  {\"id\": \"EndState\", \"data\": {\"name\": \"End State\", \"description\": \"Post-session state\", \"estimatedTime\": 3, \"questions\": [{\"id\": \"satisfaction\", \"text\": \"Session satisfaction?\", \"type\": \"scale\", \"scale\": {\"min\": 1, \"max\": 7}, \"required\": true}]}},\n  {\"id\": \"PQ\", \"data\": {\"name\": \"Presence Questionnaire\", \"description\": \"Presence assessment\", \"estimatedTime\": 5, \"questions\": [{\"id\": \"presence\", \"text\": \"Sense of presence?\", \"type\": \"scale\", \"scale\": {\"min\": 1, \"max\": 7}, \"required\": true}]}},\n  {\"id\": \"TLX\", \"data\": {\"name\": \"Task Load Index\", \"description\": \"Workload assessment\", \"estimatedTime\": 5, \"questions\": [{\"id\": \"workload\", \"text\": \"Mental workload?\", \"type\": \"scale\", \"scale\": {\"min\": 1, \"max\": 7}, \"required\": true}]}},\n  {\"id\": \"IPAQ\", \"data\": {\"name\": \"Physical Activity\", \"description\": \"Physical activity assessment\", \"estimatedTime\": 10, \"questions\": [{\"id\": \"activity\", \"text\": \"Weekly activity level?\", \"type\": \"scale\", \"scale\": {\"min\": 1, \"max\": 7}, \"required\": true}]}},\n  {\"id\": \"VVIQ\", \"data\": {\"name\": \"Vividness of Visual Imagery\", \"description\": \"Visual imagery assessment\", \"estimatedTime\": 15, \"questions\": [{\"id\": \"imagery\", \"text\": \"Image vividness?\", \"type\": \"scale\", \"scale\": {\"min\": 1, \"max\": 5}, \"required\": true}]}},\n  {\"id\": \"ATI\", \"data\": {\"name\": \"Absorption Trait Inventory\", \"description\": \"Absorption assessment\", \"estimatedTime\": 10, \"questions\": [{\"id\": \"absorption\", \"text\": \"Absorption level?\", \"type\": \"scale\", \"scale\": {\"min\": 1, \"max\": 7}, \"required\": true}]}}\n]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/questionnaires/batch",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "questionnaires", "batch"]
+				}
+			}
+		},
+		{
 			"name": "🧪 Create Complex BCI Experiment",
 			"event": [
 				{
@@ -215,6 +397,122 @@
 			}
 		},
 		{
+			"name": "👥 Add Member to Experiment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Member added successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.have.property('message');",
+							"    console.log('✅ Member added to experiment');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"role\": \"Participant\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/members/test-participant-123",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "{{experimentId}}", "members", "test-participant-123"]
+				}
+			}
+		},
+		{
+			"name": "📅 Get Experiment Members",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Get members successful', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.be.an('array');",
+							"    pm.expect(response.length).to.be.greaterThan(0);",
+							"    console.log('✅ Retrieved', response.length, 'members');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/members",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "{{experimentId}}", "members"]
+				}
+			}
+		},
+		{
+			"name": "❌ Test Validation - Missing Experiment Session",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Session creation fails with missing experiment', function () {",
+							"    pm.response.to.have.status(400);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response.error).to.equal('ValidationError');",
+							"    pm.expect(response.message).to.include('not found');",
+							"    console.log('✅ Session validation error correctly returned');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"sessionType\": \"DAILY\",\n  \"sessionName\": \"Invalid Session\",\n  \"description\": \"Session for non-existent experiment\",\n  \"date\": \"2024-01-15\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/non-existent-experiment/sessions",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "non-existent-experiment", "sessions"]
+				}
+			}
+		},
+		{
 			"name": "📅 Create Session",
 			"event": [
 				{
@@ -242,7 +540,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"sessionType\": \"DAILY\",\n  \"date\": \"2024-01-15\"\n}",
+					"raw": "{\n  \"sessionType\": \"DAILY\",\n  \"sessionName\": \"Daily Training Session 1\",\n  \"description\": \"First daily training session with EEG and questionnaires\",\n  \"date\": \"2024-01-15\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -410,6 +708,8 @@
 							"    ",
 							"    pm.expect(response.data.date).to.equal('2024-01-15');",
 							"    pm.expect(response.data.sessionType).to.equal('DAILY');",
+							"    pm.expect(response.data.sessionName).to.equal('Daily Training Session 1');",
+							"    pm.expect(response.data.description).to.equal('First daily training session with EEG and questionnaires');",
 							"    pm.expect(response.sessionId).to.equal(pm.collectionVariables.get('sessionId'));",
 							"    ",
 							"    console.log('✅ Session data validation passed');",
@@ -554,6 +854,8 @@
 						"exec": [
 							"pm.test('Task deleted successfully', function () {",
 							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.have.property('message');",
 							"    console.log('✅ Task deleted');",
 							"});"
 						]
@@ -576,6 +878,79 @@
 			}
 		},
 		{
+			"name": "🧹 Cleanup - Delete All Questionnaires",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Delete all questionnaires",
+							"const questionnaires = ['PreState', 'PhysicalState', 'CurrentState', 'EndState', 'PQ', 'TLX', 'IPAQ', 'VVIQ', 'ATI'];",
+							"let deletePromises = questionnaires.map(qId => {",
+							"    return new Promise((resolve) => {",
+							"        pm.sendRequest({",
+							"            url: pm.collectionVariables.get('apiGatewayUrl') + '/api/questionnaires/' + qId,",
+							"            method: 'DELETE',",
+							"            header: { 'Authorization': 'Bearer ' + pm.collectionVariables.get('idToken') }",
+							"        }, (err, res) => resolve());",
+							"    });",
+							"});",
+							"Promise.all(deletePromises).then(() => {",
+							"    console.log('✅ All questionnaires cleanup completed');",
+							"});",
+							"pm.test('Questionnaire cleanup initiated', () => { pm.expect(true).to.be.true; });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/questionnaires/PreState",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "questionnaires", "PreState"]
+				}
+			}
+		},
+		{
+			"name": "🧹 Cleanup - Remove Member",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Member removed successfully', function () {",
+							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.have.property('message');",
+							"    console.log('✅ Member removed');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{apiGatewayUrl}}/api/experiments/{{experimentId}}/members/test-participant-123",
+					"host": ["{{apiGatewayUrl}}"],
+					"path": ["api", "experiments", "{{experimentId}}", "members", "test-participant-123"]
+				}
+			}
+		},
+		{
 			"name": "🧹 Cleanup - Delete Experiment",
 			"event": [
 				{
@@ -584,6 +959,8 @@
 						"exec": [
 							"pm.test('Experiment deleted successfully', function () {",
 							"    pm.response.to.have.status(200);",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.have.property('message');",
 							"    console.log('✅ Experiment deleted');",
 							"});"
 						]
@@ -609,19 +986,31 @@
 	"variable": [
 		{
 			"key": "apiGatewayUrl",
-			"value": "https://3mybicfkv2.execute-api.eu-west-2.amazonaws.com/dev"
+			"value": ""
 		},
 		{
 			"key": "cognitoClientId",
-			"value": "517s6c84jo5i3lqste5idb0o4c"
+			"value": ""
 		},
 		{
 			"key": "username",
-			"value": "hss702"
+			"value": ""
 		},
 		{
 			"key": "password",
-			"value": "Hardeep123!"
+			"value": ""
+		},
+		{
+			"key": "experimentId",
+			"value": ""
+		},
+		{
+			"key": "sessionId",
+			"value": ""
+		},
+		{
+			"key": "taskId",
+			"value": ""
 		}
 	]
 }

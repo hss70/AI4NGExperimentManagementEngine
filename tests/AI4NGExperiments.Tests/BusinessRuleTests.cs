@@ -66,11 +66,10 @@ public class BusinessRuleTests
             .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _service.CreateExperimentAsync(experiment, "testuser"));
 
-        Assert.Contains("questionnaire", exception.Message.ToLower());
-        Assert.Contains("not found", exception.Message.ToLower());
+        Assert.Contains("missing questionnaire", exception.Message.ToLower());
     }
 
     [Fact]

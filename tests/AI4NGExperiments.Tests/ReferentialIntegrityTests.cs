@@ -25,6 +25,7 @@ public class ReferentialIntegrityTests
     public async Task CreateExperimentAsync_ShouldValidateQuestionnaireExists()
     {
         // Arrange
+        var missingQuestionnaireName = "non-existent-questionnaire";
         var experiment = new Experiment
         {
             Data = new ExperimentData 
@@ -32,7 +33,7 @@ public class ReferentialIntegrityTests
                 Name = "Test Experiment",
                 SessionTypes = new Dictionary<string, SessionType>
                 {
-                    ["daily"] = new SessionType { Questionnaires = new List<string> { "non-existent-questionnaire" } }
+                    ["daily"] = new SessionType { Questionnaires = new List<string> { missingQuestionnaireName } }
                 }
             },
             QuestionnaireConfig = new QuestionnaireConfig()
@@ -46,11 +47,11 @@ public class ReferentialIntegrityTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _service.CreateExperimentAsync(experiment, "testuser"));
         
-        Assert.Contains("questionnaire", exception.Message.ToLower());
-        Assert.Contains("not found", exception.Message.ToLower());
+        Assert.Contains("missing questionnaires", exception.Message.ToLower());
+        Assert.Contains(missingQuestionnaireName, exception.Message.ToLower());
     }
 
     [Fact]

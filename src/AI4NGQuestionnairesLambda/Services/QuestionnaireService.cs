@@ -77,6 +77,42 @@ public class QuestionnaireService : IQuestionnaireService
         };
     }
 
+    public async Task<IEnumerable<Questionnaire>> GetByIdsAsync(List<string> ids)
+    {
+        if (ids == null || !ids.Any())
+            return new List<Questionnaire>();
+
+        var keys = ids.Select(id => new Dictionary<string, AttributeValue>
+        {
+            ["PK"] = new($"QUESTIONNAIRE#{id}"),
+            ["SK"] = new("CONFIG")
+        }).ToList();
+
+        var request = new BatchGetItemRequest
+        {
+            RequestItems = new Dictionary<string, KeysAndAttributes>
+            {
+                [_tableName] = new KeysAndAttributes
+                {
+                    Keys = keys
+                }
+            }
+        };
+
+        var response = await _dynamoClient.BatchGetItemAsync(request);
+        var items = response.Responses[_tableName];
+
+        return items.Select(item => new Questionnaire
+        {
+            Id = item["PK"].S.Replace("QUESTIONNAIRE#", ""),
+            Data = ConvertAttributeValueToQuestionnaireData(item["data"]),
+            CreatedAt = DateTime.TryParse(item.GetValueOrDefault("createdAt")?.S, out var created)
+                ? created : DateTime.MinValue,
+            UpdatedAt = DateTime.TryParse(item.GetValueOrDefault("updatedAt")?.S, out var updated)
+                ? updated : DateTime.MinValue
+        });
+    }
+
     // === CREATE ===
     public async Task<string> CreateAsync(CreateQuestionnaireRequest request, string username)
     {
@@ -90,21 +126,33 @@ public class QuestionnaireService : IQuestionnaireService
             throw new ArgumentException("Questionnaire ID cannot be empty");
 
         // Check for existing active record
-        var existingItem = await _dynamoClient.GetItemAsync(new GetItemRequest
+        try
         {
-            TableName = _tableName,
-            Key = new Dictionary<string, AttributeValue>
+            var existingItem = await _dynamoClient.GetItemAsync(new GetItemRequest
             {
-                ["PK"] = new($"QUESTIONNAIRE#{request.Id}"),
-                ["SK"] = new("CONFIG")
-            }
-        });
+                TableName = _tableName,
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    ["PK"] = new($"QUESTIONNAIRE#{request.Id}"),
+                    ["SK"] = new("CONFIG")
+                }
+            });
 
-        if (existingItem.IsItemSet)
+            if (existingItem.IsItemSet)
+            {
+                var isDeleted = existingItem.Item.GetValueOrDefault("syncMetadata")?.M?.GetValueOrDefault("isDeleted")?.BOOL ?? false;
+                if (!isDeleted)
+                    throw new InvalidOperationException($"Questionnaire with ID '{request.Id}' already exists");
+            }
+        }
+        catch (InvalidOperationException)
         {
-            var isDeleted = existingItem.Item.GetValueOrDefault("syncMetadata")?.M?.GetValueOrDefault("isDeleted")?.BOOL ?? false;
-            if (!isDeleted)
-                throw new DuplicateItemException($"Questionnaire with ID '{request.Id}' already exists");
+            throw; // Re-throw our custom exception
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error checking for existing questionnaire: {ex}");
+            // Continue with creation attempt
         }
 
         ValidateQuestions(request.Data.Questions);
@@ -238,7 +286,7 @@ public class QuestionnaireService : IQuestionnaireService
             {
                 var message = ex switch
                 {
-                    DuplicateItemException => $"Questionnaire with ID '{request.Id}' already exists.",
+                    InvalidOperationException when ex.Message.Contains("already exists") => $"Questionnaire with ID '{request.Id}' already exists.",
                     ArgumentException => $"Invalid questionnaire '{request.Id}': {ex.Message}",
                     _ => $"Unexpected error creating '{request.Id}': {ex.Message}"
                 };
