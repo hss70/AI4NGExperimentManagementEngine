@@ -56,7 +56,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          dotnet test --configuration Release --no-build
+          dotnet test --configuration Release --no-build --solution AI4NGExperimentManagement.sln
 
       - name: SAM Build
         env:
