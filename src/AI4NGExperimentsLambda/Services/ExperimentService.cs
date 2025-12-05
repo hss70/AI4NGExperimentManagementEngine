@@ -61,19 +61,27 @@ public class ExperimentService : IExperimentService
 
         var experiment = response.Items.First(i => i["SK"].S == "METADATA");
         var sessions = response.Items.Where(i => i["SK"].S.StartsWith("SESSION#")).ToList();
+        var members = response.Items.Where(i => i["SK"].S.StartsWith("MEMBER#")).Select(m => new
+        {
+            username = m["SK"].S.Replace("MEMBER#", ""),
+            role = m.ContainsKey("role") ? m["role"].S : "participant",
+            addedAt = m.ContainsKey("addedAt") ? m["addedAt"].S : null
+        });
 
         return new
         {
             id = experimentId,
             data = DynamoDBHelper.ConvertAttributeValueToObject(experiment["data"]),
             questionnaireConfig = DynamoDBHelper.ConvertAttributeValueToObject(experiment["questionnaireConfig"]),
-            sessions = sessions.Select(s => DynamoDBHelper.ConvertAttributeValueToObject(s["data"]))
+            sessions = sessions.Select(s => DynamoDBHelper.ConvertAttributeValueToObject(s["data"])),
+            users = members
         };
     }
 
     public async Task<IEnumerable<object>> GetMyExperimentsAsync(string username)
     {
-        var response = await _dynamoClient.QueryAsync(new QueryRequest
+        // Query membership items via GSI1 (USER#username)
+        var membershipQuery = await _dynamoClient.QueryAsync(new QueryRequest
         {
             TableName = _experimentsTable,
             IndexName = "GSI1",
@@ -84,26 +92,49 @@ public class ExperimentService : IExperimentService
             }
         });
 
-        return response.Items.Select(item => new
+        var results = new List<object>();
+        foreach (var item in membershipQuery.Items)
         {
-            id = item["PK"].S.Replace("EXPERIMENT#", ""),
-            name = item["data"].M["Name"].S,
-            description = item["data"].M.GetValueOrDefault("Description")?.S ?? "",
-            role = item["role"]?.S ?? "participant"
-        });
+            var expId = item["PK"].S.Replace("EXPERIMENT#", "");
+            var role = item.ContainsKey("role") ? item["role"].S : "participant";
+
+            // Fetch experiment metadata to get name/description
+            var meta = await _dynamoClient.GetItemAsync(new GetItemRequest
+            {
+                TableName = _experimentsTable,
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    ["PK"] = new($"EXPERIMENT#{expId}"),
+                    ["SK"] = new("METADATA")
+                }
+            });
+
+            string name = string.Empty;
+            string description = string.Empty;
+            if (meta.IsItemSet && meta.Item.ContainsKey("data"))
+            {
+                var dataMap = meta.Item["data"].M;
+                if (dataMap.ContainsKey("Name")) name = dataMap["Name"].S;
+                if (dataMap.ContainsKey("Description")) description = dataMap["Description"].S;
+            }
+
+            results.Add(new { id = expId, name, description, role });
+        }
+
+        return results;
     }
 
     public async Task<object> ValidateExperimentAsync(Experiment experiment)
     {
         var questionnaireIds = CollectQuestionnaireIds(experiment);
         var missingQuestionnaires = await ValidateQuestionnaires(questionnaireIds);
-        
+
         return new
         {
             valid = !missingQuestionnaires.Any(),
             referencedQuestionnaires = questionnaireIds.ToList(),
             missingQuestionnaires = missingQuestionnaires,
-            message = missingQuestionnaires.Any() 
+            message = missingQuestionnaires.Any()
                 ? $"Missing questionnaires: {string.Join(", ", missingQuestionnaires)}"
                 : "All dependencies are valid"
         };
@@ -250,13 +281,13 @@ public class ExperimentService : IExperimentService
 
         return response.Items.Select(item => new
         {
-            userSub = item["SK"].S.Replace("MEMBER#", ""),
+            participantUsername = item["SK"].S.Replace("MEMBER#", ""),
             role = item["role"]?.S ?? "participant",
             addedAt = item["addedAt"]?.S
         });
     }
 
-    public async Task AddMemberAsync(string experimentId, string userSub, MemberRequest memberData, string username)
+    public async Task AddMemberAsync(string experimentId, string participantUsername, MemberRequest memberData, string username)
     {
         await _dynamoClient.PutItemAsync(new PutItemRequest
         {
@@ -264,16 +295,19 @@ public class ExperimentService : IExperimentService
             Item = new Dictionary<string, AttributeValue>
             {
                 ["PK"] = new($"EXPERIMENT#{experimentId}"),
-                ["SK"] = new($"MEMBER#{userSub}"),
+                ["SK"] = new($"MEMBER#{participantUsername}"),
                 ["type"] = new("Member"),
                 ["role"] = new(memberData.Role),
                 ["addedBy"] = new(username),
-                ["addedAt"] = new(DateTime.UtcNow.ToString("O"))
+                ["addedAt"] = new(DateTime.UtcNow.ToString("O")),
+                // Add GSI entries to support listing by user
+                ["GSI1PK"] = new($"USER#{participantUsername}"),
+                ["GSI1SK"] = new($"EXPERIMENT#{experimentId}")
             }
         });
     }
 
-    public async Task RemoveMemberAsync(string experimentId, string userSub, string username)
+    public async Task RemoveMemberAsync(string experimentId, string participantUsername, string username)
     {
         await _dynamoClient.DeleteItemAsync(new DeleteItemRequest
         {
@@ -281,7 +315,7 @@ public class ExperimentService : IExperimentService
             Key = new Dictionary<string, AttributeValue>
             {
                 ["PK"] = new($"EXPERIMENT#{experimentId}"),
-                ["SK"] = new($"MEMBER#{userSub}")
+                ["SK"] = new($"MEMBER#{participantUsername}")
             }
         });
     }
@@ -443,7 +477,7 @@ public class ExperimentService : IExperimentService
     private async Task<List<string>> ValidateQuestionnaires(HashSet<string> questionnaireIds)
     {
         var missingQuestionnaires = new List<string>();
-        
+
         foreach (var questionnaireId in questionnaireIds)
         {
             try
@@ -469,7 +503,7 @@ public class ExperimentService : IExperimentService
                 missingQuestionnaires.Add(questionnaireId);
             }
         }
-        
+
         return missingQuestionnaires;
     }
 }

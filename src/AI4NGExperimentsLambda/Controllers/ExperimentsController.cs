@@ -192,14 +192,14 @@ namespace AI4NGExperimentsLambda.Controllers
         /// <summary>
         /// Adds a member to an experiment (researcher-only).
         /// </summary>
-        [HttpPut("{experimentId}/members/{userSub}")]
-        public async Task<IActionResult> AddMember(string experimentId, string userSub, [FromBody] MemberRequest memberData)
+        [HttpPut("{experimentId}/members/{participantUsername}")]
+        public async Task<IActionResult> AddMember(string experimentId, string participantUsername, [FromBody] MemberRequest memberData)
         {
             try
             {
                 RequireResearcher();
                 var username = GetAuthenticatedUsername();
-                await _experimentService.AddMemberAsync(experimentId, userSub, memberData, username);
+                await _experimentService.AddMemberAsync(experimentId, participantUsername, memberData, username);
                 return Ok(new { message = "Member added successfully" });
             }
             catch (Exception ex)
@@ -211,14 +211,14 @@ namespace AI4NGExperimentsLambda.Controllers
         /// <summary>
         /// Removes a member from an experiment (researcher-only).
         /// </summary>
-        [HttpDelete("{experimentId}/members/{userSub}")]
-        public async Task<IActionResult> RemoveMember(string experimentId, string userSub)
+        [HttpDelete("{experimentId}/members/{participantUsername}")]
+        public async Task<IActionResult> RemoveMember(string experimentId, string participantUsername)
         {
             try
             {
                 RequireResearcher();
                 var username = GetAuthenticatedUsername();
-                await _experimentService.RemoveMemberAsync(experimentId, userSub, username);
+                await _experimentService.RemoveMemberAsync(experimentId, participantUsername, username);
                 return Ok(new { message = "Member removed successfully" });
             }
             catch (Exception ex)

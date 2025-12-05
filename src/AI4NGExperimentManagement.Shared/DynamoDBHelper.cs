@@ -33,10 +33,10 @@ public static class DynamoDBHelper
     {
         if (attributeValue == null)
             return null;
-            
+
         if (attributeValue.M != null)
         {
-            var result = new Dictionary<string, object>();
+            var result = new Dictionary<string, object?>();
             foreach (var kvp in attributeValue.M)
             {
                 result[kvp.Key] = ConvertAttributeValueToObject(kvp.Value);
@@ -52,7 +52,7 @@ public static class DynamoDBHelper
         if (attributeValue.BOOL.HasValue)
             return attributeValue.BOOL.Value;
         if (attributeValue.NULL == true)
-            return null!;
+            return null;
         return attributeValue.S ?? "";
     }
 

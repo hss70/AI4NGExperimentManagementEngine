@@ -61,10 +61,11 @@ public abstract class BaseStartup
                 {
                     OnTokenValidated = context =>
                     {
-                        var identity = context.Principal.Identity as ClaimsIdentity;
+                        var principal = context.Principal;
+                        var identity = principal?.Identity as ClaimsIdentity;
                         var usernameClaim = identity?.FindFirst("cognito:username") ??
                                             identity?.FindFirst("username");
-                        if (usernameClaim != null)
+                        if (identity != null && usernameClaim != null)
                         {
                             // Add a standard Name claim so User.Identity.Name is always populated
                             identity.AddClaim(new Claim(ClaimTypes.Name, usernameClaim.Value));
