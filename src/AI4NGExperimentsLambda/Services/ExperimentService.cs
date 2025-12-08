@@ -272,41 +272,39 @@ public class ExperimentService : IExperimentService
         if (!experimentExists.IsItemSet)
             throw new InvalidOperationException($"Experiment '{experimentId}' not found");
 
-        var filterExpression = "PK = :pk";
-        var expressionValues = new Dictionary<string, AttributeValue>
-        {
-            [":pk"] = new($"EXPERIMENT#{experimentId}")
-        };
+        // Fetch experiment metadata directly
+        var experiment = experimentExists.Item;
 
-        // Add timestamp filter if provided
-        if (lastSyncTime.HasValue)
-        {
-            filterExpression += " AND updatedAt > :lastSync";
-            expressionValues[":lastSync"] = new(lastSyncTime.Value.ToString("O"));
-        }
-
-        var response = await _dynamoClient.QueryAsync(new QueryRequest
+        // Fetch sessions via GSI1 to align with access pattern
+        var sessionsQuery = await _dynamoClient.QueryAsync(new QueryRequest
         {
             TableName = _experimentsTable,
-            KeyConditionExpression = filterExpression,
-            ExpressionAttributeValues = expressionValues
+            IndexName = "GSI1",
+            KeyConditionExpression = "GSI1PK = :pk AND begins_with(GSI1SK, :skprefix)",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":pk"] = new($"EXPERIMENT#{experimentId}"),
+                [":skprefix"] = new($"SESSION#{experimentId}#")
+            }
         });
 
-        var experiment = response.Items?.FirstOrDefault(i => i["SK"].S == "METADATA");
-        var sessions = response.Items?.Where(i => i["SK"].S.StartsWith("SESSION#")).ToList() ?? new List<Dictionary<string, AttributeValue>>();
+        var sessions = sessionsQuery.Items ?? new List<Dictionary<string, AttributeValue>>();
 
         return new
         {
             experiment = experiment != null ? new
             {
                 id = experimentId,
-                data = DynamoDBHelper.ConvertAttributeValueToObject(experiment["data"]),
+                data = DynamoDBHelper.ConvertAttributeValueToObject(experiment.GetValueOrDefault("data")),
                 questionnaireConfig = DynamoDBHelper.ConvertAttributeValueToObject(experiment.GetValueOrDefault("questionnaireConfig")),
                 updatedAt = experiment.GetValueOrDefault("updatedAt")?.S
             } : null,
             sessions = sessions.Select(s => new
             {
-                data = DynamoDBHelper.ConvertAttributeValueToObject(s["data"]),
+                sessionId = s.GetValueOrDefault("GSI1SK")?.S?.Split('#').Last(),
+                data = DynamoDBHelper.ConvertAttributeValueToObject(s.GetValueOrDefault("data")),
+                taskOrder = DynamoDBHelper.ConvertAttributeValueToObject(s.GetValueOrDefault("taskOrder")) ?? new List<string>(),
+                createdAt = s.GetValueOrDefault("createdAt")?.S,
                 updatedAt = s.GetValueOrDefault("updatedAt")?.S
             }),
             syncTimestamp = DateTime.UtcNow.ToString("O")
