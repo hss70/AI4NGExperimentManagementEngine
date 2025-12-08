@@ -274,7 +274,13 @@ namespace AI4NGExperimentsLambda.Controllers
             {
                 RequireResearcher();
                 var session = await _experimentService.GetSessionAsync(experimentId, sessionId);
-                return session == null ? NotFound("Session not found") : Ok(session);
+                if (session == null) return NotFound("Session not found");
+                // Fallback: if top-level TaskOrder is empty, try to populate from Data.TaskOrder
+                if ((session.TaskOrder == null || session.TaskOrder.Count == 0) && session.Data?.TaskOrder != null && session.Data.TaskOrder.Count > 0)
+                {
+                    session.TaskOrder = new List<string>(session.Data.TaskOrder);
+                }
+                return Ok(session);
             }
             catch (Exception ex)
             {

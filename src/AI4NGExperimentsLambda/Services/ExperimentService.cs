@@ -332,6 +332,17 @@ public class ExperimentService : IExperimentService
             var sdataObj = DynamoDBHelper.ConvertAttributeValueToObject(s.GetValueOrDefault("data")) as Dictionary<string, object> ?? new Dictionary<string, object>();
             var taskOrderAttr = s.GetValueOrDefault("taskOrder");
             var taskOrder = DynamoDBHelper.ConvertAttributeValueToObject(taskOrderAttr) as List<string> ?? new List<string>();
+            // Fallback: if top-level taskOrder is empty, try reading from data.TaskOrder
+            if ((taskOrder == null || taskOrder.Count == 0) && sdataObj.TryGetValue("TaskOrder", out var toObj) && toObj is IEnumerable<object> toArr)
+            {
+                taskOrder = toArr.Select(x => x?.ToString()).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!).ToList();
+            }
+            // Also support lowercase 'taskOrder' from clients
+            if ((taskOrder == null || taskOrder.Count == 0) && sdataObj.TryGetValue("taskOrder", out var toObj2) && toObj2 is IEnumerable<object> toArr2)
+            {
+                taskOrder = toArr2.Select(x => x?.ToString()).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!).ToList();
+            }
+            taskOrder ??= new List<string>();
             // Enrich common fields from data with sensible fallbacks
             var sessionType = sdataObj.TryGetValue("SessionType", out var stObj) && stObj is string st ? st : (s.GetValueOrDefault("sessionType")?.S ?? string.Empty);
             var description = sdataObj.TryGetValue("Description", out var descObj) && descObj is string desc ? desc : (s.GetValueOrDefault("description")?.S ?? string.Empty);
@@ -342,7 +353,7 @@ public class ExperimentService : IExperimentService
             sdataObj["Description"] = description;
             sdataObj["Date"] = date;
             sdataObj["SessionName"] = sessionName;
-            foreach (var t in taskOrder)
+            foreach (var t in (taskOrder ?? new List<string>()))
             {
                 if (t.StartsWith("TASK#")) referencedTaskIds.Add(t.Substring(5));
             }
@@ -350,7 +361,7 @@ public class ExperimentService : IExperimentService
             {
                 SessionId = sid,
                 Data = JsonSerializer.Deserialize<SessionData>(JsonSerializer.Serialize(sdataObj)) ?? new SessionData(),
-                TaskOrder = taskOrder,
+                TaskOrder = taskOrder ?? new List<string>(),
                 CreatedAt = s.GetValueOrDefault("createdAt")?.S,
                 UpdatedAt = s.GetValueOrDefault("updatedAt")?.S
             });
@@ -548,12 +559,29 @@ public class ExperimentService : IExperimentService
 
         return response.Items.Where(i => i["type"].S == "Session").Select(item =>
         {
-            var sdataObj = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]);
+            var sdataObj = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]) as Dictionary<string, object> ?? new Dictionary<string, object>();
+            var topLevelTaskOrder = item.ContainsKey("taskOrder") ? (DynamoDBHelper.ConvertAttributeValueToObject(item["taskOrder"]) as List<string> ?? new List<string>()) : new List<string>();
+            // Fallback: if top-level taskOrder is empty, try reading from data.TaskOrder
+            List<string> effectiveTaskOrder = topLevelTaskOrder ?? new List<string>();
+            if ((effectiveTaskOrder == null || effectiveTaskOrder.Count == 0) && sdataObj is Dictionary<string, object> sdict && sdict.TryGetValue("TaskOrder", out var toObj) && toObj is IEnumerable<object> toArr)
+            {
+                effectiveTaskOrder = toArr.Select(x => x?.ToString()).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!).ToList();
+            }
+            if ((effectiveTaskOrder == null || effectiveTaskOrder.Count == 0) && sdataObj is Dictionary<string, object> sdict2 && sdict2.TryGetValue("taskOrder", out var toObj2) && toObj2 is IEnumerable<object> toArr2)
+            {
+                effectiveTaskOrder = toArr2.Select(x => x?.ToString()).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!).ToList();
+            }
+            var dataObj = JsonSerializer.Deserialize<SessionData>(JsonSerializer.Serialize(sdataObj)) ?? new SessionData();
+            // Final fallback: use deserialized Data.TaskOrder if present
+            if ((effectiveTaskOrder == null || effectiveTaskOrder.Count == 0) && dataObj.TaskOrder != null && dataObj.TaskOrder.Count > 0)
+            {
+                effectiveTaskOrder = new List<string>(dataObj.TaskOrder);
+            }
             return new SessionDto
             {
                 SessionId = item["PK"].S,
-                Data = JsonSerializer.Deserialize<SessionData>(JsonSerializer.Serialize(sdataObj)) ?? new SessionData(),
-                TaskOrder = item.ContainsKey("taskOrder") ? (DynamoDBHelper.ConvertAttributeValueToObject(item["taskOrder"]) as List<string> ?? new List<string>()) : new List<string>(),
+                Data = dataObj,
+                TaskOrder = effectiveTaskOrder ?? new List<string>(),
                 CreatedAt = item["createdAt"]?.S,
                 UpdatedAt = item["updatedAt"]?.S
             };
@@ -569,19 +597,36 @@ public class ExperimentService : IExperimentService
             {
                 ["PK"] = new($"SESSION#{experimentId}#{sessionId}"),
                 ["SK"] = new("METADATA")
-            }
+            },
+            ConsistentRead = true
         });
 
         if (!response.IsItemSet)
             return null;
 
-        var sdataObj = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]);
+        var sdataObj = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]) as Dictionary<string, object> ?? new Dictionary<string, object>();
+        var topLevelTaskOrder = response.Item.ContainsKey("taskOrder") ? (DynamoDBHelper.ConvertAttributeValueToObject(response.Item["taskOrder"]) as List<string> ?? new List<string>()) : new List<string>();
+        // Fallback: if top-level taskOrder is empty, try reading from data.TaskOrder
+        List<string> effectiveTaskOrder = topLevelTaskOrder ?? new List<string>();
+        if ((effectiveTaskOrder == null || effectiveTaskOrder.Count == 0) && sdataObj is Dictionary<string, object> sdict && sdict.TryGetValue("TaskOrder", out var toObj) && toObj is IEnumerable<object> toArr)
+        {
+            effectiveTaskOrder = toArr.Select(x => x?.ToString()).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!).ToList();
+        }
+        if ((effectiveTaskOrder == null || effectiveTaskOrder.Count == 0) && sdataObj is Dictionary<string, object> sdict2 && sdict2.TryGetValue("taskOrder", out var toObj2) && toObj2 is IEnumerable<object> toArr2)
+        {
+            effectiveTaskOrder = toArr2.Select(x => x?.ToString()).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!).ToList();
+        }
+        var dataObj = JsonSerializer.Deserialize<SessionData>(JsonSerializer.Serialize(sdataObj)) ?? new SessionData();
+        if ((effectiveTaskOrder == null || effectiveTaskOrder.Count == 0) && dataObj.TaskOrder != null && dataObj.TaskOrder.Count > 0)
+        {
+            effectiveTaskOrder = new List<string>(dataObj.TaskOrder);
+        }
         return new SessionDto
         {
             SessionId = sessionId,
             ExperimentId = experimentId,
-            Data = JsonSerializer.Deserialize<SessionData>(JsonSerializer.Serialize(sdataObj)) ?? new SessionData(),
-            TaskOrder = response.Item.ContainsKey("taskOrder") ? (DynamoDBHelper.ConvertAttributeValueToObject(response.Item["taskOrder"]) as List<string> ?? new List<string>()) : new List<string>(),
+            Data = dataObj,
+            TaskOrder = effectiveTaskOrder ?? new List<string>(),
             CreatedAt = response.Item["createdAt"]?.S,
             UpdatedAt = response.Item["updatedAt"]?.S
         };
