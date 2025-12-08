@@ -18,7 +18,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ExperimentsControll
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentService>(
             (service, auth) => new ExperimentsController(service, auth));
 
-        var experiments = new List<Experiment> { TestDataBuilder.CreateValidExperiment() };
+        var experiments = new List<AI4NGExperimentsLambda.Models.Dtos.ExperimentListDto> { new AI4NGExperimentsLambda.Models.Dtos.ExperimentListDto { Id = "exp-1", Name = "Test", Description = "Desc" } };
         mockService.Setup(x => x.GetExperimentsAsync()).ReturnsAsync(experiments);
 
         // Act
@@ -37,14 +37,23 @@ public class ControllerIntegrationTests : ControllerTestBase<ExperimentsControll
             (service, auth) => new ExperimentsController(service, auth));
 
         var experiment = TestDataBuilder.CreateValidExperiment();
-        mockService.Setup(x => x.GetExperimentAsync("test-id")).ReturnsAsync(experiment);
+        var expDto = new AI4NGExperimentsLambda.Models.Dtos.ExperimentDto
+        {
+            Id = experiment.Id,
+            Data = experiment.Data,
+            QuestionnaireConfig = experiment.QuestionnaireConfig,
+            UpdatedAt = DateTime.UtcNow.ToString("O")
+        };
+        mockService.Setup(x => x.GetExperimentAsync("test-id")).ReturnsAsync(expDto);
 
         // Act
         var result = await controller.GetById("test-id");
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(experiment, okResult.Value);
+        var returned = Assert.IsType<AI4NGExperimentsLambda.Models.Dtos.ExperimentDto>(okResult.Value);
+        Assert.Equal(experiment.Id, returned.Id);
+        Assert.Equal(experiment.Data.Name, returned.Data.Name);
     }
 
     [Fact]
@@ -54,7 +63,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ExperimentsControll
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentService>(
             (service, auth) => new ExperimentsController(service, auth));
 
-        mockService.Setup(x => x.GetExperimentAsync("nonexistent")).ReturnsAsync((Experiment?)null);
+        mockService.Setup(x => x.GetExperimentAsync("nonexistent")).ReturnsAsync((AI4NGExperimentsLambda.Models.Dtos.ExperimentDto?)null);
 
         // Act
         var result = await controller.GetById("nonexistent");
@@ -71,15 +80,15 @@ public class ControllerIntegrationTests : ControllerTestBase<ExperimentsControll
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentService>(
             (service, auth) => new ExperimentsController(service, auth), isResearcher: false);
 
-        var experiments = new List<Experiment> { TestDataBuilder.CreateValidExperiment() };
-        mockService.Setup(x => x.GetMyExperimentsAsync(TestDataBuilder.TestUsername)).ReturnsAsync(experiments);
+        var myExperiments = new List<AI4NGExperimentsLambda.Models.Dtos.ExperimentListDto> { new AI4NGExperimentsLambda.Models.Dtos.ExperimentListDto { Id = "exp-1", Name = "Mine", Description = "Desc", Role = "participant" } };
+        mockService.Setup(x => x.GetMyExperimentsAsync(TestDataBuilder.TestUsername)).ReturnsAsync(myExperiments);
 
         // Act
         var result = await controller.GetMyExperiments();
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(experiments, okResult.Value);
+        Assert.Equal(myExperiments, okResult.Value);
     }
 
     [Fact]
@@ -147,7 +156,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ExperimentsControll
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentService>(
             (service, auth) => new ExperimentsController(service, auth), isResearcher: false);
 
-        var syncResult = new { lastSyncTime = DateTime.UtcNow };
+        var syncResult = new AI4NGExperimentsLambda.Models.Dtos.ExperimentSyncDto { SyncTimestamp = DateTime.UtcNow.ToString("O") };
         var lastSyncTime = DateTime.UtcNow.AddHours(-1);
         mockService.Setup(x => x.SyncExperimentAsync("test-id", lastSyncTime, TestDataBuilder.TestUsername)).ReturnsAsync(syncResult);
 
@@ -223,7 +232,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ExperimentsControll
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentService>(
             (service, auth) => new ExperimentsController(service, auth));
 
-        var sessions = new List<object> { new { sessionId = "session1", name = "Test Session" } };
+        var sessions = new List<AI4NGExperimentsLambda.Models.Dtos.SessionDto> { new AI4NGExperimentsLambda.Models.Dtos.SessionDto { SessionId = "session1", Data = new SessionData { SessionName = "Test Session" } } };
         mockService.Setup(x => x.GetExperimentSessionsAsync("test-id")).ReturnsAsync(sessions);
 
         // Act
@@ -241,7 +250,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ExperimentsControll
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentService>(
             (service, auth) => new ExperimentsController(service, auth));
 
-        var session = new { sessionId = "session1", name = "Test Session" };
+        var session = new AI4NGExperimentsLambda.Models.Dtos.SessionDto { SessionId = "session1", Data = new SessionData { SessionName = "Test Session" } };
         mockService.Setup(x => x.GetSessionAsync("test-id", "session1")).ReturnsAsync(session);
 
         // Act
@@ -259,7 +268,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ExperimentsControll
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentService>(
             (service, auth) => new ExperimentsController(service, auth));
 
-        mockService.Setup(x => x.GetSessionAsync("test-id", "nonexistent")).ReturnsAsync((object?)null);
+        mockService.Setup(x => x.GetSessionAsync("test-id", "nonexistent")).ReturnsAsync((AI4NGExperimentsLambda.Models.Dtos.SessionDto?)null);
 
         // Act
         var result = await controller.GetSession("test-id", "nonexistent");

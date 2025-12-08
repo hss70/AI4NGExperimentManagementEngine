@@ -23,11 +23,11 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
     {
         // Arrange
         var (mockService, controller, _) = CreateController();
-        var experiment = new { id = TestDataBuilder.TestUserId, name = "Test Experiment" };
+        var experiment = new AI4NGExperimentsLambda.Models.Dtos.ExperimentDto { Id = TestDataBuilder.TestUserId, Data = new ExperimentData { Name = "Test Experiment" }, QuestionnaireConfig = new QuestionnaireConfig() };
         if (exists)
             mockService.Setup(x => x.GetExperimentAsync(id)).ReturnsAsync(experiment);
         else
-            mockService.Setup(x => x.GetExperimentAsync(id)).ReturnsAsync((object?)null);
+            mockService.Setup(x => x.GetExperimentAsync(id)).ReturnsAsync((AI4NGExperimentsLambda.Models.Dtos.ExperimentDto?)null);
 
         // Act
         var result = await controller.GetById(id);
@@ -50,7 +50,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
     {
         // Arrange
         var (mockService, controller, _) = CreateController();
-        var experiments = new List<object> { new { id = "my-experiment", name = "My Experiment" } };
+        var experiments = new List<AI4NGExperimentsLambda.Models.Dtos.ExperimentListDto> { new AI4NGExperimentsLambda.Models.Dtos.ExperimentListDto { Id = "my-experiment", Name = "My Experiment" } };
         mockService.Setup(x => x.GetMyExperimentsAsync(TestDataBuilder.TestUsername)).ReturnsAsync(experiments);
 
         // Act
@@ -93,7 +93,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
 
         // Act
         var result = await controller.GetMembers(TestDataBuilder.TestUserId);
-        
+
         // Assert
         var ok = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(members, ok.Value);

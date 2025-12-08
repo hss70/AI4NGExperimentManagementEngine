@@ -2,6 +2,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Interfaces;
 using AI4NGExperimentsLambda.Models;
+using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentManagement.Shared;
 using System.Text.Json;
 
@@ -23,7 +24,7 @@ public class ExperimentService : IExperimentService
             throw new InvalidOperationException("EXPERIMENTS_TABLE environment variable is not set");
     }
 
-    public async Task<IEnumerable<object>> GetExperimentsAsync()
+    public async Task<IEnumerable<ExperimentListDto>> GetExperimentsAsync()
     {
         var response = await _dynamoClient.ScanAsync(new ScanRequest
         {
@@ -33,15 +34,15 @@ public class ExperimentService : IExperimentService
             ExpressionAttributeValues = new Dictionary<string, AttributeValue> { [":type"] = new("Experiment") }
         });
 
-        return response.Items.Select(item => new
+        return response.Items.Select(item => new ExperimentListDto
         {
-            id = item.ContainsKey("PK") ? item["PK"].S.Replace("EXPERIMENT#", "") : string.Empty,
-            name = item.ContainsKey("data") && item["data"].M.ContainsKey("Name") ? item["data"].M["Name"].S : string.Empty,
-            description = item.ContainsKey("data") && item["data"].M.ContainsKey("Description") ? item["data"].M["Description"].S : string.Empty
+            Id = item.ContainsKey("PK") ? item["PK"].S.Replace("EXPERIMENT#", "") : string.Empty,
+            Name = item.ContainsKey("data") && item["data"].M.ContainsKey("Name") ? item["data"].M["Name"].S : string.Empty,
+            Description = item.ContainsKey("data") && item["data"].M.ContainsKey("Description") ? item["data"].M["Description"].S : string.Empty
         });
     }
 
-    public async Task<object?> GetExperimentAsync(string? experimentId)
+    public async Task<ExperimentDto?> GetExperimentAsync(string? experimentId)
     {
         if (string.IsNullOrWhiteSpace(experimentId))
             return null;
@@ -70,17 +71,16 @@ public class ExperimentService : IExperimentService
             addedAt = m.ContainsKey("addedAt") ? m["addedAt"].S : null
         });
 
-        return new
+        return new ExperimentDto
         {
-            id = experimentId,
-            data = DynamoDBHelper.ConvertAttributeValueToObject(experiment["data"]),
-            questionnaireConfig = DynamoDBHelper.ConvertAttributeValueToObject(experiment["questionnaireConfig"]),
-            sessions = sessions.Select(s => DynamoDBHelper.ConvertAttributeValueToObject(s["data"])),
-            users = members
+            Id = experimentId!,
+            Data = (DynamoDBHelper.ConvertAttributeValueToObject(experiment["data"]) as ExperimentData) ?? new ExperimentData(),
+            QuestionnaireConfig = (DynamoDBHelper.ConvertAttributeValueToObject(experiment["questionnaireConfig"]) as QuestionnaireConfig) ?? new QuestionnaireConfig(),
+            UpdatedAt = experiment.GetValueOrDefault("updatedAt")?.S
         };
     }
 
-    public async Task<IEnumerable<object>> GetMyExperimentsAsync(string username)
+    public async Task<IEnumerable<ExperimentListDto>> GetMyExperimentsAsync(string username)
     {
         // Query membership items via GSI1 (USER#username)
         var membershipQuery = await _dynamoClient.QueryAsync(new QueryRequest
@@ -94,7 +94,7 @@ public class ExperimentService : IExperimentService
             }
         });
 
-        var results = new List<object>();
+        var results = new List<ExperimentListDto>();
         foreach (var item in membershipQuery.Items)
         {
             var expId = item["PK"].S.Replace("EXPERIMENT#", "");
@@ -120,7 +120,7 @@ public class ExperimentService : IExperimentService
                 if (dataMap.ContainsKey("Description")) description = dataMap["Description"].S;
             }
 
-            results.Add(new { id = expId, name, description, role });
+            results.Add(new ExperimentListDto { Id = expId, Name = name, Description = description, Role = role });
         }
 
         return results;
@@ -156,6 +156,16 @@ public class ExperimentService : IExperimentService
 
         var experimentId = experiment.Id ?? Guid.NewGuid().ToString();
 
+        // Normalize experiment.data to include questionnaireIds consistently
+        var dataMap = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(experiment.Data));
+        if (!dataMap.ContainsKey("questionnaireIds"))
+        {
+            dataMap["questionnaireIds"] = new AttributeValue
+            {
+                L = questionnaireIds.Select(q => new AttributeValue(q)).ToList()
+            };
+        }
+
         await _dynamoClient.PutItemAsync(new PutItemRequest
         {
             TableName = _experimentsTable,
@@ -164,10 +174,11 @@ public class ExperimentService : IExperimentService
                 ["PK"] = new($"EXPERIMENT#{experimentId}"),
                 ["SK"] = new("METADATA"),
                 ["type"] = new("Experiment"),
-                ["data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(experiment.Data)) },
+                ["data"] = new AttributeValue { M = dataMap },
                 ["questionnaireConfig"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(experiment.QuestionnaireConfig)) },
                 ["createdBy"] = new(username),
-                ["createdAt"] = new(DateTime.UtcNow.ToString("O"))
+                ["createdAt"] = new(DateTime.UtcNow.ToString("O")),
+                ["updatedAt"] = new(DateTime.UtcNow.ToString("O"))
             }
         });
 
@@ -221,6 +232,28 @@ public class ExperimentService : IExperimentService
 
     public async Task UpdateExperimentAsync(string experimentId, ExperimentData data, string username)
     {
+        // Normalize incoming data to include questionnaireIds derived from session types and questionnaireConfig
+        var normalizedDataMap = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data));
+        var derivedQuestionnaireIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (data.SessionTypes != null)
+        {
+            foreach (var st in data.SessionTypes.Values)
+            {
+                if (st?.Questionnaires != null)
+                {
+                    foreach (var q in st.Questionnaires)
+                    {
+                        if (!string.IsNullOrWhiteSpace(q)) derivedQuestionnaireIds.Add(q);
+                    }
+                }
+            }
+        }
+        // QuestionnaireConfig is serialized separately; here we only ensure data.questionnaireIds exists
+        normalizedDataMap["questionnaireIds"] = new AttributeValue
+        {
+            L = derivedQuestionnaireIds.Select(q => new AttributeValue(q)).ToList()
+        };
+
         await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = _experimentsTable,
@@ -233,7 +266,7 @@ public class ExperimentService : IExperimentService
             ExpressionAttributeNames = new Dictionary<string, string> { ["#data"] = "data" },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
+                [":data"] = new AttributeValue { M = normalizedDataMap },
                 [":user"] = new(username),
                 [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
             }
@@ -253,7 +286,7 @@ public class ExperimentService : IExperimentService
         });
     }
 
-    public async Task<object> SyncExperimentAsync(string? experimentId, DateTime? lastSyncTime, string username)
+    public async Task<ExperimentSyncDto> SyncExperimentAsync(string? experimentId, DateTime? lastSyncTime, string username)
     {
         if (string.IsNullOrWhiteSpace(experimentId))
             throw new ArgumentException("Experiment ID is required");
@@ -291,30 +324,40 @@ public class ExperimentService : IExperimentService
         var sessions = sessionsQuery.Items ?? new List<Dictionary<string, AttributeValue>>();
 
         // Build session DTOs and collect referenced task IDs
-        var sessionDtos = new List<object>();
+        var sessionDtos = new List<SessionDto>();
         var referencedTaskIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var s in sessions)
         {
             var sid = s.GetValueOrDefault("GSI1SK")?.S?.Split('#').Last();
-            var sdata = DynamoDBHelper.ConvertAttributeValueToObject(s.GetValueOrDefault("data"));
+            var sdataObj = DynamoDBHelper.ConvertAttributeValueToObject(s.GetValueOrDefault("data")) as Dictionary<string, object> ?? new Dictionary<string, object>();
             var taskOrderAttr = s.GetValueOrDefault("taskOrder");
             var taskOrder = DynamoDBHelper.ConvertAttributeValueToObject(taskOrderAttr) as List<string> ?? new List<string>();
+            // Enrich common fields from data with sensible fallbacks
+            var sessionType = sdataObj.TryGetValue("SessionType", out var stObj) && stObj is string st ? st : (s.GetValueOrDefault("sessionType")?.S ?? string.Empty);
+            var description = sdataObj.TryGetValue("Description", out var descObj) && descObj is string desc ? desc : (s.GetValueOrDefault("description")?.S ?? string.Empty);
+            var date = sdataObj.TryGetValue("Date", out var dateObj) && dateObj is string dt ? dt : sid ?? string.Empty;
+            var sessionName = sdataObj.TryGetValue("SessionName", out var snObj) && snObj is string sn ? sn : (s.GetValueOrDefault("sessionName")?.S ?? string.Empty);
+            // Update sdataObj with enriched values so clients see populated fields
+            sdataObj["SessionType"] = sessionType;
+            sdataObj["Description"] = description;
+            sdataObj["Date"] = date;
+            sdataObj["SessionName"] = sessionName;
             foreach (var t in taskOrder)
             {
                 if (t.StartsWith("TASK#")) referencedTaskIds.Add(t.Substring(5));
             }
-            sessionDtos.Add(new
+            sessionDtos.Add(new SessionDto
             {
-                sessionId = sid,
-                data = sdata,
-                taskOrder = taskOrder,
-                createdAt = s.GetValueOrDefault("createdAt")?.S,
-                updatedAt = s.GetValueOrDefault("updatedAt")?.S
+                SessionId = sid,
+                Data = JsonSerializer.Deserialize<SessionData>(JsonSerializer.Serialize(sdataObj)) ?? new SessionData(),
+                TaskOrder = taskOrder,
+                CreatedAt = s.GetValueOrDefault("createdAt")?.S,
+                UpdatedAt = s.GetValueOrDefault("updatedAt")?.S
             });
         }
 
         // Fetch tasks referenced by sessions in a BatchGet
-        var tasks = new List<object>();
+        var tasks = new List<TaskDto>();
         if (referencedTaskIds.Count > 0)
         {
             var keys = referencedTaskIds.Select(id => new Dictionary<string, AttributeValue>
@@ -341,12 +384,13 @@ public class ExperimentService : IExperimentService
                 foreach (var item in taskItems)
                 {
                     var id = item["PK"].S.Replace("TASK#", "");
-                    tasks.Add(new
+                    var tdataObj = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data"));
+                    tasks.Add(new TaskDto
                     {
-                        id,
-                        data = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data")),
-                        createdAt = item.GetValueOrDefault("createdAt")?.S,
-                        updatedAt = item.GetValueOrDefault("updatedAt")?.S
+                        Id = id,
+                        Data = JsonSerializer.Deserialize<TaskData>(JsonSerializer.Serialize(tdataObj)) ?? new TaskData(),
+                        CreatedAt = item.GetValueOrDefault("createdAt")?.S,
+                        UpdatedAt = item.GetValueOrDefault("updatedAt")?.S
                     });
                 }
             }
@@ -377,19 +421,38 @@ public class ExperimentService : IExperimentService
             }
         }
 
-        return new
+        // Aggregate session names and types for quick glance
+        var sessionNames = sessionDtos
+            .Select(d => d.Data?.SessionName)
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s!)
+            .Distinct()
+            .ToArray();
+        var sessionTypes = sessionDtos
+            .Select(d => d.Data?.SessionType)
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s!)
+            .Distinct()
+            .ToArray();
+
+        // Ensure experiment.data includes up-to-date questionnaireIds prior to returning
+        expDataObj["questionnaireIds"] = questionnaireIds.ToArray();
+
+        return new ExperimentSyncDto
         {
-            experiment = experiment != null ? new
+            Experiment = experiment != null ? new ExperimentDto
             {
-                id = experimentId,
-                data = DynamoDBHelper.ConvertAttributeValueToObject(experiment.GetValueOrDefault("data")),
-                questionnaireConfig = DynamoDBHelper.ConvertAttributeValueToObject(experiment.GetValueOrDefault("questionnaireConfig")),
-                updatedAt = experiment.GetValueOrDefault("updatedAt")?.S
+                Id = experimentId!,
+                Data = JsonSerializer.Deserialize<ExperimentData>(JsonSerializer.Serialize(expDataObj)) ?? new ExperimentData(),
+                QuestionnaireConfig = (DynamoDBHelper.ConvertAttributeValueToObject(experiment.GetValueOrDefault("questionnaireConfig")) as QuestionnaireConfig) ?? new QuestionnaireConfig(),
+                UpdatedAt = experiment.GetValueOrDefault("updatedAt")?.S
             } : null,
-            sessions = sessionDtos,
-            tasks,
-            questionnaires = questionnaireIds.ToArray(),
-            syncTimestamp = DateTime.UtcNow.ToString("O")
+            Sessions = sessionDtos,
+            Tasks = tasks,
+            Questionnaires = questionnaireIds.ToList(),
+            SessionNames = sessionNames.ToList(),
+            SessionTypes = sessionTypes.ToList(),
+            SyncTimestamp = DateTime.UtcNow.ToString("O")
         };
     }
 
@@ -408,7 +471,7 @@ public class ExperimentService : IExperimentService
 
         var list = response.Items.Select(item => new
         {
-            participantUsername = item["SK"].S.Replace("MEMBER#", ""),
+            username = item["SK"].S.Replace("MEMBER#", ""),
             role = item.ContainsKey("role") ? item["role"].S : "participant",
             status = item.ContainsKey("status") ? item["status"].S : "active",
             cohort = item.ContainsKey("cohort") ? item["cohort"].S : string.Empty,
@@ -421,7 +484,6 @@ public class ExperimentService : IExperimentService
             list = list.Where(m => string.Equals(m.status, status, StringComparison.OrdinalIgnoreCase));
         if (!string.IsNullOrWhiteSpace(role))
             list = list.Where(m => string.Equals(m.role, role, StringComparison.OrdinalIgnoreCase));
-
         return list;
     }
 
@@ -471,7 +533,7 @@ public class ExperimentService : IExperimentService
     }
 
     // Session management methods
-    public async Task<IEnumerable<object>> GetExperimentSessionsAsync(string experimentId)
+    public async Task<IEnumerable<SessionDto>> GetExperimentSessionsAsync(string experimentId)
     {
         var response = await _dynamoClient.QueryAsync(new QueryRequest
         {
@@ -484,17 +546,21 @@ public class ExperimentService : IExperimentService
             }
         });
 
-        return response.Items.Where(i => i["type"].S == "Session").Select(item => new
+        return response.Items.Where(i => i["type"].S == "Session").Select(item =>
         {
-            sessionId = item["PK"].S,
-            data = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]),
-            taskOrder = item.ContainsKey("taskOrder") ? DynamoDBHelper.ConvertAttributeValueToObject(item["taskOrder"]) : new List<string>(),
-            createdAt = item["createdAt"]?.S,
-            updatedAt = item["updatedAt"]?.S
+            var sdataObj = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]);
+            return new SessionDto
+            {
+                SessionId = item["PK"].S,
+                Data = JsonSerializer.Deserialize<SessionData>(JsonSerializer.Serialize(sdataObj)) ?? new SessionData(),
+                TaskOrder = item.ContainsKey("taskOrder") ? (DynamoDBHelper.ConvertAttributeValueToObject(item["taskOrder"]) as List<string> ?? new List<string>()) : new List<string>(),
+                CreatedAt = item["createdAt"]?.S,
+                UpdatedAt = item["updatedAt"]?.S
+            };
         });
     }
 
-    public async Task<object?> GetSessionAsync(string experimentId, string sessionId)
+    public async Task<SessionDto?> GetSessionAsync(string experimentId, string sessionId)
     {
         var response = await _dynamoClient.GetItemAsync(new GetItemRequest
         {
@@ -509,14 +575,15 @@ public class ExperimentService : IExperimentService
         if (!response.IsItemSet)
             return null;
 
-        return new
+        var sdataObj = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]);
+        return new SessionDto
         {
-            sessionId = sessionId,
-            experimentId = experimentId,
-            data = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]),
-            taskOrder = response.Item.ContainsKey("taskOrder") ? DynamoDBHelper.ConvertAttributeValueToObject(response.Item["taskOrder"]) : new List<string>(),
-            createdAt = response.Item["createdAt"]?.S,
-            updatedAt = response.Item["updatedAt"]?.S
+            SessionId = sessionId,
+            ExperimentId = experimentId,
+            Data = JsonSerializer.Deserialize<SessionData>(JsonSerializer.Serialize(sdataObj)) ?? new SessionData(),
+            TaskOrder = response.Item.ContainsKey("taskOrder") ? (DynamoDBHelper.ConvertAttributeValueToObject(response.Item["taskOrder"]) as List<string> ?? new List<string>()) : new List<string>(),
+            CreatedAt = response.Item["createdAt"]?.S,
+            UpdatedAt = response.Item["updatedAt"]?.S
         };
     }
 
@@ -556,6 +623,12 @@ public class ExperimentService : IExperimentService
                 ["updatedAt"] = new(DateTime.UtcNow.ToString("O"))
             }
         });
+
+        // Persist session name into experiment data for quick glance
+        if (!string.IsNullOrWhiteSpace(request.SessionName))
+        {
+            await UpsertExperimentSessionNameAsync(experimentId, request.SessionName);
+        }
 
         return new { sessionId = sessionId, experimentId = experimentId };
     }
@@ -601,6 +674,28 @@ public class ExperimentService : IExperimentService
             ExpressionAttributeNames = exprAttrNames,
             ExpressionAttributeValues = exprAttrValues
         });
+
+        // Touch experiment updatedAt to reflect session change
+        await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"EXPERIMENT#{experimentId}"),
+                ["SK"] = new("METADATA")
+            },
+            UpdateExpression = "SET updatedAt = :timestamp",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
+            }
+        });
+
+        // Persist session name updates into experiment data
+        if (!string.IsNullOrWhiteSpace(data.SessionName))
+        {
+            await UpsertExperimentSessionNameAsync(experimentId, data.SessionName);
+        }
     }
 
     public async Task DeleteSessionAsync(string experimentId, string sessionId, string username)
@@ -612,6 +707,62 @@ public class ExperimentService : IExperimentService
             {
                 ["PK"] = new($"SESSION#{experimentId}#{sessionId}"),
                 ["SK"] = new("METADATA")
+            }
+        });
+
+        // Optional: could remove session name from experiment data if we also fetch the session's name.
+        // Skipping removal to avoid losing historical visibility; clients can rely on sync for current sessions.
+    }
+
+    private async Task UpsertExperimentSessionNameAsync(string experimentId, string sessionName)
+    {
+        var expResp = await _dynamoClient.GetItemAsync(new GetItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"EXPERIMENT#{experimentId}"),
+                ["SK"] = new("METADATA")
+            }
+        });
+
+        if (!expResp.IsItemSet || !expResp.Item.TryGetValue("data", out var dataAttr)) return;
+
+        var expDataObj = DynamoDBHelper.ConvertAttributeValueToObject(dataAttr) as Dictionary<string, object> ?? new Dictionary<string, object>();
+        List<string> names;
+        if (expDataObj.TryGetValue("SessionNames", out var existing) && existing is IEnumerable<object> arr)
+        {
+            names = arr
+                .Select(x => x?.ToString())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        else
+        {
+            names = new List<string>();
+        }
+        if (!names.Contains(sessionName, StringComparer.OrdinalIgnoreCase))
+        {
+            names.Add(sessionName);
+        }
+        expDataObj["SessionNames"] = names;
+
+        await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"EXPERIMENT#{experimentId}"),
+                ["SK"] = new("METADATA")
+            },
+            UpdateExpression = "SET #data = :data, updatedAt = :timestamp",
+            ExpressionAttributeNames = new Dictionary<string, string> { ["#data"] = "data" },
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(expDataObj)) },
+                [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
             }
         });
     }

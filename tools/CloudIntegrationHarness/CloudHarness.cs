@@ -54,10 +54,10 @@ public class CloudHarness
         setAuth(researcherJwt);
         var trainingTask = await CreateTaskAsync(new { name = "EEG Training", type = "training", description = "EEG training block", estimatedDuration = 300 });
         var freePlayTask = await CreateTaskAsync(new { name = "Free Play", type = "free_play", description = "Unstructured play", estimatedDuration = 600 });
-        var sharedQuestionnaireTask = await CreateTaskAsync(new { name = "Shared Questionnaire", type = "questionnaire", description = "Shared questionnaire across sessions", data = new { questionnaireId = _cfg.QuestionnaireIdPQ } });
-        var firstUniqueQuestionnaireTask = await CreateTaskAsync(new { name = "First Session Questionnaire", type = "questionnaire", description = "Unique to first session", data = new { questionnaireId = _cfg.QuestionnaireIdATI } });
-        var weeklyUniqueQuestionnaireTask = await CreateTaskAsync(new { name = "Weekly Session Questionnaire", type = "questionnaire", description = "Unique to weekly session", data = new { questionnaireId = _cfg.QuestionnaireIdPQ } });
-        var dailyUniqueQuestionnaireTask = await CreateTaskAsync(new { name = "Daily Session Questionnaire", type = "questionnaire", description = "Unique to daily session", data = new { questionnaireId = _cfg.QuestionnaireIdATI } });
+        var sharedQuestionnaireTask = await CreateTaskAsync(new { name = "Shared Questionnaire", type = "questionnaire", description = "Shared questionnaire across sessions", configuration = new { questionnaireId = _cfg.QuestionnaireIdPQ } });
+        var firstUniqueQuestionnaireTask = await CreateTaskAsync(new { name = "First Session Questionnaire", type = "questionnaire", description = "Unique to first session", configuration = new { questionnaireId = _cfg.QuestionnaireIdATI } });
+        var weeklyUniqueQuestionnaireTask = await CreateTaskAsync(new { name = "Weekly Session Questionnaire", type = "questionnaire", description = "Unique to weekly session", configuration = new { questionnaireId = _cfg.QuestionnaireIdPQ } });
+        var dailyUniqueQuestionnaireTask = await CreateTaskAsync(new { name = "Daily Session Questionnaire", type = "questionnaire", description = "Unique to daily session", configuration = new { questionnaireId = _cfg.QuestionnaireIdATI } });
         var reactionTimeTask = await CreateTaskAsync(new { name = "Reaction Time", type = "cognitive", description = "RT task", estimatedDuration = 180 });
         var memorySpanTask = await CreateTaskAsync(new { name = "Memory Span", type = "cognitive", description = "Memory span task", estimatedDuration = 240 });
         var visualSearchTask = await CreateTaskAsync(new { name = "Visual Search", type = "cognitive", description = "Visual search", estimatedDuration = 200 });
