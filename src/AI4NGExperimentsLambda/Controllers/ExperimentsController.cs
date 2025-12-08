@@ -307,6 +307,29 @@ namespace AI4NGExperimentsLambda.Controllers
         }
 
         /// <summary>
+        /// Adds or updates multiple sessions for an experiment (researcher-only).
+        /// </summary>
+        [HttpPost("{experimentId}/sessions/batch")]
+        public async Task<IActionResult> AddSessionsBatch(string experimentId, [FromBody] List<CreateSessionRequest> sessions)
+        {
+            try
+            {
+                RequireResearcher();
+                var username = GetAuthenticatedUsername();
+                await _experimentService.AddSessionsAsync(experimentId, sessions, username);
+                return Ok(new { message = "Sessions upserted successfully", count = sessions?.Count ?? 0 });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+            {
+                return BadRequest(new { error = "ValidationError", message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "adding sessions batch");
+            }
+        }
+
+        /// <summary>
         /// Updates an existing session (researcher-only).
         /// </summary>
         [HttpPut("{experimentId}/sessions/{sessionId}")]

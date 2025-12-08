@@ -56,6 +56,8 @@ public class SessionData
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
     public SessionMetadata Metadata { get; set; } = new();
+    // Optional: allow updating task order via session update
+    public List<string>? TaskOrder { get; set; }
 }
 
 public class SessionMetadata

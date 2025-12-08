@@ -494,6 +494,21 @@ public class ExperimentService : IExperimentService
 
     public async Task UpdateSessionAsync(string experimentId, string sessionId, SessionData data, string username)
     {
+        var updateExpr = "SET #data = :data, updatedAt = :timestamp";
+        var exprAttrNames = new Dictionary<string, string> { ["#data"] = "data" };
+        var exprAttrValues = new Dictionary<string, AttributeValue>
+        {
+            [":data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
+            [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
+        };
+
+        // If task order provided, include it in update
+        if (data.TaskOrder != null)
+        {
+            updateExpr += ", taskOrder = :taskOrder";
+            exprAttrValues[":taskOrder"] = new AttributeValue { L = data.TaskOrder.Select(t => new AttributeValue(t)).ToList() };
+        }
+
         await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = _experimentsTable,
@@ -502,13 +517,9 @@ public class ExperimentService : IExperimentService
                 ["PK"] = new($"SESSION#{experimentId}#{sessionId}"),
                 ["SK"] = new("METADATA")
             },
-            UpdateExpression = "SET #data = :data, updatedAt = :timestamp",
-            ExpressionAttributeNames = new Dictionary<string, string> { ["#data"] = "data" },
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-            {
-                [":data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
-                [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
-            }
+            UpdateExpression = updateExpr,
+            ExpressionAttributeNames = exprAttrNames,
+            ExpressionAttributeValues = exprAttrValues
         });
     }
 

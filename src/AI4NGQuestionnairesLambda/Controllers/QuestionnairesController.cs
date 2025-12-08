@@ -34,11 +34,11 @@ public class QuestionnairesController : BaseApiController
     }
 
     [HttpPost("by-ids")]
-    public async Task<ActionResult> GetByIds([FromBody] List<string> ids)
+    public async Task<ActionResult> GetByIds([FromBody] string[] ids)
     {
         try
         {
-            if (ids == null || ids.Count == 0)
+            if (ids == null || ids.Length == 0)
                 return BadRequest("Provide at least one questionnaire id.");
 
             var uniqueIds = ids

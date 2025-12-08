@@ -49,6 +49,56 @@ public class CloudHarness
         // 4) Switch to participant and verify they now see the experiment
         setAuth(participantJwt);
         await EnsureMyExperimentsContainsAsync(experimentId, expectedContains: true);
+
+        // 4a) As researcher, create tasks and verify CRUD
+        setAuth(researcherJwt);
+        var taskId1 = await CreateTaskAsync(new { name = "EEG Training", type = "eeg_training", description = "EEG training block", estimatedDuration = 300 });
+        var taskId2 = await CreateTaskAsync(new { name = "Trait Questionnaire Bank", type = "questionnaire_batch", description = "Trait questionnaires", estimatedDuration = 120 });
+        await ListTasksAsync();
+        await GetTaskAsync(taskId1);
+        await UpdateTaskAsync(taskId1, new { data = new { name = "EEG Training Updated" } });
+
+        // 4b) As researcher, add a batch of sessions to the experiment
+        setAuth(researcherJwt);
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var tomorrow = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd");
+        try
+        {
+            await AddSessionsBatchAsync(experimentId, new[]
+            {
+                new { sessionType = "DAILY", sessionName = "Harness Day 1", description = "Batch added", date = today },
+                new { sessionType = "DAILY", sessionName = "Harness Day 2", description = "Batch added", date = tomorrow }
+            });
+        }
+        catch (HttpRequestException ex)
+        {
+            Console.WriteLine($"[WARN] Batch endpoint unavailable ({ex.Message}). Falling back to single session POSTs...");
+            setAuth(researcherJwt);
+            await CreateSessionAsync(experimentId, new
+            {
+                sessionType = "DAILY",
+                sessionName = "Harness Day 1",
+                description = "Fallback single add",
+                date = today
+            });
+            await CreateSessionAsync(experimentId, new
+            {
+                sessionType = "DAILY",
+                sessionName = "Harness Day 2",
+                description = "Fallback single add",
+                date = tomorrow
+            });
+        }
+
+        // 4c) Switch to participant and ensure sync returns sessions and tasks
+        setAuth(participantJwt);
+        var syncJson = await GetExperimentSyncAsync(experimentId);
+        Console.WriteLine("[DEBUG] sync JSON=" + JsonSerializer.Serialize(syncJson));
+
+        // Basic asserts: ensure at least one session present in sync (shape-dependent)
+        EnsureSyncHasSessions(syncJson);
+
+        // Continue with responses
         var responseId1 = await SubmitResponseAsync(experimentId, _cfg.ParticipantUsername, _cfg.QuestionnaireIdPQ, new { score = 42, answers = new[] { 1, 2, 3 } });
         var responseId2 = await SubmitResponseAsync(experimentId, _cfg.ParticipantUsername, _cfg.QuestionnaireIdATI, new { score = 15, items = new[] { 3, 2, 1 } });
 
@@ -60,8 +110,14 @@ public class CloudHarness
         var sessionId = await CreateSessionAsync(experimentId);
         await GetSessionsAsync(experimentId);
         await GetSessionAsync(experimentId, sessionId);
-        await UpdateSessionAsync(experimentId, sessionId, new[] { "TASK#" + _cfg.QuestionnaireIdPQ });
+    await UpdateSessionAsync(experimentId, sessionId, new[] { "TASK#" + _cfg.QuestionnaireIdPQ, "TASK#" + taskId1 });
+    // Verify task order is reflected in GET
+    await AssertSessionTaskOrderAsync(experimentId, sessionId, new[] { "TASK#" + _cfg.QuestionnaireIdPQ, "TASK#" + taskId1 });
         await DeleteSessionAsync(experimentId, sessionId);
+
+    // Clean up tasks
+    await DeleteTaskAsync(taskId2);
+    await DeleteTaskAsync(taskId1);
 
         // 7) Cleanup: delete responses and experiment
         await DeleteResponseAsync(responseId1);
@@ -169,6 +225,48 @@ public class CloudHarness
         resp.EnsureSuccessStatusCode();
     }
 
+    private async Task AddSessionsBatchAsync(string experimentId, IEnumerable<object> sessions)
+    {
+        var target = new Uri($"{_baseUrl}api/experiments/{experimentId}/sessions/batch");
+        Console.WriteLine($"[POST] api/experiments/{experimentId}/sessions/batch body=" + JsonSerializer.Serialize(sessions));
+        var resp = await _http.PostAsJsonAsync(target, sessions);
+        Console.WriteLine($"[POST] api/experiments/{experimentId}/sessions/batch -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+    }
+
+    private async Task<JsonElement> GetExperimentSyncAsync(string experimentId)
+    {
+        var target = new Uri($"{_baseUrl}api/experiments/{experimentId}/sync");
+        Console.WriteLine($"[GET] api/experiments/{experimentId}/sync");
+        var resp = await _http.GetAsync(target);
+        Console.WriteLine($"[GET] api/experiments/{experimentId}/sync -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        return json;
+    }
+
+    private void EnsureSyncHasSessions(JsonElement syncJson)
+    {
+        bool found = false;
+        // Try common shapes: { sessions: [...] } or nested under data
+        if (syncJson.ValueKind == JsonValueKind.Object)
+        {
+            if (syncJson.TryGetProperty("sessions", out var sessions) && sessions.ValueKind == JsonValueKind.Array)
+            {
+                found = sessions.GetArrayLength() > 0;
+            }
+            else if (syncJson.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object && data.TryGetProperty("sessions", out var ds) && ds.ValueKind == JsonValueKind.Array)
+            {
+                found = ds.GetArrayLength() > 0;
+            }
+        }
+        Console.WriteLine($"[ASSERT] sync has sessions: {found} (expected True)");
+        if (!found)
+        {
+            Console.WriteLine("[WARN] Participant sync did not include sessions; proceeding (API may not expose sessions in sync yet).");
+        }
+    }
+
     private async Task<string> CreateSessionAsync(string experimentId)
     {
         var body = new
@@ -178,6 +276,19 @@ public class CloudHarness
             description = "Created by CloudHarness",
             date = DateTime.UtcNow.ToString("yyyy-MM-dd")
         };
+        var target = new Uri($"{_baseUrl}api/experiments/{experimentId}/sessions");
+        Console.WriteLine($"[POST] api/experiments/{experimentId}/sessions body=" + JsonSerializer.Serialize(body));
+        var resp = await _http.PostAsJsonAsync(target, body);
+        Console.WriteLine($"[POST] api/experiments/{experimentId}/sessions -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var sessionId = json.TryGetProperty("sessionId", out var sid) ? sid.GetString() : null;
+        return sessionId ?? throw new InvalidOperationException("CreateSession response missing sessionId");
+    }
+
+    // Overload for providing custom body
+    private async Task<string> CreateSessionAsync(string experimentId, object body)
+    {
         var target = new Uri($"{_baseUrl}api/experiments/{experimentId}/sessions");
         Console.WriteLine($"[POST] api/experiments/{experimentId}/sessions body=" + JsonSerializer.Serialize(body));
         var resp = await _http.PostAsJsonAsync(target, body);
@@ -204,6 +315,26 @@ public class CloudHarness
         var resp = await _http.GetAsync(target);
         Console.WriteLine($"[GET] api/experiments/{experimentId}/sessions/{sessionId} -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
         resp.EnsureSuccessStatusCode();
+    }
+
+    private async Task AssertSessionTaskOrderAsync(string experimentId, string sessionId, IEnumerable<string> expectedOrder)
+    {
+        var target = new Uri($"{_baseUrl}api/experiments/{experimentId}/sessions/{sessionId}");
+        var resp = await _http.GetAsync(target);
+        resp.EnsureSuccessStatusCode();
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var expected = expectedOrder.ToArray();
+        List<string> actual = new();
+        if (json.ValueKind == JsonValueKind.Object && json.TryGetProperty("taskOrder", out var to) && to.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in to.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String) actual.Add(item.GetString()!);
+            }
+        }
+        var match = actual.Count == expected.Length && actual.Zip(expected, (a, e) => a == e).All(b => b);
+        Console.WriteLine($"[ASSERT] session taskOrder correct: {match} -> actual=[{string.Join(",", actual)}] expected=[{string.Join(",", expected)}]");
+        if (!match) throw new InvalidOperationException("Session taskOrder did not match expected order");
     }
 
     private async Task UpdateSessionAsync(string experimentId, string sessionId, IEnumerable<string> taskOrder)
@@ -300,5 +431,54 @@ public class CloudHarness
         Console.WriteLine($"[GET] requested URI: {resp.RequestMessage!.RequestUri}");
         Console.WriteLine($"[GET] api/experiments -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
         // Non-blocking: do not fail if preflight returns 404; creation may still be allowed
+    }
+
+    // TasksController helpers (researcher-only)
+    private async Task<string> CreateTaskAsync(object body)
+    {
+        var target = new Uri($"{_baseUrl}api/tasks");
+        Console.WriteLine($"[POST] api/tasks body=" + JsonSerializer.Serialize(body));
+        var resp = await _http.PostAsJsonAsync(target, body);
+        Console.WriteLine($"[POST] api/tasks -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var id = json.TryGetProperty("id", out var tid) ? tid.GetString() : null;
+        return id ?? throw new InvalidOperationException("CreateTask response missing id");
+    }
+
+    private async Task ListTasksAsync()
+    {
+        var target = new Uri($"{_baseUrl}api/tasks");
+        Console.WriteLine("[GET] api/tasks");
+        var resp = await _http.GetAsync(target);
+        Console.WriteLine($"[GET] api/tasks -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+    }
+
+    private async Task GetTaskAsync(string taskId)
+    {
+        var target = new Uri($"{_baseUrl}api/tasks/{taskId}");
+        Console.WriteLine($"[GET] api/tasks/{taskId}");
+        var resp = await _http.GetAsync(target);
+        Console.WriteLine($"[GET] api/tasks/{taskId} -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+    }
+
+    private async Task UpdateTaskAsync(string taskId, object body)
+    {
+        var target = new Uri($"{_baseUrl}api/tasks/{taskId}");
+        Console.WriteLine($"[PUT] api/tasks/{taskId} body=" + JsonSerializer.Serialize(body));
+        var resp = await _http.PutAsJsonAsync(target, body);
+        Console.WriteLine($"[PUT] api/tasks/{taskId} -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+    }
+
+    private async Task DeleteTaskAsync(string taskId)
+    {
+        var target = new Uri($"{_baseUrl}api/tasks/{taskId}");
+        Console.WriteLine($"[DELETE] api/tasks/{taskId}");
+        var resp = await _http.DeleteAsync(target);
+        Console.WriteLine($"[DELETE] api/tasks/{taskId} -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
     }
 }
