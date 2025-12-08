@@ -4,6 +4,7 @@ using Moq;
 using AI4NGExperimentsLambda.Controllers;
 using AI4NGExperimentsLambda.Interfaces;
 using AI4NGExperimentsLambda.Models;
+using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
 
@@ -175,7 +176,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ExperimentsControll
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentService>(
             (service, auth) => new ExperimentsController(service, auth));
 
-        var members = new List<object> { new { userSub = "user123", role = "participant" } };
+        var members = new List<MemberDto> { new MemberDto { Username = "user123", Role = "participant" } };
         mockService.Setup(x => x.GetExperimentMembersAsync("test-id", null, null, null)).ReturnsAsync(members);
 
         // Act

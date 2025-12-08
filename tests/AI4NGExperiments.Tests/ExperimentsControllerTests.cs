@@ -7,6 +7,7 @@ using AI4NGExperimentsLambda.Interfaces;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
+using AI4NGExperimentsLambda.Models.Dtos;
 
 namespace AI4NGExperiments.Tests;
 
@@ -84,10 +85,10 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
     {
         // Arrange
         var (mockService, controller, _) = CreateController();
-        var members = new List<object>
+        var members = new List<MemberDto>
         {
-            new { userSub = "user-1", role = "participant" },
-            new { userSub = "user-2", role = "researcher" }
+            new MemberDto { Username = "user-1", Role = "participant" },
+            new MemberDto { Username = "user-2", Role = "researcher" }
         };
         mockService.Setup(x => x.GetExperimentMembersAsync(TestDataBuilder.TestUserId, null, null, null)).ReturnsAsync(members);
 

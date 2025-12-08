@@ -456,7 +456,7 @@ public class ExperimentService : IExperimentService
         };
     }
 
-    public async Task<IEnumerable<object>> GetExperimentMembersAsync(string experimentId, string? cohort = null, string? status = null, string? role = null)
+    public async Task<IEnumerable<MemberDto>> GetExperimentMembersAsync(string experimentId, string? cohort = null, string? status = null, string? role = null)
     {
         var response = await _dynamoClient.QueryAsync(new QueryRequest
         {
@@ -469,21 +469,21 @@ public class ExperimentService : IExperimentService
             }
         });
 
-        var list = response.Items.Select(item => new
+        var list = response.Items.Select(item => new MemberDto
         {
-            username = item["SK"].S.Replace("MEMBER#", ""),
-            role = item.ContainsKey("role") ? item["role"].S : "participant",
-            status = item.ContainsKey("status") ? item["status"].S : "active",
-            cohort = item.ContainsKey("cohort") ? item["cohort"].S : string.Empty,
-            addedAt = item.ContainsKey("addedAt") ? item["addedAt"].S : null
+            Username = item["SK"].S.Replace("MEMBER#", ""),
+            Role = item.ContainsKey("role") ? item["role"].S : "participant",
+            Status = item.ContainsKey("status") ? item["status"].S : "active",
+            Cohort = item.ContainsKey("cohort") ? item["cohort"].S : string.Empty,
+            JoinedAt = item.ContainsKey("addedAt") ? item["addedAt"].S : null
         });
 
         if (!string.IsNullOrWhiteSpace(cohort))
-            list = list.Where(m => string.Equals(m.cohort, cohort, StringComparison.OrdinalIgnoreCase));
+            list = list.Where(m => string.Equals(m.Cohort, cohort, StringComparison.OrdinalIgnoreCase));
         if (!string.IsNullOrWhiteSpace(status))
-            list = list.Where(m => string.Equals(m.status, status, StringComparison.OrdinalIgnoreCase));
+            list = list.Where(m => string.Equals(m.Status, status, StringComparison.OrdinalIgnoreCase));
         if (!string.IsNullOrWhiteSpace(role))
-            list = list.Where(m => string.Equals(m.role, role, StringComparison.OrdinalIgnoreCase));
+            list = list.Where(m => string.Equals(m.Role, role, StringComparison.OrdinalIgnoreCase));
         return list;
     }
 
