@@ -167,7 +167,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ExperimentsControll
             (service, auth) => new ExperimentsController(service, auth));
 
         var members = new List<object> { new { userSub = "user123", role = "participant" } };
-        mockService.Setup(x => x.GetExperimentMembersAsync("test-id")).ReturnsAsync(members);
+        mockService.Setup(x => x.GetExperimentMembersAsync("test-id", null, null, null)).ReturnsAsync(members);
 
         // Act
         var result = await controller.GetMembers("test-id");

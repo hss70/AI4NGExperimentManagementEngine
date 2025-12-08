@@ -55,7 +55,15 @@ public class CloudHarness
         // 5) Verify retrieval
         await VerifyResponsesAsync(experimentId, _cfg.ParticipantUsername, responseId1, responseId2);
 
-        // 6) Cleanup: delete responses and experiment
+        // 6) Create a session (researcher-only), then update it (add a task order), then delete it
+        setAuth(researcherJwt);
+        var sessionId = await CreateSessionAsync(experimentId);
+        await GetSessionsAsync(experimentId);
+        await GetSessionAsync(experimentId, sessionId);
+        await UpdateSessionAsync(experimentId, sessionId, new[] { "TASK#" + _cfg.QuestionnaireIdPQ });
+        await DeleteSessionAsync(experimentId, sessionId);
+
+        // 7) Cleanup: delete responses and experiment
         await DeleteResponseAsync(responseId1);
         await DeleteResponseAsync(responseId2);
         // Back to researcher for cleanup
@@ -158,6 +166,66 @@ public class CloudHarness
         var target = new Uri($"{_baseUrl}api/experiments/{experimentId}");
         var resp = await _http.DeleteAsync(target);
         Console.WriteLine($"[DELETE] api/experiments/{experimentId} -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+    }
+
+    private async Task<string> CreateSessionAsync(string experimentId)
+    {
+        var body = new
+        {
+            sessionType = "DAILY",
+            sessionName = "Harness Daily Session",
+            description = "Created by CloudHarness",
+            date = DateTime.UtcNow.ToString("yyyy-MM-dd")
+        };
+        var target = new Uri($"{_baseUrl}api/experiments/{experimentId}/sessions");
+        Console.WriteLine($"[POST] api/experiments/{experimentId}/sessions body=" + JsonSerializer.Serialize(body));
+        var resp = await _http.PostAsJsonAsync(target, body);
+        Console.WriteLine($"[POST] api/experiments/{experimentId}/sessions -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var sessionId = json.TryGetProperty("sessionId", out var sid) ? sid.GetString() : null;
+        return sessionId ?? throw new InvalidOperationException("CreateSession response missing sessionId");
+    }
+
+    private async Task GetSessionsAsync(string experimentId)
+    {
+        var target = new Uri($"{_baseUrl}api/experiments/{experimentId}/sessions");
+        Console.WriteLine($"[GET] api/experiments/{experimentId}/sessions");
+        var resp = await _http.GetAsync(target);
+        Console.WriteLine($"[GET] api/experiments/{experimentId}/sessions -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+    }
+
+    private async Task GetSessionAsync(string experimentId, string sessionId)
+    {
+        var target = new Uri($"{_baseUrl}api/experiments/{experimentId}/sessions/{sessionId}");
+        Console.WriteLine($"[GET] api/experiments/{experimentId}/sessions/{sessionId}");
+        var resp = await _http.GetAsync(target);
+        Console.WriteLine($"[GET] api/experiments/{experimentId}/sessions/{sessionId} -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+    }
+
+    private async Task UpdateSessionAsync(string experimentId, string sessionId, IEnumerable<string> taskOrder)
+    {
+        var body = new
+        {
+            taskOrder = taskOrder,
+            status = "updated"
+        };
+        var target = new Uri($"{_baseUrl}api/experiments/{experimentId}/sessions/{sessionId}");
+        Console.WriteLine($"[PUT] api/experiments/{experimentId}/sessions/{sessionId} body=" + JsonSerializer.Serialize(body));
+        var resp = await _http.PutAsJsonAsync(target, body);
+        Console.WriteLine($"[PUT] api/experiments/{experimentId}/sessions/{sessionId} -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        resp.EnsureSuccessStatusCode();
+    }
+
+    private async Task DeleteSessionAsync(string experimentId, string sessionId)
+    {
+        var target = new Uri($"{_baseUrl}api/experiments/{experimentId}/sessions/{sessionId}");
+        Console.WriteLine($"[DELETE] api/experiments/{experimentId}/sessions/{sessionId}");
+        var resp = await _http.DeleteAsync(target);
+        Console.WriteLine($"[DELETE] api/experiments/{experimentId}/sessions/{sessionId} -> {(int)resp.StatusCode} {resp.ReasonPhrase}");
         resp.EnsureSuccessStatusCode();
     }
 

@@ -89,11 +89,11 @@ public class ExperimentsControllerTests : ControllerTestBase<ExperimentsControll
             new { userSub = "user-1", role = "participant" },
             new { userSub = "user-2", role = "researcher" }
         };
-        mockService.Setup(x => x.GetExperimentMembersAsync(TestDataBuilder.TestUserId)).ReturnsAsync(members);
+        mockService.Setup(x => x.GetExperimentMembersAsync(TestDataBuilder.TestUserId, null, null, null)).ReturnsAsync(members);
 
         // Act
         var result = await controller.GetMembers(TestDataBuilder.TestUserId);
-
+        
         // Assert
         var ok = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(members, ok.Value);

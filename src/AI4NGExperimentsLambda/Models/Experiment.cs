@@ -6,6 +6,8 @@ public class Experiment
     public ExperimentData Data { get; set; } = new();
     public QuestionnaireConfig QuestionnaireConfig { get; set; } = new();
     public List<Session> Sessions { get; set; } = new();
+    // Optional: seed sessions to be created during experiment creation
+    public List<InitialSessionRequest>? InitialSessions { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
 }
@@ -101,7 +103,27 @@ public class CreateTaskRequest
     public int EstimatedDuration { get; set; }
 }
 
+// For creating sessions as part of experiment creation
+public class InitialSessionRequest
+{
+    public string SessionType { get; set; } = string.Empty;
+    // If not provided, service may default to date-based sessionId (e.g., yyyy-MM-dd)
+    public string? SessionId { get; set; }
+    public string Date { get; set; } = string.Empty;
+    public List<string>? TaskOrder { get; set; }
+}
+
 public class MemberRequest
 {
     public string Role { get; set; } = string.Empty;
+    public string Status { get; set; } = "active";
+    public string Cohort { get; set; } = string.Empty;
+}
+
+public class MemberBatchItem
+{
+    public string Username { get; set; } = string.Empty;
+    public string Role { get; set; } = "participant";
+    public string Status { get; set; } = "active";
+    public string Cohort { get; set; } = string.Empty;
 }

@@ -175,12 +175,12 @@ namespace AI4NGExperimentsLambda.Controllers
         /// Retrieves all members of a given experiment (researcher-only).
         /// </summary>
         [HttpGet("{experimentId}/members")]
-        public async Task<IActionResult> GetMembers(string experimentId)
+        public async Task<IActionResult> GetMembers(string experimentId, [FromQuery] string? cohort = null, [FromQuery] string? status = null, [FromQuery] string? role = null)
         {
             try
             {
                 RequireResearcher();
-                var members = await _experimentService.GetExperimentMembersAsync(experimentId);
+                var members = await _experimentService.GetExperimentMembersAsync(experimentId, cohort, status, role);
                 return Ok(members);
             }
             catch (Exception ex)
@@ -205,6 +205,25 @@ namespace AI4NGExperimentsLambda.Controllers
             catch (Exception ex)
             {
                 return HandleException(ex, "adding experiment member");
+            }
+        }
+
+        /// <summary>
+        /// Adds multiple members to an experiment (researcher-only).
+        /// </summary>
+        [HttpPost("{experimentId}/members/batch")]
+        public async Task<IActionResult> AddMembersBatch(string experimentId, [FromBody] List<MemberBatchItem> members)
+        {
+            try
+            {
+                RequireResearcher();
+                var username = GetAuthenticatedUsername();
+                await _experimentService.AddMembersAsync(experimentId, members, username);
+                return Ok(new { message = "Members added successfully", count = members?.Count ?? 0 });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, "adding experiment members batch");
             }
         }
 

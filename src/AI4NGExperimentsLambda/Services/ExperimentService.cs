@@ -65,6 +65,8 @@ public class ExperimentService : IExperimentService
         {
             username = m["SK"].S.Replace("MEMBER#", ""),
             role = m.ContainsKey("role") ? m["role"].S : "participant",
+            status = m.ContainsKey("status") ? m["status"].S : "active",
+            cohort = m.ContainsKey("cohort") ? m["cohort"].S : string.Empty,
             addedAt = m.ContainsKey("addedAt") ? m["addedAt"].S : null
         });
 
@@ -169,6 +171,51 @@ public class ExperimentService : IExperimentService
             }
         });
 
+        // Optionally create initial sessions
+        if (experiment.InitialSessions != null && experiment.InitialSessions.Any())
+        {
+            foreach (var seed in experiment.InitialSessions)
+            {
+                var sessionId = !string.IsNullOrWhiteSpace(seed.SessionId)
+                    ? seed.SessionId!
+                    : (!string.IsNullOrWhiteSpace(seed.Date) ? seed.Date : DateTime.UtcNow.ToString("yyyy-MM-dd"));
+
+                // Derive taskOrder from session type if not provided
+                List<string> taskOrder = seed.TaskOrder ?? new List<string>();
+                if (taskOrder.Count == 0 && experiment.Data.SessionTypes != null && experiment.Data.SessionTypes.TryGetValue(seed.SessionType, out var st))
+                {
+                    taskOrder = st.Tasks.Select(t => t.StartsWith("TASK#") ? t : $"TASK#{t}").ToList();
+                }
+
+                var sessionData = new SessionData
+                {
+                    Date = string.IsNullOrWhiteSpace(seed.Date) ? sessionId : seed.Date,
+                    SessionType = seed.SessionType,
+                    SessionName = $"{seed.SessionType} Session",
+                    Description = "Seeded at experiment creation",
+                    Status = "scheduled",
+                    UserId = username
+                };
+
+                await _dynamoClient.PutItemAsync(new PutItemRequest
+                {
+                    TableName = _experimentsTable,
+                    Item = new Dictionary<string, AttributeValue>
+                    {
+                        ["PK"] = new($"SESSION#{experimentId}#{sessionId}"),
+                        ["SK"] = new("METADATA"),
+                        ["GSI1PK"] = new($"EXPERIMENT#{experimentId}"),
+                        ["GSI1SK"] = new($"SESSION#{experimentId}#{sessionId}"),
+                        ["type"] = new("Session"),
+                        ["data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(sessionData)) },
+                        ["taskOrder"] = new AttributeValue { L = taskOrder.Select(x => new AttributeValue(x)).ToList() },
+                        ["createdAt"] = new(DateTime.UtcNow.ToString("O")),
+                        ["updatedAt"] = new(DateTime.UtcNow.ToString("O"))
+                    }
+                });
+            }
+        }
+
         return new { id = experimentId };
     }
 
@@ -266,7 +313,7 @@ public class ExperimentService : IExperimentService
         };
     }
 
-    public async Task<IEnumerable<object>> GetExperimentMembersAsync(string experimentId)
+    public async Task<IEnumerable<object>> GetExperimentMembersAsync(string experimentId, string? cohort = null, string? status = null, string? role = null)
     {
         var response = await _dynamoClient.QueryAsync(new QueryRequest
         {
@@ -279,12 +326,23 @@ public class ExperimentService : IExperimentService
             }
         });
 
-        return response.Items.Select(item => new
+        var list = response.Items.Select(item => new
         {
             participantUsername = item["SK"].S.Replace("MEMBER#", ""),
-            role = item["role"]?.S ?? "participant",
-            addedAt = item["addedAt"]?.S
+            role = item.ContainsKey("role") ? item["role"].S : "participant",
+            status = item.ContainsKey("status") ? item["status"].S : "active",
+            cohort = item.ContainsKey("cohort") ? item["cohort"].S : string.Empty,
+            addedAt = item.ContainsKey("addedAt") ? item["addedAt"].S : null
         });
+
+        if (!string.IsNullOrWhiteSpace(cohort))
+            list = list.Where(m => string.Equals(m.cohort, cohort, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(status))
+            list = list.Where(m => string.Equals(m.status, status, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(role))
+            list = list.Where(m => string.Equals(m.role, role, StringComparison.OrdinalIgnoreCase));
+
+        return list;
     }
 
     public async Task AddMemberAsync(string experimentId, string participantUsername, MemberRequest memberData, string username)
@@ -298,6 +356,8 @@ public class ExperimentService : IExperimentService
                 ["SK"] = new($"MEMBER#{participantUsername}"),
                 ["type"] = new("Member"),
                 ["role"] = new(memberData.Role),
+                ["status"] = new(memberData.Status ?? "active"),
+                ["cohort"] = new(string.IsNullOrWhiteSpace(memberData.Cohort) ? "" : memberData.Cohort),
                 ["addedBy"] = new(username),
                 ["addedAt"] = new(DateTime.UtcNow.ToString("O")),
                 // Add GSI entries to support listing by user
@@ -305,6 +365,16 @@ public class ExperimentService : IExperimentService
                 ["GSI1SK"] = new($"EXPERIMENT#{experimentId}")
             }
         });
+    }
+
+    public async Task AddMembersAsync(string experimentId, IEnumerable<MemberBatchItem> members, string username)
+    {
+        // Simple sequential writes; switch to BatchWriteItem for large batches if needed
+        foreach (var m in members)
+        {
+            var req = new MemberRequest { Role = m.Role, Status = m.Status, Cohort = m.Cohort };
+            await AddMemberAsync(experimentId, m.Username, req, username);
+        }
     }
 
     public async Task RemoveMemberAsync(string experimentId, string participantUsername, string username)
@@ -408,6 +478,18 @@ public class ExperimentService : IExperimentService
         });
 
         return new { sessionId = sessionId, experimentId = experimentId };
+    }
+
+    public async Task AddSessionsAsync(string experimentId, IEnumerable<CreateSessionRequest> sessions, string username)
+    {
+        if (sessions == null) return;
+        foreach (var s in sessions)
+        {
+            // Ensure experimentId consistency
+            s.ExperimentId = experimentId;
+            // Create is idempotent on the PK; will overwrite metadata if same sessionId
+            await CreateSessionAsync(experimentId, s, username);
+        }
     }
 
     public async Task UpdateSessionAsync(string experimentId, string sessionId, SessionData data, string username)
