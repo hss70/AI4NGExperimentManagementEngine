@@ -50,45 +50,58 @@ public class CloudHarness
         setAuth(participantJwt);
         await EnsureMyExperimentsContainsAsync(experimentId, expectedContains: true);
 
-        // 4a) As researcher, create tasks and verify CRUD
+        // 4a) As researcher, create a pool of tasks (10 total, some reused) including questionnaires, training, and free-play
         setAuth(researcherJwt);
-        var taskId1 = await CreateTaskAsync(new { name = "EEG Training", type = "eeg_training", description = "EEG training block", estimatedDuration = 300 });
-        var taskId2 = await CreateTaskAsync(new { name = "Trait Questionnaire Bank", type = "questionnaire_batch", description = "Trait questionnaires", estimatedDuration = 120 });
-        await ListTasksAsync();
-        await GetTaskAsync(taskId1);
-        await UpdateTaskAsync(taskId1, new { data = new { name = "EEG Training Updated" } });
+        var trainingTask = await CreateTaskAsync(new { name = "EEG Training", type = "training", description = "EEG training block", estimatedDuration = 300 });
+        var freePlayTask = await CreateTaskAsync(new { name = "Free Play", type = "free_play", description = "Unstructured play", estimatedDuration = 600 });
+        var sharedQuestionnaireTask = await CreateTaskAsync(new { name = "Shared Questionnaire", type = "questionnaire", description = "Shared questionnaire across sessions", data = new { questionnaireId = _cfg.QuestionnaireIdPQ } });
+        var firstUniqueQuestionnaireTask = await CreateTaskAsync(new { name = "First Session Questionnaire", type = "questionnaire", description = "Unique to first session", data = new { questionnaireId = _cfg.QuestionnaireIdATI } });
+        var weeklyUniqueQuestionnaireTask = await CreateTaskAsync(new { name = "Weekly Session Questionnaire", type = "questionnaire", description = "Unique to weekly session", data = new { questionnaireId = _cfg.QuestionnaireIdPQ } });
+        var dailyUniqueQuestionnaireTask = await CreateTaskAsync(new { name = "Daily Session Questionnaire", type = "questionnaire", description = "Unique to daily session", data = new { questionnaireId = _cfg.QuestionnaireIdATI } });
+        var reactionTimeTask = await CreateTaskAsync(new { name = "Reaction Time", type = "cognitive", description = "RT task", estimatedDuration = 180 });
+        var memorySpanTask = await CreateTaskAsync(new { name = "Memory Span", type = "cognitive", description = "Memory span task", estimatedDuration = 240 });
+        var visualSearchTask = await CreateTaskAsync(new { name = "Visual Search", type = "cognitive", description = "Visual search", estimatedDuration = 200 });
+        var moodSurveyTask = await CreateTaskAsync(new { name = "Mood Survey", type = "questionnaire", description = "Mood survey", data = new { questionnaireId = _cfg.QuestionnaireIdPQ } });
 
-        // 4b) As researcher, add a batch of sessions to the experiment
+        // Optional sanity checks on tasks
+        await ListTasksAsync();
+        await GetTaskAsync(trainingTask);
+        await UpdateTaskAsync(trainingTask, new { data = new { name = "EEG Training (Updated)" } });
+
+        // 4b) As researcher, create three session types (FIRST, WEEKLY, DAILY), each with 5 tasks (mix of shared and unique)
         setAuth(researcherJwt);
         var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var nextWeek = DateTime.UtcNow.AddDays(7).ToString("yyyy-MM-dd");
         var tomorrow = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd");
-        try
+        var firstSessionId = await CreateSessionAsync(experimentId, new { sessionType = "FIRST", sessionName = "First Session", description = "Onboarding session", date = today });
+        var weeklySessionId = await CreateSessionAsync(experimentId, new { sessionType = "WEEKLY", sessionName = "Weekly Session", description = "Weekly check-in", date = nextWeek });
+        var dailySessionId = await CreateSessionAsync(experimentId, new { sessionType = "DAILY", sessionName = "Daily Session", description = "Daily practice", date = tomorrow });
+
+        // Populate task orders (5 tasks each)
+        await UpdateSessionAsync(experimentId, firstSessionId, new[]
         {
-            await AddSessionsBatchAsync(experimentId, new[]
-            {
-                new { sessionType = "DAILY", sessionName = "Harness Day 1", description = "Batch added", date = today },
-                new { sessionType = "DAILY", sessionName = "Harness Day 2", description = "Batch added", date = tomorrow }
-            });
-        }
-        catch (HttpRequestException ex)
+            $"TASK#{trainingTask}",
+            $"TASK#{sharedQuestionnaireTask}",
+            $"TASK#{firstUniqueQuestionnaireTask}",
+            $"TASK#{freePlayTask}",
+            $"TASK#{reactionTimeTask}"
+        });
+        await UpdateSessionAsync(experimentId, weeklySessionId, new[]
         {
-            Console.WriteLine($"[WARN] Batch endpoint unavailable ({ex.Message}). Falling back to single session POSTs...");
-            setAuth(researcherJwt);
-            await CreateSessionAsync(experimentId, new
-            {
-                sessionType = "DAILY",
-                sessionName = "Harness Day 1",
-                description = "Fallback single add",
-                date = today
-            });
-            await CreateSessionAsync(experimentId, new
-            {
-                sessionType = "DAILY",
-                sessionName = "Harness Day 2",
-                description = "Fallback single add",
-                date = tomorrow
-            });
-        }
+            $"TASK#{trainingTask}",
+            $"TASK#{sharedQuestionnaireTask}",
+            $"TASK#{weeklyUniqueQuestionnaireTask}",
+            $"TASK#{freePlayTask}",
+            $"TASK#{memorySpanTask}"
+        });
+        await UpdateSessionAsync(experimentId, dailySessionId, new[]
+        {
+            $"TASK#{trainingTask}",
+            $"TASK#{sharedQuestionnaireTask}",
+            $"TASK#{dailyUniqueQuestionnaireTask}",
+            $"TASK#{freePlayTask}",
+            $"TASK#{visualSearchTask}"
+        });
 
         // 4c) Switch to participant and ensure sync returns sessions and tasks
         setAuth(participantJwt);
@@ -105,19 +118,19 @@ public class CloudHarness
         // 5) Verify retrieval
         await VerifyResponsesAsync(experimentId, _cfg.ParticipantUsername, responseId1, responseId2);
 
-        // 6) Create a session (researcher-only), then update it (add a task order), then delete it
+        // 6) Verify session task orders are reflected in GET
         setAuth(researcherJwt);
-        var sessionId = await CreateSessionAsync(experimentId);
         await GetSessionsAsync(experimentId);
-        await GetSessionAsync(experimentId, sessionId);
-        await UpdateSessionAsync(experimentId, sessionId, new[] { "TASK#" + _cfg.QuestionnaireIdPQ, "TASK#" + taskId1 });
-        // Verify task order is reflected in GET
-        await AssertSessionTaskOrderAsync(experimentId, sessionId, new[] { "TASK#" + _cfg.QuestionnaireIdPQ, "TASK#" + taskId1 });
-        await DeleteSessionAsync(experimentId, sessionId);
+        await GetSessionAsync(experimentId, firstSessionId);
+        await AssertSessionTaskOrderAsync(experimentId, firstSessionId, new[] { $"TASK#{trainingTask}", $"TASK#{sharedQuestionnaireTask}", $"TASK#{firstUniqueQuestionnaireTask}", $"TASK#{freePlayTask}", $"TASK#{reactionTimeTask}" });
+        await AssertSessionTaskOrderAsync(experimentId, weeklySessionId, new[] { $"TASK#{trainingTask}", $"TASK#{sharedQuestionnaireTask}", $"TASK#{weeklyUniqueQuestionnaireTask}", $"TASK#{freePlayTask}", $"TASK#{memorySpanTask}" });
+        await AssertSessionTaskOrderAsync(experimentId, dailySessionId, new[] { $"TASK#{trainingTask}", $"TASK#{sharedQuestionnaireTask}", $"TASK#{dailyUniqueQuestionnaireTask}", $"TASK#{freePlayTask}", $"TASK#{visualSearchTask}" });
 
-        // Clean up tasks
-        await DeleteTaskAsync(taskId2);
-        await DeleteTaskAsync(taskId1);
+        // Clean up tasks (optional; keep if environment requires cleanup)
+        foreach (var taskId in new[] { moodSurveyTask, visualSearchTask, memorySpanTask, reactionTimeTask, dailyUniqueQuestionnaireTask, weeklyUniqueQuestionnaireTask, firstUniqueQuestionnaireTask, sharedQuestionnaireTask, freePlayTask, trainingTask })
+        {
+            await DeleteTaskAsync(taskId);
+        }
 
         // 7) Cleanup: delete responses and experiment
         await DeleteResponseAsync(responseId1);

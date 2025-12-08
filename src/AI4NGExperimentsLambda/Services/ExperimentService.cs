@@ -290,6 +290,93 @@ public class ExperimentService : IExperimentService
 
         var sessions = sessionsQuery.Items ?? new List<Dictionary<string, AttributeValue>>();
 
+        // Build session DTOs and collect referenced task IDs
+        var sessionDtos = new List<object>();
+        var referencedTaskIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var s in sessions)
+        {
+            var sid = s.GetValueOrDefault("GSI1SK")?.S?.Split('#').Last();
+            var sdata = DynamoDBHelper.ConvertAttributeValueToObject(s.GetValueOrDefault("data"));
+            var taskOrderAttr = s.GetValueOrDefault("taskOrder");
+            var taskOrder = DynamoDBHelper.ConvertAttributeValueToObject(taskOrderAttr) as List<string> ?? new List<string>();
+            foreach (var t in taskOrder)
+            {
+                if (t.StartsWith("TASK#")) referencedTaskIds.Add(t.Substring(5));
+            }
+            sessionDtos.Add(new
+            {
+                sessionId = sid,
+                data = sdata,
+                taskOrder = taskOrder,
+                createdAt = s.GetValueOrDefault("createdAt")?.S,
+                updatedAt = s.GetValueOrDefault("updatedAt")?.S
+            });
+        }
+
+        // Fetch tasks referenced by sessions in a BatchGet
+        var tasks = new List<object>();
+        if (referencedTaskIds.Count > 0)
+        {
+            var keys = referencedTaskIds.Select(id => new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new($"TASK#{id}"),
+                ["SK"] = new("METADATA")
+            }).ToList();
+
+            var batchReq = new BatchGetItemRequest
+            {
+                RequestItems = new Dictionary<string, KeysAndAttributes>
+                {
+                    [_experimentsTable] = new KeysAndAttributes
+                    {
+                        Keys = keys,
+                        ProjectionExpression = "PK, data, createdAt, updatedAt"
+                    }
+                }
+            };
+
+            var batchResp = await _dynamoClient.BatchGetItemAsync(batchReq);
+            if (batchResp.Responses.TryGetValue(_experimentsTable, out var taskItems))
+            {
+                foreach (var item in taskItems)
+                {
+                    var id = item["PK"].S.Replace("TASK#", "");
+                    tasks.Add(new
+                    {
+                        id,
+                        data = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data")),
+                        createdAt = item.GetValueOrDefault("createdAt")?.S,
+                        updatedAt = item.GetValueOrDefault("updatedAt")?.S
+                    });
+                }
+            }
+        }
+
+        // Aggregate questionnaires needed: from experiment data and task configurations
+        var questionnaireIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var expDataElem = experiment.GetValueOrDefault("data");
+        var expDataObj = DynamoDBHelper.ConvertAttributeValueToObject(expDataElem) as Dictionary<string, object> ?? new Dictionary<string, object>();
+        if (expDataObj.TryGetValue("questionnaireIds", out var qidsObj) && qidsObj is IEnumerable<object> qarr)
+        {
+            foreach (var q in qarr)
+                if (q is string qs && !string.IsNullOrWhiteSpace(qs)) questionnaireIds.Add(qs);
+        }
+        foreach (var t in tasks)
+        {
+            var tdict = t as IDictionary<string, object>;
+            if (tdict != null && tdict.TryGetValue("data", out var tdataObj) && tdataObj is IDictionary<string, object> tdata)
+            {
+                if (tdata.TryGetValue("Configuration", out var cfgObj) && cfgObj is IDictionary<string, object> cfg)
+                {
+                    if (cfg.TryGetValue("questionnaireId", out var qidObj) && qidObj is string qid && !string.IsNullOrWhiteSpace(qid))
+                        questionnaireIds.Add(qid);
+                }
+                // Also support flat questionnaireId
+                if (tdata.TryGetValue("questionnaireId", out var flatQidObj) && flatQidObj is string fqid && !string.IsNullOrWhiteSpace(fqid))
+                    questionnaireIds.Add(fqid);
+            }
+        }
+
         return new
         {
             experiment = experiment != null ? new
@@ -299,14 +386,9 @@ public class ExperimentService : IExperimentService
                 questionnaireConfig = DynamoDBHelper.ConvertAttributeValueToObject(experiment.GetValueOrDefault("questionnaireConfig")),
                 updatedAt = experiment.GetValueOrDefault("updatedAt")?.S
             } : null,
-            sessions = sessions.Select(s => new
-            {
-                sessionId = s.GetValueOrDefault("GSI1SK")?.S?.Split('#').Last(),
-                data = DynamoDBHelper.ConvertAttributeValueToObject(s.GetValueOrDefault("data")),
-                taskOrder = DynamoDBHelper.ConvertAttributeValueToObject(s.GetValueOrDefault("taskOrder")) ?? new List<string>(),
-                createdAt = s.GetValueOrDefault("createdAt")?.S,
-                updatedAt = s.GetValueOrDefault("updatedAt")?.S
-            }),
+            sessions = sessionDtos,
+            tasks,
+            questionnaires = questionnaireIds.ToArray(),
             syncTimestamp = DateTime.UtcNow.ToString("O")
         };
     }
