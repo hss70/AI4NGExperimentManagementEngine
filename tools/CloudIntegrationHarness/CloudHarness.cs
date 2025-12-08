@@ -110,14 +110,14 @@ public class CloudHarness
         var sessionId = await CreateSessionAsync(experimentId);
         await GetSessionsAsync(experimentId);
         await GetSessionAsync(experimentId, sessionId);
-    await UpdateSessionAsync(experimentId, sessionId, new[] { "TASK#" + _cfg.QuestionnaireIdPQ, "TASK#" + taskId1 });
-    // Verify task order is reflected in GET
-    await AssertSessionTaskOrderAsync(experimentId, sessionId, new[] { "TASK#" + _cfg.QuestionnaireIdPQ, "TASK#" + taskId1 });
+        await UpdateSessionAsync(experimentId, sessionId, new[] { "TASK#" + _cfg.QuestionnaireIdPQ, "TASK#" + taskId1 });
+        // Verify task order is reflected in GET
+        await AssertSessionTaskOrderAsync(experimentId, sessionId, new[] { "TASK#" + _cfg.QuestionnaireIdPQ, "TASK#" + taskId1 });
         await DeleteSessionAsync(experimentId, sessionId);
 
-    // Clean up tasks
-    await DeleteTaskAsync(taskId2);
-    await DeleteTaskAsync(taskId1);
+        // Clean up tasks
+        await DeleteTaskAsync(taskId2);
+        await DeleteTaskAsync(taskId1);
 
         // 7) Cleanup: delete responses and experiment
         await DeleteResponseAsync(responseId1);
