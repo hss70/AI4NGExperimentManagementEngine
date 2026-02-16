@@ -361,14 +361,19 @@ public class QuestionnaireService : IQuestionnaireService
 
                         if (q.Scale != null)
                         {
-                            qMap["scale"] = new AttributeValue
+                            var scaleMap = new Dictionary<string, AttributeValue>
                             {
-                                M = new Dictionary<string, AttributeValue>
-                                {
-                                    ["min"] = new AttributeValue { N = q.Scale.Min.ToString() },
-                                    ["max"] = new AttributeValue { N = q.Scale.Max.ToString() }
-                                }
+                                ["min"] = new AttributeValue { N = q.Scale.Min.ToString() },
+                                ["max"] = new AttributeValue { N = q.Scale.Max.ToString() },
                             };
+
+                            if (!string.IsNullOrWhiteSpace(q.Scale.MinLabel))
+                                scaleMap["minLabel"] = new AttributeValue { S = q.Scale.MinLabel };
+
+                            if (!string.IsNullOrWhiteSpace(q.Scale.MaxLabel))
+                                scaleMap["maxLabel"] = new AttributeValue { S = q.Scale.MaxLabel };
+
+                            qMap["scale"] = new AttributeValue { M = scaleMap };
                         }
 
                         return new AttributeValue { M = qMap };
@@ -400,7 +405,9 @@ public class QuestionnaireService : IQuestionnaireService
                     ? new Scale
                     {
                         Min = int.Parse(q.M["scale"].M.GetValueOrDefault("min")?.N ?? "0"),
-                        Max = int.Parse(q.M["scale"].M.GetValueOrDefault("max")?.N ?? "0")
+                        Max = int.Parse(q.M["scale"].M.GetValueOrDefault("max")?.N ?? "0"),
+                        MinLabel = q.M["scale"].M.GetValueOrDefault("minLabel")?.S,
+                        MaxLabel = q.M["scale"].M.GetValueOrDefault("maxLabel")?.S
                     }
                     : null
             }).ToList() ?? new()

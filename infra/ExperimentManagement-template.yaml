@@ -556,6 +556,14 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${QuestionnairesIntegration}
 
+  DeleteQuestionnaireRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: DELETE /api/questionnaires/{questionnaireId}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
   # Researcher Questionnaire Routes (Admin)
   CreateQuestionnaireResearcherRoute:
     Type: AWS::ApiGatewayV2::Route
