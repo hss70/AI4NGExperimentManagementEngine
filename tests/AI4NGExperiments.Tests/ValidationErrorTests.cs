@@ -66,11 +66,15 @@ public class ValidationErrorTests
         // Arrange
         var taskRequest = new CreateTaskRequest
         {
-            Name = "Test Task",
-            Type = "questionnaire",
-            Configuration = new Dictionary<string, object>
+            TaskKey = "TEST_TASK",
+            Data = new TaskData
             {
-                ["questionnaireId"] = "NonExistentQuestionnaire"
+                Name = "Test Task",
+                Type = "questionnaire",
+                Configuration = new Dictionary<string, object>
+                {
+                    ["questionnaireId"] = "NonExistentQuestionnaire"
+                }
             }
         };
 

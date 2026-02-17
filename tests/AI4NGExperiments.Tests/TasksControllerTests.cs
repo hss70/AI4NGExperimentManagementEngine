@@ -54,16 +54,18 @@ public class TasksControllerTests : ControllerTestBase<TasksController>
         var (mockService, controller, _) = CreateControllerWithMocks<ITaskService>(
             (service, auth) => new TasksController(service, auth));
 
-        var request = new CreateTaskRequest { Name = "Test Task" };
-        var createResult = new { taskId = "task1" };
-        mockService.Setup(x => x.CreateTaskAsync(request, TestDataBuilder.TestUsername)).ReturnsAsync(createResult);
+        var request = new CreateTaskRequest { TaskKey = "TEST_TASK", Data = new TaskData { Name = "Test Task" } };
+        dynamic createResult = new System.Dynamic.ExpandoObject();
+        ((IDictionary<string, object>)createResult)["id"] = "task1";
+        mockService.Setup(x => x.CreateTaskAsync(It.IsAny<CreateTaskRequest>(), It.IsAny<string>())).ReturnsAsync((object)createResult);
 
         // Act
         var result = await controller.Create(request);
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(createResult, okResult.Value);
+        var createdResult = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(result);
+        Assert.Equal(201, createdResult.StatusCode);
+        Assert.Equal(createResult, createdResult.Value);
     }
 
     [Fact]

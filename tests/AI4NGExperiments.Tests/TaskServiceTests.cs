@@ -20,6 +20,17 @@ public class TaskServiceTests
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
+        // Default GetItemAsync to return an item (questionnaires lookups) so questionnaire existence checks pass
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+            .ReturnsAsync(new GetItemResponse
+            {
+                IsItemSet = true,
+                Item = new Dictionary<string, AttributeValue>
+                {
+                    ["PK"] = new AttributeValue("QUESTIONNAIRE#exists")
+                }
+            });
+
         _service = new TaskService(_mockDynamoClient.Object);
     }
 
@@ -30,10 +41,13 @@ public class TaskServiceTests
         var request = new CreateTaskRequest
         {
             TaskKey = "TEST_TASK_KEY",
-            Name = "Test Task",
-            Type = "TRAIN_EEG",
-            Description = "Test description",
-            EstimatedDuration = 300
+            Data = new TaskData
+            {
+                Name = "Test Task",
+                Type = "Training",
+                Description = "Test description",
+                EstimatedDuration = 300
+            }
         };
 
         // Act
@@ -99,12 +113,12 @@ public class TaskServiceTests
     public async Task UpdateTaskAsync_ShouldCallUpdateItem()
     {
         // Arrange
-        var data = new TaskData { Name = "Updated Task" };
+        var data = new TaskData { Name = "Updated Task", Type = "Training" };
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .ReturnsAsync(new UpdateItemResponse());
 
         // Act
-        await _service.UpdateTaskAsync("task-1", data, "testuser");
+        await _service.UpdateTaskAsync("TASK1", data, "testuser");
 
         // Assert
         _mockDynamoClient.Verify(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default), Times.Once);
@@ -131,9 +145,14 @@ public class TaskServiceTests
         var request = new CreateTaskRequest
         {
             TaskKey = "pre_training_state_questionnaire",
-            Name = "Pre-Training State Questionnaire",
-            Type = "questionnaire",
-            Description = "Assesses emotional and cognitive readiness before BCI training."
+            Data = new TaskData
+            {
+                Name = "Pre-Training State Questionnaire",
+                Type = "Questionnaire",
+                Description = "Assesses emotional and cognitive readiness before BCI training."
+                ,
+                QuestionnaireIds = new List<string> { "preq1" }
+            }
         };
 
         // Act
@@ -151,9 +170,14 @@ public class TaskServiceTests
         var request = new CreateTaskRequest
         {
             TaskKey = "trait_questionnaire_bank",
-            Name = "Trait Questionnaire Bank",
-            Type = "questionnaire_batch",
-            Description = "Presents one or more trait questionnaires (once per study)."
+            Data = new TaskData
+            {
+                Name = "Trait Questionnaire Bank",
+                Type = "QuestionnaireSet",
+                Description = "Presents one or more trait questionnaires (once per study)."
+                ,
+                QuestionnaireIds = new List<string> { "trait_q1" }
+            }
         };
 
         // Act
@@ -171,9 +195,12 @@ public class TaskServiceTests
         var request = new CreateTaskRequest
         {
             TaskKey = "eeg_training_session",
-            Name = "EEG Training Session",
-            Type = "eeg_training",
-            Description = "EEG-based neurofeedback training session."
+            Data = new TaskData
+            {
+                Name = "EEG Training Session",
+                Type = "Training",
+                Description = "EEG-based neurofeedback training session."
+            }
         };
 
         // Act
@@ -191,9 +218,12 @@ public class TaskServiceTests
         var request = new CreateTaskRequest
         {
             TaskKey = string.Empty,
-            Name = "No Key Task",
-            Type = "eeg_training",
-            Description = "Missing key"
+            Data = new TaskData
+            {
+                Name = "No Key Task",
+                Type = "eeg_training",
+                Description = "Missing key"
+            }
         };
 
         // Act & Assert
@@ -208,9 +238,12 @@ public class TaskServiceTests
         var request = new CreateTaskRequest
         {
             TaskKey = "bad-key!",
-            Name = "Bad Key Task",
-            Type = "eeg_training",
-            Description = "Invalid format"
+            Data = new TaskData
+            {
+                Name = "Bad Key Task",
+                Type = "eeg_training",
+                Description = "Invalid format"
+            }
         };
 
         // Act & Assert
