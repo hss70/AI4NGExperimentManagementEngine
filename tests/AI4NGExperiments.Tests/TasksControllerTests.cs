@@ -18,7 +18,7 @@ public class TasksControllerTests : ControllerTestBase<TasksController>
         var (mockService, controller, _) = CreateControllerWithMocks<ITaskService>(
             (service, auth) => new TasksController(service, auth));
 
-        var tasks = new List<object> { new { taskId = "task1", name = "Test Task" } };
+        var tasks = new List<AI4NGTask> { new AI4NGTask { TaskKey = "task1", Data = new TaskData { Name = "Test Task" } } };
         mockService.Setup(x => x.GetTasksAsync()).ReturnsAsync(tasks);
 
         // Act
@@ -36,7 +36,7 @@ public class TasksControllerTests : ControllerTestBase<TasksController>
         var (mockService, controller, _) = CreateControllerWithMocks<ITaskService>(
             (service, auth) => new TasksController(service, auth));
 
-        var task = new { taskId = "task1", name = "Test Task" };
+        var task = new AI4NGTask { TaskKey = "task1", Data = new TaskData { Name = "Test Task" } };
         mockService.Setup(x => x.GetTaskAsync("task1")).ReturnsAsync(task);
 
         // Act

@@ -22,7 +22,7 @@ public class TaskService : ITaskService
             throw new InvalidOperationException("EXPERIMENTS_TABLE environment variable is not set");
     }
 
-    public async Task<IEnumerable<object>> GetTasksAsync()
+    public async Task<IEnumerable<AI4NGTask>> GetTasksAsync()
     {
         var response = await _dynamoClient.QueryAsync(new QueryRequest
         {
@@ -40,16 +40,10 @@ public class TaskService : ITaskService
             FilterExpression = "attribute_not_exists(IsDeleted) OR IsDeleted = :false"
         });
 
-        return response.Items.Select(item => new
-        {
-            taskKey = item["PK"].S.Replace("TASK#", ""),
-            data = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]),
-            createdAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("createdAt")?.S),
-            updatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("updatedAt")?.S)
-        });
+        return response.Items.Select(MapItemToTask);
     }
 
-    public async Task<object?> GetTaskAsync(string taskKey)
+    public async Task<AI4NGTask?> GetTaskAsync(string taskKey)
     {
         taskKey = NormaliseTaskKey(taskKey);
 
@@ -69,12 +63,19 @@ public class TaskService : ITaskService
         if (response.Item.TryGetValue("IsDeleted", out var del) && del.BOOL.HasValue && del.BOOL.Value)
             return null;
 
-        return new
+        return MapItemToTask(response.Item);
+    }
+
+    private static AI4NGTask MapItemToTask(Dictionary<string, AttributeValue> item)
+    {
+        return new AI4NGTask
         {
-            taskKey = taskKey,
-            data = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]),
-            createdAt = Utilities.ParseIsoUtcDateTimeOrMin(response.Item.GetValueOrDefault("createdAt")?.S),
-            updatedAt = Utilities.ParseIsoUtcDateTimeOrMin(response.Item.GetValueOrDefault("updatedAt")?.S)
+            TaskKey = item["PK"].S.Replace("TASK#", ""),
+            Data = JsonSerializer.Deserialize<TaskData>(
+                JsonSerializer.Serialize(DynamoDBHelper.ConvertAttributeValueToObject(item["data"]))
+            ) ?? new TaskData(),
+            CreatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("createdAt")?.S),
+            UpdatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("updatedAt")?.S)
         };
     }
 

@@ -96,6 +96,7 @@ public class TaskServiceTests
                 IsItemSet = true,
                 Item = new Dictionary<string, AttributeValue>
                 {
+                    ["PK"] = new AttributeValue("TASK#task-1"),
                     ["data"] = new AttributeValue { M = new Dictionary<string, AttributeValue> { ["name"] = new AttributeValue("Test Task") } },
                     ["createdAt"] = new AttributeValue(DateTime.UtcNow.ToString("O")),
                     ["updatedAt"] = new AttributeValue(DateTime.UtcNow.ToString("O"))
