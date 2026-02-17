@@ -3,7 +3,7 @@ using Moq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -16,7 +16,7 @@ public class IntegrationTests
     {
         _mockDynamoClient = new Mock<IAmazonDynamoDB>();
         Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "test-table");
-        
+
         _service = new QuestionnaireService(_mockDynamoClient.Object);
     }
 
@@ -25,7 +25,7 @@ public class IntegrationTests
     {
         // Arrange
         var uniqueId = $"integration-test-{Guid.NewGuid()}";
-        
+
         // Mock sequence: first call returns null (no duplicate), second call returns item (after creation)
         _mockDynamoClient.SetupSequence(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
             .ReturnsAsync(new GetItemResponse { Item = null }) // First call - no duplicate
@@ -39,7 +39,7 @@ public class IntegrationTests
                     ["createdAt"] = new AttributeValue("2023-11-01T09:00:00Z")
                 }
             });
-        
+
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
@@ -49,15 +49,15 @@ public class IntegrationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = uniqueId,
-            Data = new QuestionnaireData { Name = "Integration Test Questionnaire" }
+            Data = new QuestionnaireDataDto { Name = "Integration Test Questionnaire" }
         };
-        var createResult = await _service.CreateAsync(request, "testuser");
+        var createResult = await _service.CreateAsync(request.Id, request.Data, "testuser");
 
         // Act - Step 2: Retrieve questionnaire
         var retrievedQuestionnaire = await _service.GetByIdAsync(uniqueId);
 
         // Act - Step 3: Update questionnaire
-        var updateData = new QuestionnaireData { Name = "Updated Questionnaire" };
+        var updateData = new QuestionnaireDataDto { Name = "Updated Questionnaire" };
         await _service.UpdateAsync(uniqueId, updateData, "testuser");
 
         // Act - Step 4: Delete questionnaire
@@ -66,7 +66,7 @@ public class IntegrationTests
         // Assert
         Assert.NotNull(createResult);
         Assert.NotNull(retrievedQuestionnaire);
-        
+
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
         _mockDynamoClient.Verify(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default), Times.AtLeast(2));
         _mockDynamoClient.Verify(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default), Times.Exactly(2)); // Update + Delete
@@ -123,7 +123,7 @@ public class IntegrationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "audit-test",
-            Data = new QuestionnaireData { Name = "Audit Test Questionnaire" }
+            Data = new QuestionnaireDataDto { Name = "Audit Test Questionnaire" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -134,14 +134,14 @@ public class IntegrationTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act
-        await _service.CreateAsync(request, "audit-user");
+        await _service.CreateAsync(request.Id, request.Data, "audit-user");
 
         // Assert
         Assert.NotNull(capturedRequest);
         Assert.True(capturedRequest.Item.ContainsKey("createdBy"));
         Assert.Equal("audit-user", capturedRequest.Item["createdBy"].S);
         Assert.True(capturedRequest.Item.ContainsKey("createdAt"));
-        
+
         var timestamp = capturedRequest.Item["createdAt"].S;
         Assert.True(DateTime.TryParse(timestamp, out _), "Timestamp should be valid DateTime");
     }

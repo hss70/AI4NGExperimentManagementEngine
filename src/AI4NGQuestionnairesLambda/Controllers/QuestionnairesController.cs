@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using AI4NGQuestionnairesLambda.Interfaces;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 using AI4NGExperimentManagement.Shared;
 
 namespace AI4NGQuestionnairesLambda.Controllers;
@@ -17,14 +17,14 @@ public class QuestionnairesController : BaseApiController
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Questionnaire>>> GetAll()
+    public async Task<ActionResult<IEnumerable<QuestionnaireDto>>> GetAll()
     {
         var questionnaires = await _questionnaireService.GetAllAsync();
         return Ok(questionnaires);
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Questionnaire>> GetById(string id)
+    public async Task<ActionResult<QuestionnaireDto>> GetById(string id)
     {
         var questionnaire = await _questionnaireService.GetByIdAsync(id);
         if (questionnaire == null)
@@ -36,118 +36,80 @@ public class QuestionnairesController : BaseApiController
     [HttpPost("by-ids")]
     public async Task<ActionResult> GetByIds([FromBody] string[] ids)
     {
-        try
-        {
-            if (ids == null || ids.Length == 0)
-                return BadRequest("Provide at least one questionnaire id.");
+        if (ids == null || ids.Length == 0)
+            return BadRequest("Provide at least one questionnaire id.");
 
-            var uniqueIds = ids
-                .Where(i => !string.IsNullOrWhiteSpace(i))
-                .Select(i => i.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+        var uniqueIds = ids
+            .Where(i => !string.IsNullOrWhiteSpace(i))
+            .Select(i => i.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-            if (uniqueIds.Count == 0)
-                return BadRequest("Provide at least one valid questionnaire id.");
+        if (uniqueIds.Count == 0)
+            return BadRequest("Provide at least one valid questionnaire id.");
 
-            var result = await _questionnaireService.GetByIdsAsync(uniqueIds);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Error fetching questionnaires: {ex.Message}");
-        }
+        var result = await _questionnaireService.GetByIdsAsync(uniqueIds);
+        return Ok(result);
     }
 
     [HttpPost]
     public async Task<ActionResult> Create([FromBody] CreateQuestionnaireRequest request)
     {
-        try
-        {
-            var username = GetAuthenticatedUsername();
-            var researcherCheck = RequireResearcher();
-            if (researcherCheck != null) return researcherCheck;
+        var username = GetAuthenticatedUsername();
+        var researcherCheck = RequireResearcher();
+        if (researcherCheck != null) return researcherCheck;
 
-            var id = await _questionnaireService.CreateAsync(request, username);
-            return Ok(new { id });
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("already exists"))
-        {
-            return Conflict(new { error = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return HandleException(ex, "creating questionnaire");
-        }
+        var id = await _questionnaireService.CreateAsync(request.Id, request.Data, username);
+        return CreatedAtAction(nameof(GetById), new { id }, new { id });
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult> Update(string id, [FromBody] CreateQuestionnaireRequest request)
+    public async Task<ActionResult> Update(string id, [FromBody] UpdateQuestionnaireRequest request)
     {
-        try
-        {
-            var username = GetAuthenticatedUsername();
-            var researcherCheck = RequireResearcher();
-            if (researcherCheck != null) return researcherCheck;
+        var username = GetAuthenticatedUsername();
+        var researcherCheck = RequireResearcher();
+        if (researcherCheck != null) return researcherCheck;
 
-            if (request == null || request.Data == null)
-                return BadRequest("Invalid questionnaire update request.");
+        if (request == null || request.Data == null)
+            return BadRequest("Invalid questionnaire update request.");
 
-            if (string.IsNullOrWhiteSpace(id))
-                return BadRequest("Questionnaire ID cannot be empty.");
+        if (string.IsNullOrWhiteSpace(id))
+            return BadRequest("Questionnaire ID cannot be empty.");
 
-            await _questionnaireService.UpdateAsync(id, request.Data, username);
+        await _questionnaireService.UpdateAsync(id, request.Data, username);
 
-            return Ok(new { message = $"Questionnaire '{id}' updated successfully." });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return HandleException(ex, $"Error updating questionnaire {id}");
-        }
+        return Ok(new { message = $"Questionnaire '{id}' updated successfully." });
     }
 
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete(string id)
     {
-        try
-        {
-            var username = GetAuthenticatedUsername();
-            var researcherCheck = RequireResearcher();
-            if (researcherCheck != null) return researcherCheck;
+        var username = GetAuthenticatedUsername();
+        var researcherCheck = RequireResearcher();
+        if (researcherCheck != null) return researcherCheck;
 
-            await _questionnaireService.DeleteAsync(id, username);
-            return Ok(new { message = "Questionnaire deleted successfully" });
-        }
-        catch (Exception ex)
-        {
-            return HandleException(ex, "deleting questionnaire");
-        }
+        await _questionnaireService.DeleteAsync(id, username);
+        return Ok(new { message = "Questionnaire deleted successfully" });
     }
 
     [HttpPost("batch")]
     public async Task<ActionResult> CreateBatch([FromBody] List<CreateQuestionnaireRequest> requests)
     {
-        try
-        {
-            var username = GetAuthenticatedUsername();
-            var researcherCheck = RequireResearcher();
-            if (researcherCheck != null) return researcherCheck;
+        var username = GetAuthenticatedUsername();
+        var researcherCheck = RequireResearcher();
+        if (researcherCheck != null) return researcherCheck;
 
-            var result = await _questionnaireService.CreateBatchAsync(requests, username);
+        if (requests == null || requests.Count == 0)
+            return BadRequest(new { error = "No questionnaires provided for batch import." });
 
-            if (result.Summary.Failed == 0)
-                return Ok(result);
-            if (result.Summary.Successful == 0)
-                return BadRequest(result);
-            return StatusCode(207, result); // Partial success
-        }
-        catch (Exception ex)
-        {
-            return HandleException(ex, "creating batch questionnaires");
-        }
+        var result = await _questionnaireService.CreateBatchAsync(requests, username);
+
+        if (result.Summary.Failed == 0)
+            return Ok(result);
+
+        if (result.Summary.Successful == 0)
+            return BadRequest(result);
+
+        return StatusCode(207, result); // Partial success
     }
 }

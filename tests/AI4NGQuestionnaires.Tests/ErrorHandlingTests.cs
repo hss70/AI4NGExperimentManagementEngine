@@ -7,7 +7,7 @@ using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Controllers;
 using AI4NGQuestionnairesLambda.Interfaces;
 using AI4NGQuestionnairesLambda.Services;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 using AI4NGExperimentManagement.Shared;
 using System.ComponentModel.DataAnnotations;
 
@@ -45,7 +45,7 @@ public class ErrorHandlingTests
         // Arrange
         Environment.SetEnvironmentVariable("AWS_ENDPOINT_URL", null);
         _controller.ControllerContext.HttpContext.Request.Headers.Clear();
-        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireData { Name = "Test" } };
+        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
 
         // Act
         var result = await _controller.Create(request);
@@ -78,7 +78,7 @@ public class ErrorHandlingTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test",
-            Data = new QuestionnaireData { Name = "Test" }
+            Data = new QuestionnaireDataDto { Name = "Test" }
         };
 
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
@@ -86,7 +86,7 @@ public class ErrorHandlingTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            () => _service.CreateAsync(request, "testuser"));
+            () => _service.CreateAsync(request.Id, request.Data, "testuser"));
 
         Assert.Contains("Invalid request data", exception.Message);
     }
@@ -127,7 +127,7 @@ public class ErrorHandlingTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test",
-            Data = new QuestionnaireData { Name = "Test" }
+            Data = new QuestionnaireDataDto { Name = "Test" }
         };
 
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
@@ -135,7 +135,7 @@ public class ErrorHandlingTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ProvisionedThroughputExceededException>(
-            () => _service.CreateAsync(request, "testuser"));
+            () => _service.CreateAsync(request.Id, request.Data, "testuser"));
 
         Assert.Contains("Rate limit exceeded", exception.Message);
     }

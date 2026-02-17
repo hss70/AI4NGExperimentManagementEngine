@@ -3,7 +3,7 @@ using Moq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -26,19 +26,19 @@ public class SoftDeleteTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "reused-id",
-            Data = new QuestionnaireData { Name = "New Questionnaire" }
+            Data = new QuestionnaireDataDto { Name = "New Questionnaire" }
         };
 
         // Mock existing soft-deleted item
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
+            .ReturnsAsync(new GetItemResponse
+            {
                 IsItemSet = true,
                 Item = new Dictionary<string, AttributeValue>
                 {
                     ["PK"] = new AttributeValue("QUESTIONNAIRE#reused-id"),
-                    ["syncMetadata"] = new AttributeValue 
-                    { 
+                    ["syncMetadata"] = new AttributeValue
+                    {
                         M = new Dictionary<string, AttributeValue>
                         {
                             ["isDeleted"] = new AttributeValue { BOOL = true }
@@ -51,7 +51,7 @@ public class SoftDeleteTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act
-        var result = await _service.CreateAsync(request, "testuser");
+        var result = await _service.CreateAsync(request.Id, request.Data, "testuser");
 
         // Assert
         Assert.Equal("reused-id", result);
@@ -65,19 +65,19 @@ public class SoftDeleteTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "existing-id",
-            Data = new QuestionnaireData { Name = "Test" }
+            Data = new QuestionnaireDataDto { Name = "Test" }
         };
 
         // Mock existing active item
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
+            .ReturnsAsync(new GetItemResponse
+            {
                 IsItemSet = true,
                 Item = new Dictionary<string, AttributeValue>
                 {
                     ["PK"] = new AttributeValue("QUESTIONNAIRE#existing-id"),
-                    ["syncMetadata"] = new AttributeValue 
-                    { 
+                    ["syncMetadata"] = new AttributeValue
+                    {
                         M = new Dictionary<string, AttributeValue>
                         {
                             ["isDeleted"] = new AttributeValue { BOOL = false }
@@ -88,8 +88,8 @@ public class SoftDeleteTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateAsync(request, "testuser"));
-        
+            () => _service.CreateAsync(request.Id, request.Data, "testuser"));
+
         Assert.Contains("already exists", exception.Message);
     }
 
@@ -98,15 +98,15 @@ public class SoftDeleteTests
     {
         // Arrange
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
+            .ReturnsAsync(new GetItemResponse
+            {
                 IsItemSet = true,
                 Item = new Dictionary<string, AttributeValue>
                 {
                     ["PK"] = new AttributeValue("QUESTIONNAIRE#deleted-id"),
                     ["data"] = new AttributeValue { M = new Dictionary<string, AttributeValue> { ["name"] = new AttributeValue("Test") } },
-                    ["syncMetadata"] = new AttributeValue 
-                    { 
+                    ["syncMetadata"] = new AttributeValue
+                    {
                         M = new Dictionary<string, AttributeValue>
                         {
                             ["isDeleted"] = new AttributeValue { BOOL = true }

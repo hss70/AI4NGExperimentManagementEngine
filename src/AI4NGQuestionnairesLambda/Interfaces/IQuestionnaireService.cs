@@ -1,14 +1,14 @@
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 
 namespace AI4NGQuestionnairesLambda.Interfaces;
 
 public interface IQuestionnaireService
 {
-    Task<IEnumerable<Questionnaire>> GetAllAsync();
-    Task<Questionnaire?> GetByIdAsync(string id);
-    Task<string> CreateAsync(CreateQuestionnaireRequest request, string username);
-    Task UpdateAsync(string id, QuestionnaireData data, string username);
+    Task<IEnumerable<QuestionnaireDto>> GetAllAsync();
+    Task<QuestionnaireDto?> GetByIdAsync(string id);
+    Task<string> CreateAsync(string id, QuestionnaireDataDto data, string username);
+    Task UpdateAsync(string id, QuestionnaireDataDto data, string username);
     Task DeleteAsync(string id, string username);
     Task<BatchResult> CreateBatchAsync(List<CreateQuestionnaireRequest> requests, string username);
-    Task<IEnumerable<Questionnaire>> GetByIdsAsync(List<string> ids);
+    Task<IEnumerable<QuestionnaireDto>> GetByIdsAsync(List<string> ids);
 }

@@ -3,7 +3,7 @@ using Moq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -57,14 +57,14 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "existing-questionnaire",
-            Data = new QuestionnaireData { Name = "Test" }
+            Data = new QuestionnaireDataDto { Name = "Test" }
         };
 
         var service = SetUpMockService(duplicateTest: true);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CreateAsync(request, "testuser"));
+            () => service.CreateAsync(request.Id, request.Data, "testuser"));
 
         Assert.Contains("already exists", exception.Message);
     }
@@ -79,12 +79,12 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireData { Name = invalidName! }
+            Data = new QuestionnaireDataDto { Name = invalidName! }
         };
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CreateAsync(request, "testuser"));
+            () => _service.CreateAsync(request.Id, request.Data, "testuser"));
 
         Assert.Contains("name", exception.Message.ToLower());
     }
@@ -96,10 +96,10 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Test Questionnaire",
-                Questions = new List<Question>
+                Questions = new List<QuestionDto>
                 {
                     new() { Id = "q1", Text = "Question 1", Type = "text", Required = true },
                     new() { Id = "q1", Text = "Question 2", Type = "text", Required = true } // Duplicate ID
@@ -109,7 +109,7 @@ public class BusinessRuleTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CreateAsync(request, "testuser"));
+            () => _service.CreateAsync(request.Id, request.Data, "testuser"));
 
         Assert.Contains("unique", exception.Message.ToLower());
         Assert.Contains("question", exception.Message.ToLower());
@@ -123,10 +123,10 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Test Questionnaire",
-                Questions = new List<Question>
+                Questions = new List<QuestionDto>
                 {
                     new() { Id = "q1", Text = "", Type = "text", Required = true } // Missing text
                 }
@@ -135,7 +135,7 @@ public class BusinessRuleTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CreateAsync(request, "testuser"));
+            () => _service.CreateAsync(request.Id, request.Data, "testuser"));
 
         Assert.Contains("text", exception.Message.ToLower());
     }
@@ -150,10 +150,10 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Test Questionnaire",
-                Questions = new List<Question>
+                Questions = new List<QuestionDto>
                 {
                     new() { Id = "q1", Text = "Question 1", Type = invalidType!, Required = true }
                 }
@@ -162,7 +162,7 @@ public class BusinessRuleTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CreateAsync(request, "testuser"));
+            () => _service.CreateAsync(request.Id, request.Data, "testuser"));
 
         Assert.Contains("type", exception.Message.ToLower());
     }
@@ -174,10 +174,10 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "select-test-questionnaire", // Use unique ID
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Test Questionnaire",
-                Questions = new List<Question>
+                Questions = new List<QuestionDto>
                 {
                     new() { Id = "q1", Text = "Select question", Type = "select", Required = true } // Missing options
                 }
@@ -186,7 +186,7 @@ public class BusinessRuleTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CreateAsync(request, "testuser"));
+            () => _service.CreateAsync(request.Id, request.Data, "testuser"));
 
         Assert.Contains("options", exception.Message.ToLower());
         Assert.Contains("select", exception.Message.ToLower());

@@ -1,32 +1,32 @@
-namespace AI4NGQuestionnairesLambda.Models;
+namespace AI4NG.ExperimentManagement.Contracts.Questionnaires;
 
-public class Questionnaire
+public class QuestionnaireDto
 {
     public string Id { get; set; } = string.Empty;
-    public QuestionnaireData Data { get; set; } = new();
+    public QuestionnaireDataDto Data { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
 
-public class QuestionnaireData
+public class QuestionnaireDataDto
 {
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public int EstimatedTime { get; set; }
     public string Version { get; set; } = "1.0";
-    public List<Question> Questions { get; set; } = new();
+    public List<QuestionDto> Questions { get; set; } = new();
 }
 
-public class Question
+public class QuestionDto
 {
     public string Id { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
     public List<string> Options { get; set; } = new();
     public bool Required { get; set; } = true;
-    public Scale? Scale { get; set; } = null;
+    public ScaleDto? Scale { get; set; } = null;
 }
-public class Scale
+public class ScaleDto
 {
     public int Min { get; set; }
     public int Max { get; set; }
@@ -34,22 +34,27 @@ public class Scale
     public string? MaxLabel { get; set; }
 }
 
-public class CreateQuestionnaireRequest
+public sealed class CreateQuestionnaireRequest
 {
     public string Id { get; set; } = string.Empty;
-    public QuestionnaireData Data { get; set; } = new();
+    public QuestionnaireDataDto Data { get; set; } = new();
 }
 
-public record BatchSummary(int Processed, int Successful, int Failed);
+public sealed class UpdateQuestionnaireRequest
+{
+    public QuestionnaireDataDto Data { get; set; } = new();
+}
 
-public record BatchItemResult(string Id, string Status, string? Error = null)
+public sealed record BatchSummary(int Processed, int Successful, int Failed);
+
+public sealed record BatchItemResult(string Id, string Status, string? Error = null)
 {
     public bool Success => Status == "success";
 }
 
 public record BatchResult(BatchSummary Summary, List<BatchItemResult> Results);
 
-public class BatchCreateResult
+public sealed class BatchCreateResult
 {
     public BatchSummary Summary { get; set; } = new(0, 0, 0);
     public List<BatchItemResult> Results { get; set; } = new();

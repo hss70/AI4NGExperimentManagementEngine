@@ -188,6 +188,7 @@ Resources:
         SubnetIds: !Ref PrivateSubnetIds
       Environment:
         Variables:
+          Environment: !Ref Environment
           EXPERIMENTS_TABLE: !Ref AI4NGExperimentsTable
           RESPONSES_TABLE: !Ref AI4NGResponsesTable
           QUESTIONNAIRES_TABLE: !Ref AI4NGQuestionnairesTable
@@ -220,6 +221,7 @@ Resources:
         SubnetIds: !Ref PrivateSubnetIds
       Environment:
         Variables:
+          Environment: !Ref Environment
           RESPONSES_TABLE: !Ref AI4NGResponsesTable
           EXPERIMENTS_TABLE: !Ref AI4NGExperimentsTable
       Policies:
@@ -249,6 +251,7 @@ Resources:
         SubnetIds: !Ref PrivateSubnetIds
       Environment:
         Variables:
+          Environment: !Ref Environment
           QUESTIONNAIRES_TABLE: !Ref AI4NGQuestionnairesTable
       Policies:
         - AWSLambdaBasicExecutionRole

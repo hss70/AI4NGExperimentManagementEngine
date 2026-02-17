@@ -3,7 +3,7 @@ using Moq;
 using Microsoft.AspNetCore.Mvc;
 using AI4NGQuestionnairesLambda.Controllers;
 using AI4NGQuestionnairesLambda.Interfaces;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
 using System.Net;
@@ -92,9 +92,9 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
     {
         // Arrange
         var (mockService, controller, auth) = CreateController();
-        var questionnaires = new List<Questionnaire>
+        var questionnaires = new List<QuestionnaireDto>
         {
-            new() { Id = "test-1", Data = new QuestionnaireData { Name = "Test 1" } }
+            new() { Id = "test-1", Data = new QuestionnaireDataDto { Name = "Test 1" } }
         };
         mockService.Setup(x => x.GetAllAsync()).ReturnsAsync(questionnaires);
 
@@ -114,9 +114,9 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-id",
-            Data = new QuestionnaireData { Name = "Test" }
+            Data = new QuestionnaireDataDto { Name = "Test" }
         };
-        mockService.Setup(x => x.CreateAsync(request, TestDataBuilder.TestUsername)).ReturnsAsync(TestDataBuilder.TestUserId);
+        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername)).ReturnsAsync(TestDataBuilder.TestUserId);
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
         // Act
@@ -135,11 +135,11 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
     {
         // Arrange
         var (mockService, controller, auth) = CreateController();
-        var questionnaire = new Questionnaire { Id = TestDataBuilder.TestUserId, Data = new QuestionnaireData { Name = "Test" } };
+        var questionnaire = new QuestionnaireDto { Id = TestDataBuilder.TestUserId, Data = new QuestionnaireDataDto { Name = "Test" } };
         if (exists)
             mockService.Setup(x => x.GetByIdAsync(id)).ReturnsAsync(questionnaire);
         else
-            mockService.Setup(x => x.GetByIdAsync(id)).ReturnsAsync((Questionnaire?)null);
+            mockService.Setup(x => x.GetByIdAsync(id)).ReturnsAsync((QuestionnaireDto?)null);
 
         // Act
         var result = await controller.GetById(id);
@@ -164,13 +164,13 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         using var _ = TestEnvironmentHelper.SetLocalTestingMode();
 
         var (mockService, controller, auth) = CreateController();
-        var data = new QuestionnaireData { Name = "Updated Questionnaire" };
-        mockService.Setup(x => x.UpdateAsync(TestDataBuilder.TestUserId, data, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
+        QuestionnaireDto questionnaireDto = TestDataBuilder.CreateValidQuestionnaire();
+        mockService.Setup(x => x.UpdateAsync(questionnaireDto.Id, questionnaireDto.Data, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
-        var request = new CreateQuestionnaireRequest { Id = "asfasf", Data= data};
+        var request = new UpdateQuestionnaireRequest {Data = questionnaireDto.Data};
         // Act
-        var result = await controller.Update(TestDataBuilder.TestUserId, request);
+        var result = await controller.Update(questionnaireDto.Id, request);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -202,7 +202,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
     {
         // Arrange
         var (mockService, controller, _) = CreateController(isResearcher: false);
-        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireData { Name = "Test" } };
+        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ParticipantQuestionnaires;
 
         // Act
@@ -222,8 +222,8 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
     {
         // Arrange
         var (mockService, controller, auth) = CreateController();
-        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireData { Name = "Test" } };
-        mockService.Setup(x => x.CreateAsync(request, TestDataBuilder.TestUsername)).ReturnsAsync("test");
+        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
+        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername)).ReturnsAsync("test");
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
         // Act
@@ -231,7 +231,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
 
         // Assert
         Assert.IsType<OkObjectResult>(result);
-        mockService.Verify(x => x.CreateAsync(request, TestDataBuilder.TestUsername), Times.Once);
+        mockService.Verify(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername), Times.Once);
     }
 
     [Fact]
@@ -241,7 +241,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var (mockService, controller, auth) = CreateController(isLocal: false);
         auth.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Authorization header is required"));
         controller.ControllerContext.HttpContext.Request.Headers.Clear();
-        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireData { Name = "Test" } };
+        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
 
         // Act
         var result = await controller.Create(request);
@@ -257,7 +257,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var (mockService, controller, auth) = CreateController(isLocal: false);
         auth.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Authorization header is required"));
         controller.ControllerContext.HttpContext.Request.Headers.Clear();
-        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireData { Name = "Test" } };
+        var request = new UpdateQuestionnaireRequest { Data = new QuestionnaireDataDto { Name = "Test" } };
 
         // Act
         var result = await controller.Update("test-id", request);
@@ -273,7 +273,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var (mockService, controller, auth) = CreateController(isLocal: false);
         auth.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Authorization header is required"));
         controller.ControllerContext.HttpContext.Request.Headers.Clear();
-        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireData { Name = "Test" } };
+        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
 
         // Act
         var result = await controller.Create(request);
@@ -289,7 +289,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var (mockService, controller, auth) = CreateController(isLocal: false);
         auth.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Invalid token format"));
         controller.ControllerContext.HttpContext.Request.Headers.Authorization = "Bearer invalid-token";
-        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireData { Name = "Test" } };
+        var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
 
         // Act
         var result = await controller.Create(request);

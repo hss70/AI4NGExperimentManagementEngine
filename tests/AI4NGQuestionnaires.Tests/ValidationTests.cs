@@ -3,7 +3,7 @@ using Moq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -29,11 +29,11 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = invalidId!,
-            Data = new QuestionnaireData { Name = "Test" }
+            Data = new QuestionnaireDataDto { Name = "Test" }
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAsync(request, "testuser"));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAsync(request.Id, request.Data, "testuser"));
     }
 
     [Fact]
@@ -43,11 +43,11 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "valid-questionnaire",
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Valid Questionnaire",
                 Description = "Valid description",
-                Questions = new List<Question>
+                Questions = new List<QuestionDto>
                 {
                     new() { Id = "q1", Text = "Question 1", Type = "text", Required = true }
                 }
@@ -60,7 +60,7 @@ public class ValidationTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act
-        var result = await _service.CreateAsync(request, "testuser");
+        var result = await _service.CreateAsync(request.Id, request.Data, "testuser");
 
         // Assert
         Assert.NotNull(result);
@@ -90,10 +90,10 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Test Questionnaire",
-                Questions = new List<Question>
+                Questions = new List<QuestionDto>
                 {
                     new() { Id = "q1", Text = "", Type = "text", Required = true } // Empty text
                 }
@@ -104,7 +104,7 @@ public class ValidationTests
             .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAsync(request, "testuser"));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAsync(request.Id, request.Data, "testuser"));
     }
 
     [Theory]
@@ -114,7 +114,7 @@ public class ValidationTests
     public async Task UpdateAsync_ShouldHandleInvalidUsernames(string? username)
     {
         // Arrange
-        var data = new QuestionnaireData { Name = "Updated" };
+        var data = new QuestionnaireDataDto { Name = "Updated" };
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .ReturnsAsync(new UpdateItemResponse());
 
@@ -132,10 +132,10 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "empty-questions",
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Empty Questions",
-                Questions = new List<Question>() // Empty list
+                Questions = new List<QuestionDto>() // Empty list
             }
         };
 
@@ -145,7 +145,7 @@ public class ValidationTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act
-        var result = await _service.CreateAsync(request, "testuser");
+        var result = await _service.CreateAsync(request.Id, request.Data, "testuser");
 
         // Assert
         Assert.NotNull(result);
@@ -158,7 +158,7 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "null-questions",
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Null Questions",
                 Questions = null! // Null list
@@ -171,7 +171,7 @@ public class ValidationTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act
-        var result = await _service.CreateAsync(request, "testuser");
+        var result = await _service.CreateAsync(request.Id, request.Data, "testuser");
 
         // Assert
         Assert.NotNull(result);
@@ -187,10 +187,10 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "invalid-type-test",
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Invalid Type Test",
-                Questions = new List<Question>
+                Questions = new List<QuestionDto>
                 {
                     new() { Id = "q1", Text = "Question 1", Type = invalidType!, Required = true }
                 }
@@ -201,6 +201,6 @@ public class ValidationTests
             .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAsync(request, "testuser"));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAsync(request.Id, request.Data, "testuser"));
     }
 }

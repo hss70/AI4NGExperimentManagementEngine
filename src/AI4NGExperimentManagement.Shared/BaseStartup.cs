@@ -13,7 +13,9 @@ public abstract class BaseStartup
 {
     public virtual void ConfigureServices(IServiceCollection services)
     {
-        services.AddControllers();
+        services.AddControllers(
+            options => options.Filters.Add<ApiExceptionFilter>()
+        );
         services.AddHttpContextAccessor();
         services.AddScoped<IAuthenticationService, AuthenticationService>();
 
@@ -34,9 +36,9 @@ public abstract class BaseStartup
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_EaNz6cSp0",
+                    ValidIssuer = "https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_EaNz6cSp0", //todo - should ideally be an env var or config value
                     ValidateAudience = false,
-                    ValidAudience = "517s6c84jo5i3lqste5idb0o4c", // Cognito App Client ID
+                    ValidAudience = "517s6c84jo5i3lqste5idb0o4c", // Cognito App Client ID //tpdo - should ideally be an env var or config value
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
@@ -116,8 +118,8 @@ public abstract class BaseStartup
         });
 
         app.UseRouting();
-        app.UseAuthentication(); // Add this line
-        app.UseAuthorization(); // And this line
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         app.UseEndpoints(endpoints =>
         {

@@ -3,7 +3,7 @@ using Moq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 using System.Text.Json;
 
 namespace AI4NGQuestionnaires.Tests;
@@ -30,7 +30,7 @@ public class QuestionnaireServiceTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-id",
-            Data = new QuestionnaireData { Name = "Test Questionnaire" }
+            Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
         };
 
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
@@ -38,7 +38,7 @@ public class QuestionnaireServiceTests
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
-        var result = await _service.CreateAsync(request, "testuser");
+        var result = await _service.CreateAsync(request.Id, request.Data, "testuser");
 
         Assert.Equal("test-id", result);
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
@@ -111,7 +111,7 @@ public class QuestionnaireServiceTests
     [Fact]
     public async Task UpdateAsync_ShouldCallUpdateItem()
     {
-        var data = new QuestionnaireData { Name = "Updated Questionnaire" };
+        var data = new QuestionnaireDataDto { Name = "Updated Questionnaire" };
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .ReturnsAsync(new UpdateItemResponse());
 
@@ -141,13 +141,13 @@ public class QuestionnaireServiceTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "PQ1",
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Presence Questionnaire",
                 Description = "Measures presence",
                 EstimatedTime = 120,
                 Version = "1.0",
-                Questions = new List<Question>
+                Questions = new List<QuestionDto>
                 {
                     new()
                     {
@@ -156,7 +156,7 @@ public class QuestionnaireServiceTests
                         Type = "scale",
                         Required = true,
                         Options = new(),
-                        Scale = new Scale { Min = 1, Max = 7 }
+                        Scale = new ScaleDto { Min = 1, Max = 7 }
                     }
                 }
             }
@@ -170,7 +170,7 @@ public class QuestionnaireServiceTests
             .Callback<PutItemRequest, CancellationToken>((req, _) => savedItem = req.Item)
             .ReturnsAsync(new PutItemResponse());
 
-        await _service.CreateAsync(request, "testuser");
+        await _service.CreateAsync(request.Id, request.Data, "testuser");
 
         Assert.NotNull(savedItem);
         var question = savedItem!["data"].M["questions"].L.First().M;
@@ -193,13 +193,13 @@ public class QuestionnaireServiceTests
             .Callback<PutItemRequest, CancellationToken>((req, _) => savedItem = req.Item)
             .ReturnsAsync(new PutItemResponse());
 
-        await _service.CreateAsync(request, "testuser");
+        await _service.CreateAsync(request.Id, request.Data, "testuser");
 
         Assert.NotNull(savedItem);
 
         var convertMethod = typeof(QuestionnaireService)
             .GetMethod("ConvertAttributeValueToQuestionnaireData", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        var roundTripped = (QuestionnaireData)convertMethod.Invoke(_service, new object[] { savedItem!["data"] })!;
+        var roundTripped = (QuestionnaireDataDto)convertMethod.Invoke(_service, new object[] { savedItem!["data"] })!;
 
         Assert.Equal(request.Data.Name, roundTripped.Name);
         Assert.Equal(request.Data.Description, roundTripped.Description);
@@ -235,7 +235,7 @@ public class QuestionnaireServiceTests
     {
         var data = new List<CreateQuestionnaireRequest>
         {
-            new() { Id = "good", Data = new QuestionnaireData { Name = "Valid Q" } },
+            new() { Id = "good", Data = new QuestionnaireDataDto { Name = "Valid Q" } },
             new() { Id = "bad", Data = null! } // force failure
         };
 
@@ -261,7 +261,7 @@ public class QuestionnaireServiceTests
     {
         var path = Path.Combine(AppContext.BaseDirectory, "TestData", "update_questionnaire.json");
         var json = File.ReadAllText(path);
-        var data = JsonSerializer.Deserialize<QuestionnaireData>(
+        var data = JsonSerializer.Deserialize<QuestionnaireDataDto>(
             json,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
         )!;
@@ -305,7 +305,7 @@ public class QuestionnaireServiceTests
         foreach (var element in root.RootElement.GetProperty("requests").EnumerateArray())
         {
             var id = element.GetProperty("id").GetString() ?? "";
-            var data = JsonSerializer.Deserialize<QuestionnaireData>(
+            var data = JsonSerializer.Deserialize<QuestionnaireDataDto>(
                 element.GetProperty("data").GetRawText(),
                 options
             );

@@ -3,7 +3,7 @@ using Moq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -26,13 +26,13 @@ public class ReferentialIntegrityTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "existing-questionnaire",
-            Data = new QuestionnaireData { Name = "Test" }
+            Data = new QuestionnaireDataDto { Name = "Test" }
         };
 
         // Mock questionnaire already exists
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse 
-            { 
+            .ReturnsAsync(new GetItemResponse
+            {
                 Item = new Dictionary<string, AttributeValue>
                 {
                     ["PK"] = new AttributeValue("QUESTIONNAIRE#existing-questionnaire")
@@ -41,8 +41,8 @@ public class ReferentialIntegrityTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateAsync(request, "testuser"));
-        
+            () => _service.CreateAsync(request.Id, request.Data, "testuser"));
+
         Assert.Contains("already exists", exception.Message);
     }
 
@@ -53,7 +53,7 @@ public class ReferentialIntegrityTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "new-questionnaire",
-            Data = new QuestionnaireData { Name = "New Questionnaire" }
+            Data = new QuestionnaireDataDto { Name = "New Questionnaire" }
         };
 
         // Mock questionnaire does not exist
@@ -64,7 +64,7 @@ public class ReferentialIntegrityTests
             .ReturnsAsync(new PutItemResponse());
 
         // Act
-        var result = await _service.CreateAsync(request, "testuser");
+        var result = await _service.CreateAsync(request.Id, request.Data, "testuser");
 
         // Assert
         Assert.NotNull(result);
@@ -90,7 +90,7 @@ public class ReferentialIntegrityTests
     public async Task UpdateAsync_ShouldNotValidateExistence()
     {
         // Arrange
-        var data = new QuestionnaireData { Name = "Updated" };
+        var data = new QuestionnaireDataDto { Name = "Updated" };
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .ReturnsAsync(new UpdateItemResponse());
 

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using AI4NGQuestionnairesLambda.Controllers;
 using AI4NGQuestionnairesLambda.Interfaces;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
 
@@ -18,10 +18,10 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth));
 
-        var questionnaires = new List<Questionnaire> 
-        { 
-            new() { Id = "q1", Data = new QuestionnaireData { Name = "Test Questionnaire 1" } },
-            new() { Id = "q2", Data = new QuestionnaireData { Name = "Test Questionnaire 2" } }
+        var questionnaires = new List<QuestionnaireDto>
+        {
+            new() { Id = "q1", Data = new QuestionnaireDataDto { Name = "Test Questionnaire 1" } },
+            new() { Id = "q2", Data = new QuestionnaireDataDto { Name = "Test Questionnaire 2" } }
         };
         mockService.Setup(x => x.GetAllAsync()).ReturnsAsync(questionnaires);
 
@@ -40,10 +40,10 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth));
 
-        var questionnaire = new Questionnaire 
-        { 
-            Id = "test-id", 
-            Data = new QuestionnaireData { Name = "Test Questionnaire" } 
+        var questionnaire = new QuestionnaireDto
+        {
+            Id = "test-id",
+            Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
         };
         mockService.Setup(x => x.GetByIdAsync("test-id")).ReturnsAsync(questionnaire);
 
@@ -62,7 +62,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth));
 
-        mockService.Setup(x => x.GetByIdAsync("nonexistent")).ReturnsAsync((Questionnaire?)null);
+        mockService.Setup(x => x.GetByIdAsync("nonexistent")).ReturnsAsync((QuestionnaireDto?)null);
 
         // Act
         var result = await controller.GetById("nonexistent");
@@ -82,9 +82,9 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-id",
-            Data = new QuestionnaireData { Name = "Test Questionnaire" }
+            Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
         };
-        mockService.Setup(x => x.CreateAsync(request, TestDataBuilder.TestUsername)).ReturnsAsync("test-id");
+        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername)).ReturnsAsync("test-id");
 
         // Act
         var result = await controller.Create(request);
@@ -103,9 +103,9 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth));
 
-        var request = new CreateQuestionnaireRequest
+        var request = new UpdateQuestionnaireRequest
         {
-            Data = new QuestionnaireData { Name = "Updated Questionnaire" }
+            Data = new QuestionnaireDataDto { Name = "Updated Questionnaire" }
         };
         mockService.Setup(x => x.UpdateAsync("test-id", request.Data, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
 
@@ -141,9 +141,9 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth));
 
-        var request = new CreateQuestionnaireRequest
+        var request = new UpdateQuestionnaireRequest
         {
-            Data = new QuestionnaireData { Name = "Updated Questionnaire" }
+            Data = new QuestionnaireDataDto { Name = "Updated Questionnaire" }
         };
 
         // Act
@@ -182,8 +182,8 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
 
         var requests = new List<CreateQuestionnaireRequest>
         {
-            new() { Id = "q1", Data = new QuestionnaireData { Name = "Questionnaire 1" } },
-            new() { Id = "q2", Data = new QuestionnaireData { Name = "Questionnaire 2" } }
+            new() { Id = "q1", Data = new QuestionnaireDataDto { Name = "Questionnaire 1" } },
+            new() { Id = "q2", Data = new QuestionnaireDataDto { Name = "Questionnaire 2" } }
         };
 
         var batchResult = new BatchResult(
@@ -214,7 +214,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
 
         var requests = new List<CreateQuestionnaireRequest>
         {
-            new() { Id = "q1", Data = new QuestionnaireData { Name = "Questionnaire 1" } }
+            new() { Id = "q1", Data = new QuestionnaireDataDto { Name = "Questionnaire 1" } }
         };
 
         var batchResult = new BatchResult(
@@ -244,8 +244,8 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
 
         var requests = new List<CreateQuestionnaireRequest>
         {
-            new() { Id = "q1", Data = new QuestionnaireData { Name = "Questionnaire 1" } },
-            new() { Id = "q2", Data = new QuestionnaireData { Name = "Questionnaire 2" } }
+            new() { Id = "q1", Data = new QuestionnaireDataDto { Name = "Questionnaire 1" } },
+            new() { Id = "q2", Data = new QuestionnaireDataDto { Name = "Questionnaire 2" } }
         };
 
         var batchResult = new BatchResult(
@@ -278,7 +278,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-id",
-            Data = new QuestionnaireData { Name = "Test Questionnaire" }
+            Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
         };
 
         // Act
@@ -287,7 +287,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         // Assert - Should return Forbidden
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
-        mockService.Verify(x => x.CreateAsync(It.IsAny<CreateQuestionnaireRequest>(), It.IsAny<string>()), Times.Never);
+        mockService.Verify(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -297,9 +297,9 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth), isResearcher: false);
 
-        var request = new CreateQuestionnaireRequest
+        var request = new UpdateQuestionnaireRequest
         {
-            Data = new QuestionnaireData { Name = "Updated Questionnaire" }
+            Data = new QuestionnaireDataDto { Name = "Updated Questionnaire" }
         };
 
         // Act
@@ -308,7 +308,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         // Assert - Should return Forbidden
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
-        mockService.Verify(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireData>(), It.IsAny<string>()), Times.Never);
+        mockService.Verify(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -336,7 +336,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
 
         var requests = new List<CreateQuestionnaireRequest>
         {
-            new() { Id = "q1", Data = new QuestionnaireData { Name = "Questionnaire 1" } }
+            new() { Id = "q1", Data = new QuestionnaireDataDto { Name = "Questionnaire 1" } }
         };
 
         // Act

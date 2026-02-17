@@ -1,5 +1,5 @@
 using AI4NGExperimentsLambda.Models;
-using AI4NGQuestionnairesLambda.Models;
+using AI4NG.ExperimentManagement.Contracts.Questionnaires;
 using AI4NGResponsesLambda.Models;
 
 namespace AI4NGExperimentManagementTests.Shared;
@@ -9,7 +9,7 @@ public static class TestDataBuilder
     public const string TestUserId = "test-id";
     public const string TestUsername = "testuser";
     public const string NonExistentId = "nonexistent";
-    
+
     public static class Paths
     {
         public const string ResearcherQuestionnaires = "/api/researcher/questionnaires";
@@ -44,12 +44,12 @@ public static class TestDataBuilder
         };
     }
 
-    public static Questionnaire CreateValidQuestionnaire()
+    public static QuestionnaireDto CreateValidQuestionnaire()
     {
-        return new Questionnaire
+        return new QuestionnaireDto
         {
             Id = "test-questionnaire-id",
-            Data = new QuestionnaireData
+            Data = new QuestionnaireDataDto
             {
                 Name = "Test Questionnaire",
                 Description = "A test questionnaire for integration testing"
