@@ -10,23 +10,25 @@ public class QuestionnairesController : BaseApiController
 {
     private readonly IQuestionnaireService _questionnaireService;
 
-    public QuestionnairesController(IQuestionnaireService questionnaireService, IAuthenticationService authService)
+    public QuestionnairesController(
+        IQuestionnaireService questionnaireService,
+        IAuthenticationService authService)
         : base(authService)
     {
         _questionnaireService = questionnaireService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<QuestionnaireDto>>> GetAll()
+    public async Task<ActionResult<IEnumerable<QuestionnaireDto>>> GetAll(CancellationToken ct)
     {
-        var questionnaires = await _questionnaireService.GetAllAsync();
+        var questionnaires = await _questionnaireService.GetAllAsync(ct);
         return Ok(questionnaires);
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<QuestionnaireDto>> GetById(string id)
+    public async Task<ActionResult<QuestionnaireDto>> GetById(string id, CancellationToken ct)
     {
-        var questionnaire = await _questionnaireService.GetByIdAsync(id);
+        var questionnaire = await _questionnaireService.GetByIdAsync(id, ct);
         if (questionnaire == null)
             return NotFound("Questionnaire not found");
 
@@ -34,7 +36,7 @@ public class QuestionnairesController : BaseApiController
     }
 
     [HttpPost("by-ids")]
-    public async Task<ActionResult> GetByIds([FromBody] string[] ids)
+    public async Task<ActionResult> GetByIds([FromBody] string[] ids, CancellationToken ct)
     {
         if (ids == null || ids.Length == 0)
             return BadRequest("Provide at least one questionnaire id.");
@@ -48,23 +50,33 @@ public class QuestionnairesController : BaseApiController
         if (uniqueIds.Count == 0)
             return BadRequest("Provide at least one valid questionnaire id.");
 
-        var result = await _questionnaireService.GetByIdsAsync(uniqueIds);
+        var result = await _questionnaireService.GetByIdsAsync(uniqueIds, ct);
         return Ok(result);
     }
 
     [HttpPost]
-    public async Task<ActionResult> Create([FromBody] CreateQuestionnaireRequest request)
+    public async Task<ActionResult> Create(
+        [FromBody] CreateQuestionnaireRequest request,
+        CancellationToken ct)
     {
         var username = GetAuthenticatedUsername();
         var researcherCheck = RequireResearcher();
         if (researcherCheck != null) return researcherCheck;
 
-        var id = await _questionnaireService.CreateAsync(request.Id, request.Data, username);
+        var id = await _questionnaireService.CreateAsync(
+            request.Id,
+            request.Data,
+            username,
+            ct);
+
         return CreatedAtAction(nameof(GetById), new { id }, new { id });
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult> Update(string id, [FromBody] UpdateQuestionnaireRequest request)
+    public async Task<ActionResult> Update(
+        string id,
+        [FromBody] UpdateQuestionnaireRequest request,
+        CancellationToken ct)
     {
         var username = GetAuthenticatedUsername();
         var researcherCheck = RequireResearcher();
@@ -76,24 +88,27 @@ public class QuestionnairesController : BaseApiController
         if (string.IsNullOrWhiteSpace(id))
             return BadRequest("Questionnaire ID cannot be empty.");
 
-        await _questionnaireService.UpdateAsync(id, request.Data, username);
+        await _questionnaireService.UpdateAsync(id, request.Data, username, ct);
 
         return Ok(new { message = $"Questionnaire '{id}' updated successfully." });
     }
 
     [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete(string id)
+    public async Task<ActionResult> Delete(string id, CancellationToken ct)
     {
         var username = GetAuthenticatedUsername();
         var researcherCheck = RequireResearcher();
         if (researcherCheck != null) return researcherCheck;
 
-        await _questionnaireService.DeleteAsync(id, username);
+        await _questionnaireService.DeleteAsync(id, username, ct);
+
         return Ok(new { message = "Questionnaire deleted successfully" });
     }
 
     [HttpPost("batch")]
-    public async Task<ActionResult> CreateBatch([FromBody] List<CreateQuestionnaireRequest> requests)
+    public async Task<ActionResult> CreateBatch(
+        [FromBody] List<CreateQuestionnaireRequest> requests,
+        CancellationToken ct)
     {
         var username = GetAuthenticatedUsername();
         var researcherCheck = RequireResearcher();
@@ -102,7 +117,7 @@ public class QuestionnairesController : BaseApiController
         if (requests == null || requests.Count == 0)
             return BadRequest(new { error = "No questionnaires provided for batch import." });
 
-        var result = await _questionnaireService.CreateBatchAsync(requests, username);
+        var result = await _questionnaireService.CreateBatchAsync(requests, username, ct);
 
         if (result.Summary.Failed == 0)
             return Ok(result);
