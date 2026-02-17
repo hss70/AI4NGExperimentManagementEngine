@@ -4,6 +4,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
+using AI4NGExperimentManagementTests.Shared;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -29,7 +30,7 @@ public class ValidationTests
         var request = new CreateQuestionnaireRequest
         {
             Id = invalidId!,
-            Data = new QuestionnaireDataDto { Name = "Test" }
+            Data = TestDataBuilder.CreateValidQuestionnaireData()
         };
 
         // Act & Assert
@@ -114,7 +115,7 @@ public class ValidationTests
     public async Task UpdateAsync_ShouldHandleInvalidUsernames(string? username)
     {
         // Arrange
-        var data = new QuestionnaireDataDto { Name = "Updated" };
+        var data = TestDataBuilder.CreateValidQuestionnaireData();
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .ReturnsAsync(new UpdateItemResponse());
 
@@ -144,11 +145,8 @@ public class ValidationTests
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
-        // Act
-        var result = await _service.CreateAsync(request.Id, request.Data, "testuser");
-
-        // Assert
-        Assert.NotNull(result);
+        // Act & Assert - empty questions list should be rejected by validation
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAsync(request.Id, request.Data, "testuser"));
     }
 
     [Fact]
@@ -170,11 +168,8 @@ public class ValidationTests
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
-        // Act
-        var result = await _service.CreateAsync(request.Id, request.Data, "testuser");
-
-        // Assert
-        Assert.NotNull(result);
+        // Act & Assert - null questions list should be rejected by validation
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateAsync(request.Id, request.Data, "testuser"));
     }
 
     [Theory]

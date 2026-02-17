@@ -4,6 +4,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
+using AI4NGExperimentManagementTests.Shared;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -26,7 +27,7 @@ public class SoftDeleteTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "reused-id",
-            Data = new QuestionnaireDataDto { Name = "New Questionnaire" }
+            Data = TestDataBuilder.CreateValidQuestionnaireData()
         };
 
         // Mock existing soft-deleted item
@@ -65,7 +66,7 @@ public class SoftDeleteTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "existing-id",
-            Data = new QuestionnaireDataDto { Name = "Test" }
+            Data = TestDataBuilder.CreateValidQuestionnaireData()
         };
 
         // Mock existing active item
@@ -87,6 +88,10 @@ public class SoftDeleteTests
             });
 
         // Act & Assert
+        // Simulate conditional check failure when item exists
+        _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
+            .ThrowsAsync(new ConditionalCheckFailedException("Conditional check failed"));
+
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CreateAsync(request.Id, request.Data, "testuser"));
 

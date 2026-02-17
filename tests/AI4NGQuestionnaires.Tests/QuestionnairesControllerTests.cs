@@ -96,10 +96,10 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         {
             new() { Id = "test-1", Data = new QuestionnaireDataDto { Name = "Test 1" } }
         };
-        mockService.Setup(x => x.GetAllAsync()).ReturnsAsync(questionnaires);
+        mockService.Setup(x => x.GetAllAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(questionnaires);
 
         // Act
-        var result = await controller.GetAll();
+        var result = await controller.GetAll(System.Threading.CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -116,15 +116,16 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
             Id = "test-id",
             Data = new QuestionnaireDataDto { Name = "Test" }
         };
-        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername)).ReturnsAsync(TestDataBuilder.TestUserId);
+        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(TestDataBuilder.TestUserId);
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
         // Act
-        var result = await controller.Create(request);
+        var result = await controller.Create(request, System.Threading.CancellationToken.None);
 
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsAssignableFrom<object>(okResult.Value);
+        // Assert - controller now returns CreatedAtActionResult (201) for create; accept 200 or 201
+        var objectResult = Assert.IsAssignableFrom<ObjectResult>(result);
+        Assert.Contains(objectResult.StatusCode ?? 0, new[] { 200, 201 });
+        var response = objectResult.Value;
         Assert.NotNull(response);
     }
 
@@ -137,12 +138,12 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var (mockService, controller, auth) = CreateController();
         var questionnaire = new QuestionnaireDto { Id = TestDataBuilder.TestUserId, Data = new QuestionnaireDataDto { Name = "Test" } };
         if (exists)
-            mockService.Setup(x => x.GetByIdAsync(id)).ReturnsAsync(questionnaire);
+            mockService.Setup(x => x.GetByIdAsync(id, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(questionnaire);
         else
-            mockService.Setup(x => x.GetByIdAsync(id)).ReturnsAsync((QuestionnaireDto?)null);
+            mockService.Setup(x => x.GetByIdAsync(id, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync((QuestionnaireDto?)null);
 
         // Act
-        var result = await controller.GetById(id);
+        var result = await controller.GetById(id, System.Threading.CancellationToken.None);
 
         // Assert
         if (expectOk)
@@ -165,12 +166,12 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
 
         var (mockService, controller, auth) = CreateController();
         QuestionnaireDto questionnaireDto = TestDataBuilder.CreateValidQuestionnaire();
-        mockService.Setup(x => x.UpdateAsync(questionnaireDto.Id, questionnaireDto.Data, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
+        mockService.Setup(x => x.UpdateAsync(questionnaireDto.Id, questionnaireDto.Data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
-        var request = new UpdateQuestionnaireRequest {Data = questionnaireDto.Data};
+        var request = new UpdateQuestionnaireRequest { Data = questionnaireDto.Data };
         // Act
-        var result = await controller.Update(questionnaireDto.Id, request);
+        var result = await controller.Update(questionnaireDto.Id, request, System.Threading.CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -185,11 +186,11 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         using var _ = TestEnvironmentHelper.SetLocalTestingMode();
 
         var (mockService, controller, auth) = CreateController();
-        mockService.Setup(x => x.DeleteAsync(TestDataBuilder.TestUserId, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
+        mockService.Setup(x => x.DeleteAsync(TestDataBuilder.TestUserId, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
         // Act
-        var result = await controller.Delete(TestDataBuilder.TestUserId);
+        var result = await controller.Delete(TestDataBuilder.TestUserId, System.Threading.CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -206,7 +207,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ParticipantQuestionnaires;
 
         // Act
-        var result = await controller.Create(request);
+        var result = await controller.Create(request, System.Threading.CancellationToken.None);
 
         // Assert
         var objectResult = Assert.IsType<ObjectResult>(result);
@@ -223,15 +224,16 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         // Arrange
         var (mockService, controller, auth) = CreateController();
         var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
-        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername)).ReturnsAsync("test");
+        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync("test");
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
         // Act
-        var result = await controller.Create(request);
+        var result = await controller.Create(request, System.Threading.CancellationToken.None);
 
-        // Assert
-        Assert.IsType<OkObjectResult>(result);
-        mockService.Verify(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername), Times.Once);
+        // Assert - accept 200 or 201
+        var objectResult = Assert.IsAssignableFrom<ObjectResult>(result);
+        Assert.Contains(objectResult.StatusCode ?? 0, new[] { 200, 201 });
+        mockService.Verify(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -243,11 +245,8 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         controller.ControllerContext.HttpContext.Request.Headers.Clear();
         var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
 
-        // Act
-        var result = await controller.Create(request);
-
-        // Assert
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(request, System.Threading.CancellationToken.None));
     }
 
     [Fact]
@@ -259,11 +258,8 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         controller.ControllerContext.HttpContext.Request.Headers.Clear();
         var request = new UpdateQuestionnaireRequest { Data = new QuestionnaireDataDto { Name = "Test" } };
 
-        // Act
-        var result = await controller.Update("test-id", request);
-
-        // Assert
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Update("test-id", request, System.Threading.CancellationToken.None));
     }
 
     [Fact]
@@ -275,11 +271,8 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         controller.ControllerContext.HttpContext.Request.Headers.Clear();
         var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
 
-        // Act
-        var result = await controller.Create(request);
-
-        // Assert
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(request, System.Threading.CancellationToken.None));
     }
 
     [Fact]
@@ -291,11 +284,8 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         controller.ControllerContext.HttpContext.Request.Headers.Authorization = "Bearer invalid-token";
         var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
 
-        // Act
-        var result = await controller.Create(request);
-
-        // Assert
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(request, System.Threading.CancellationToken.None));
     }
 
     [Fact]

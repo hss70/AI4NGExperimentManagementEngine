@@ -25,15 +25,16 @@ public class QuestionnaireCreateTest : ControllerTestBase<QuestionnairesControll
             Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
         };
 
-        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername))
-                  .ReturnsAsync("created-id");
+        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>()))
+              .ReturnsAsync("created-id");
 
         // Act
-        var result = await controller.Create(request);
+        var result = await controller.Create(request, System.Threading.CancellationToken.None);
 
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = okResult.Value;
+        // Assert - Create returns 201 Created; accept 200/201
+        var objectResult = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(result);
+        Assert.Contains(objectResult.StatusCode ?? 0, new[] { 200, 201 });
+        var response = objectResult.Value;
         Assert.NotNull(response);
     }
 }

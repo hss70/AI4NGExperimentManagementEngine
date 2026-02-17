@@ -4,6 +4,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
+using AI4NGExperimentManagementTests.Shared;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -26,18 +27,12 @@ public class ReferentialIntegrityTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "existing-questionnaire",
-            Data = new QuestionnaireDataDto { Name = "Test" }
+            Data = TestDataBuilder.CreateValidQuestionnaireData()
         };
 
-        // Mock questionnaire already exists
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse
-            {
-                Item = new Dictionary<string, AttributeValue>
-                {
-                    ["PK"] = new AttributeValue("QUESTIONNAIRE#existing-questionnaire")
-                }
-            });
+        // Mock questionnaire already exists (simulate Put conditional failure)
+        _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
+            .ThrowsAsync(new ConditionalCheckFailedException("Conditional check failed"));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -53,13 +48,10 @@ public class ReferentialIntegrityTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "new-questionnaire",
-            Data = new QuestionnaireDataDto { Name = "New Questionnaire" }
+            Data = TestDataBuilder.CreateValidQuestionnaireData()
         };
 
         // Mock questionnaire does not exist
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse { Item = null });
-
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
@@ -68,7 +60,6 @@ public class ReferentialIntegrityTests
 
         // Assert
         Assert.NotNull(result);
-        _mockDynamoClient.Verify(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default), Times.Once);
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
     }
 
@@ -90,7 +81,7 @@ public class ReferentialIntegrityTests
     public async Task UpdateAsync_ShouldNotValidateExistence()
     {
         // Arrange
-        var data = new QuestionnaireDataDto { Name = "Updated" };
+        var data = TestDataBuilder.CreateValidQuestionnaireData();
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .ReturnsAsync(new UpdateItemResponse());
 

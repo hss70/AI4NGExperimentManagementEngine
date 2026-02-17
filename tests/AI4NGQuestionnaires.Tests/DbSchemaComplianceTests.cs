@@ -41,7 +41,7 @@ public class DbSchemaComplianceTests
                 Version = "1.0",
                 Questions = new List<QuestionDto>
                 {
-                    new() { Id = "1", Text = "Test question", Type = "scale", Required = true }
+                    new() { Id = "1", Text = "Test question", Type = "scale", Required = true, Scale = new ScaleDto { Min = 1, Max = 5 } }
                 }
             }
         };
@@ -103,7 +103,7 @@ public class DbSchemaComplianceTests
                         Text = "Time seemed to go by",
                         Type = "scale",
                         Required = true,
-                        Options = new List<string> { "Quickly", "Slowly" }
+                        Scale = new ScaleDto { Min = 1, Max = 7 }
                     }
                 }
             }

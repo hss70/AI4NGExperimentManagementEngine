@@ -203,7 +203,8 @@ public class ControllerIntegrationTests : ControllerTestBase<ResponsesController
 
         // Assert
         var statusCodeResult = Assert.IsAssignableFrom<ObjectResult>(result);
-        Assert.Equal(500, statusCodeResult.StatusCode); // default mapping from HandleException
+        // InvalidOperationException is mapped to 409 Conflict by ApiExceptionMapper
+        Assert.Equal(409, statusCodeResult.StatusCode);
         Assert.Contains("Database connection failed", statusCodeResult.Value?.ToString());
     }
 
@@ -227,7 +228,8 @@ public class ControllerIntegrationTests : ControllerTestBase<ResponsesController
 
         // Assert
         var statusCodeResult = Assert.IsAssignableFrom<ObjectResult>(result);
-        Assert.Equal(500, statusCodeResult.StatusCode); // default mapping from HandleException
+        // ArgumentException maps to 400 Bad Request
+        Assert.Equal(400, statusCodeResult.StatusCode);
         Assert.Contains("Invalid response data", statusCodeResult.Value?.ToString());
     }
 
@@ -267,7 +269,8 @@ public class ControllerIntegrationTests : ControllerTestBase<ResponsesController
 
         // Assert
         var statusCodeResult = Assert.IsAssignableFrom<ObjectResult>(result);
-        Assert.Equal(500, statusCodeResult.StatusCode); // default mapping from HandleException
+        // KeyNotFoundException maps to 404 Not Found
+        Assert.Equal(404, statusCodeResult.StatusCode);
         Assert.Contains("Response not found", statusCodeResult.Value?.ToString());
     }
 

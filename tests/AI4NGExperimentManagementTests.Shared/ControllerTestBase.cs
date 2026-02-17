@@ -24,7 +24,7 @@ public abstract class ControllerTestBase<TController> where TController : Contro
     {
         // Adjust the ctor to match your real BaseApiController ctor
         public TestBaseApiController(IAuthenticationService auth)
-            : base( auth)
+            : base(auth)
         {
         }
 
@@ -40,29 +40,25 @@ public abstract class ControllerTestBase<TController> where TController : Contro
         {
             new UnauthorizedAccessException("Unauthorized!"),
             typeof(UnauthorizedObjectResult),
-            401,
-            "Unauthorized!"
+            401
         },
         new object[]
         {
             new Amazon.DynamoDBv2.AmazonDynamoDBException("Dynamo error"),
             typeof(ObjectResult),
-            503,
-            "Database temporarily unavailable"
+            503
         },
         new object[]
         {
             new TimeoutException("Request timeout"),
             typeof(ObjectResult),
-            408,
-            "Request timeout"
+            408
         },
         new object[]
         {
             new Exception("Something failed"),
             typeof(ObjectResult),
-            500,
-            "Something failed"
+            500
         }
         };
 

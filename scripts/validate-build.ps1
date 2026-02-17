@@ -62,8 +62,20 @@ if (-not $SkipTests) {
     }
     
     # 5. Run compilation tests (fast)
+    # Run tests against the solution file so dotnet knows which projects to execute.
     Write-Host "Running compilation tests..." -ForegroundColor Yellow
-    dotnet test --configuration Release --no-build --filter "Category!=Integration"
+    $solution = "./AI4NGExperimentManagement.sln"
+    if (Test-Path $solution) {
+        dotnet test $solution --configuration Release --no-build --filter "Category!=Integration"
+    } else {
+        # Fallback: run tests per test project
+        foreach ($proj in $testProjects) {
+            if (Test-Path $proj) {
+                dotnet test $proj --configuration Release --no-build --filter "Category!=Integration"
+                if ($LASTEXITCODE -ne 0) { throw "Unit tests failed for $proj" }
+            }
+        }
+    }
     if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
 }
 

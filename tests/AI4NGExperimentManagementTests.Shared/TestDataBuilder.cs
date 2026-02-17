@@ -52,9 +52,38 @@ public static class TestDataBuilder
             Data = new QuestionnaireDataDto
             {
                 Name = "Test Questionnaire",
-                Description = "A test questionnaire for integration testing"
+                Description = "A test questionnaire for integration testing",
+                Questions = new List<QuestionDto>
+                {
+                    new QuestionDto
+                    {
+                        Id = "1",
+                        Text = "First question",
+                        Type = "text",
+                        Required = true
+                    }
+                }
             },
             CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    public static QuestionnaireDataDto CreateValidQuestionnaireData()
+    {
+        return new QuestionnaireDataDto
+        {
+            Name = "Valid Questionnaire",
+            Description = "Auto-generated valid questionnaire for tests",
+            Questions = new List<QuestionDto>
+            {
+                new QuestionDto
+                {
+                    Id = "1",
+                    Text = "How are you?",
+                    Type = "text",
+                    Required = true
+                }
+            }
         };
     }
 

@@ -4,6 +4,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
+using AI4NGExperimentManagementTests.Shared;
 using System.Text.Json;
 
 namespace AI4NGQuestionnaires.Tests;
@@ -30,7 +31,7 @@ public class QuestionnaireServiceTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-id",
-            Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
+            Data = TestDataBuilder.CreateValidQuestionnaireData()
         };
 
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
@@ -47,7 +48,7 @@ public class QuestionnaireServiceTests
     [Fact]
     public async Task GetAllAsync_ShouldReturnQuestionnaires_WhenDataExists()
     {
-        var scanResponse = new ScanResponse
+        var queryResponse = new QueryResponse
         {
             Items = new List<Dictionary<string, AttributeValue>>
             {
@@ -65,13 +66,13 @@ public class QuestionnaireServiceTests
             }
         };
 
-        _mockDynamoClient.Setup(x => x.ScanAsync(It.IsAny<ScanRequest>(), default))
-            .ReturnsAsync(scanResponse);
+        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
+            .ReturnsAsync(queryResponse);
 
         var result = await _service.GetAllAsync();
 
         Assert.Single(result);
-        _mockDynamoClient.Verify(x => x.ScanAsync(It.IsAny<ScanRequest>(), default), Times.Once);
+        _mockDynamoClient.Verify(x => x.QueryAsync(It.IsAny<QueryRequest>(), default), Times.Once);
     }
 
     [Fact]
@@ -111,7 +112,7 @@ public class QuestionnaireServiceTests
     [Fact]
     public async Task UpdateAsync_ShouldCallUpdateItem()
     {
-        var data = new QuestionnaireDataDto { Name = "Updated Questionnaire" };
+        var data = TestDataBuilder.CreateValidQuestionnaireData();
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .ReturnsAsync(new UpdateItemResponse());
 
@@ -235,7 +236,7 @@ public class QuestionnaireServiceTests
     {
         var data = new List<CreateQuestionnaireRequest>
         {
-            new() { Id = "good", Data = new QuestionnaireDataDto { Name = "Valid Q" } },
+            new() { Id = "good", Data = TestDataBuilder.CreateValidQuestionnaireData() },
             new() { Id = "bad", Data = null! } // force failure
         };
 

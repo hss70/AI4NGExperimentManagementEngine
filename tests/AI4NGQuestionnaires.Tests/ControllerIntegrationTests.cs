@@ -23,10 +23,10 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             new() { Id = "q1", Data = new QuestionnaireDataDto { Name = "Test Questionnaire 1" } },
             new() { Id = "q2", Data = new QuestionnaireDataDto { Name = "Test Questionnaire 2" } }
         };
-        mockService.Setup(x => x.GetAllAsync()).ReturnsAsync(questionnaires);
+        mockService.Setup(x => x.GetAllAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(questionnaires);
 
         // Act
-        var result = await controller.GetAll();
+        var result = await controller.GetAll(CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -45,10 +45,10 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             Id = "test-id",
             Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
         };
-        mockService.Setup(x => x.GetByIdAsync("test-id")).ReturnsAsync(questionnaire);
+        mockService.Setup(x => x.GetByIdAsync("test-id", It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(questionnaire);
 
         // Act
-        var result = await controller.GetById("test-id");
+        var result = await controller.GetById("test-id", CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -62,10 +62,10 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth));
 
-        mockService.Setup(x => x.GetByIdAsync("nonexistent")).ReturnsAsync((QuestionnaireDto?)null);
+        mockService.Setup(x => x.GetByIdAsync("nonexistent", It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync((QuestionnaireDto?)null);
 
         // Act
-        var result = await controller.GetById("nonexistent");
+        var result = await controller.GetById("nonexistent", CancellationToken.None);
 
         // Assert
         var notFoundResult = Assert.IsType<NotFoundObjectResult>(result.Result);
@@ -84,14 +84,15 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             Id = "test-id",
             Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
         };
-        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername)).ReturnsAsync("test-id");
+        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync("test-id");
 
         // Act
-        var result = await controller.Create(request);
+        var result = await controller.Create(request, CancellationToken.None);
 
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = okResult.Value;
+        // Assert - Create now returns CreatedAtActionResult (201). Accept 200 or 201.
+        var objectResult = Assert.IsAssignableFrom<ObjectResult>(result);
+        Assert.Contains(objectResult.StatusCode ?? 0, new[] { 200, 201 });
+        var response = objectResult.Value;
         Assert.NotNull(response);
         Assert.Contains("test-id", response.ToString());
     }
@@ -107,10 +108,10 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         {
             Data = new QuestionnaireDataDto { Name = "Updated Questionnaire" }
         };
-        mockService.Setup(x => x.UpdateAsync("test-id", request.Data, TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
+        mockService.Setup(x => x.UpdateAsync("test-id", request.Data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
 
         // Act
-        var result = await controller.Update("test-id", request);
+        var result = await controller.Update("test-id", request, CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -127,7 +128,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             (service, auth) => new QuestionnairesController(service, auth));
 
         // Act
-        var result = await controller.Update("test-id", null);
+        var result = await controller.Update("test-id", new UpdateQuestionnaireRequest { Data = null }, CancellationToken.None);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -147,7 +148,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         };
 
         // Act
-        var result = await controller.Update("", request);
+        var result = await controller.Update("", request, CancellationToken.None);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -161,10 +162,10 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth));
 
-        mockService.Setup(x => x.DeleteAsync("test-id", TestDataBuilder.TestUsername)).Returns(Task.CompletedTask);
+        mockService.Setup(x => x.DeleteAsync("test-id", TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
 
         // Act
-        var result = await controller.Delete("test-id");
+        var result = await controller.Delete("test-id", CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -195,10 +196,10 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             }
         );
 
-        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername)).ReturnsAsync(batchResult);
+        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(batchResult);
 
         // Act
-        var result = await controller.CreateBatch(requests);
+        var result = await controller.CreateBatch(requests, CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -225,10 +226,10 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             }
         );
 
-        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername)).ReturnsAsync(batchResult);
+        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(batchResult);
 
         // Act
-        var result = await controller.CreateBatch(requests);
+        var result = await controller.CreateBatch(requests, CancellationToken.None);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -257,10 +258,10 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             }
         );
 
-        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername)).ReturnsAsync(batchResult);
+        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(batchResult);
 
         // Act
-        var result = await controller.CreateBatch(requests);
+        var result = await controller.CreateBatch(requests, CancellationToken.None);
 
         // Assert
         var statusCodeResult = Assert.IsType<ObjectResult>(result);
@@ -282,12 +283,12 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         };
 
         // Act
-        var result = await controller.Create(request);
+        var result = await controller.Create(request, CancellationToken.None);
 
         // Assert - Should return Forbidden
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
-        mockService.Verify(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>()), Times.Never);
+        mockService.Verify(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -303,12 +304,12 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         };
 
         // Act
-        var result = await controller.Update("test-id", request);
+        var result = await controller.Update("test-id", request, CancellationToken.None);
 
         // Assert - Should return Forbidden
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
-        mockService.Verify(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>()), Times.Never);
+        mockService.Verify(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -319,12 +320,12 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             (service, auth) => new QuestionnairesController(service, auth), isResearcher: false);
 
         // Act
-        var result = await controller.Delete("test-id");
+        var result = await controller.Delete("test-id", CancellationToken.None);
 
         // Assert - Should return Forbidden
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
-        mockService.Verify(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        mockService.Verify(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -340,11 +341,11 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         };
 
         // Act
-        var result = await controller.CreateBatch(requests);
+        var result = await controller.CreateBatch(requests, CancellationToken.None);
 
         // Assert - Should return Forbidden
         var objectResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, objectResult.StatusCode);
-        mockService.Verify(x => x.CreateBatchAsync(It.IsAny<List<CreateQuestionnaireRequest>>(), It.IsAny<string>()), Times.Never);
+        mockService.Verify(x => x.CreateBatchAsync(It.IsAny<List<CreateQuestionnaireRequest>>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
     }
 }

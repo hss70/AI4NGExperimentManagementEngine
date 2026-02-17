@@ -4,6 +4,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
+using AI4NGExperimentManagementTests.Shared;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -44,8 +45,16 @@ public class BusinessRuleTests
                 return new GetItemResponse { Item = null };
             });
 
-        mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
-            .ReturnsAsync(new PutItemResponse());
+        if (duplicateTest)
+        {
+            mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
+                .ThrowsAsync(new ConditionalCheckFailedException("Conditional check failed"));
+        }
+        else
+        {
+            mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
+                .ReturnsAsync(new PutItemResponse());
+        }
 
         return new QuestionnaireService(mockDynamoClient.Object);
     }
@@ -57,7 +66,7 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "existing-questionnaire",
-            Data = new QuestionnaireDataDto { Name = "Test" }
+            Data = TestDataBuilder.CreateValidQuestionnaireData()
         };
 
         var service = SetUpMockService(duplicateTest: true);
@@ -79,8 +88,9 @@ public class BusinessRuleTests
         var request = new CreateQuestionnaireRequest
         {
             Id = "test-questionnaire",
-            Data = new QuestionnaireDataDto { Name = invalidName! }
+            Data = TestDataBuilder.CreateValidQuestionnaireData()
         };
+        request.Data.Name = invalidName!;
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(
