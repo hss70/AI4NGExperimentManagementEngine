@@ -23,20 +23,28 @@ public class TaskService : ITaskService
 
     public async Task<IEnumerable<object>> GetTasksAsync()
     {
-        var response = await _dynamoClient.ScanAsync(new ScanRequest
+        var response = await _dynamoClient.QueryAsync(new QueryRequest
         {
             TableName = _experimentsTable,
-            FilterExpression = "#type = :type",
-            ExpressionAttributeNames = new Dictionary<string, string> { ["#type"] = "type" },
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue> { [":type"] = new("Task") }
+            IndexName = "GSI1",
+            KeyConditionExpression = "GSI1PK = :pk",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":pk"] = new AttributeValue("TASK"),
+                [":false"] = new AttributeValue { BOOL = false }
+            },
+            // newest first
+            ScanIndexForward = false,
+            // filter out soft-deleted tasks
+            FilterExpression = "attribute_not_exists(IsDeleted) OR IsDeleted = :false"
         });
 
         return response.Items.Select(item => new
         {
             id = item["PK"].S.Replace("TASK#", ""),
             data = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]),
-            createdAt = item["createdAt"]?.S,
-            updatedAt = item["updatedAt"]?.S
+            createdAt = item.TryGetValue("createdAt", out var c) ? c.S : null,
+            updatedAt = item.TryGetValue("updatedAt", out var u) ? u.S : null
         });
     }
 
@@ -47,61 +55,78 @@ public class TaskService : ITaskService
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new($"TASK#{taskId}"),
-                ["SK"] = new("METADATA")
+                ["PK"] = new AttributeValue($"TASK#{taskId}"),
+                ["SK"] = new AttributeValue("METADATA")
             }
         });
 
         if (!response.IsItemSet)
             return null;
 
+        if (response.Item.TryGetValue("IsDeleted", out var del) && del.BOOL.HasValue && del.BOOL.Value)
+            return null;
+
         return new
         {
             id = taskId,
             data = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]),
-            createdAt = response.Item["createdAt"]?.S,
-            updatedAt = response.Item["updatedAt"]?.S
+            createdAt = response.Item.TryGetValue("createdAt", out var c) ? c.S : null,
+            updatedAt = response.Item.TryGetValue("updatedAt", out var u) ? u.S : null
         };
     }
 
+
     public async Task<object> CreateTaskAsync(CreateTaskRequest request, string username)
     {
-        // Validate questionnaire dependencies if task references questionnaires
+        // Keep your questionnaire validation as-is for now
         if (request.Configuration?.ContainsKey("questionnaireId") == true)
         {
-            var questionnaireId = request.Configuration["questionnaireId"].ToString();
-            if (!string.IsNullOrEmpty(questionnaireId))
+            var questionnaireId = request.Configuration["questionnaireId"]?.ToString();
+            if (!string.IsNullOrWhiteSpace(questionnaireId))
             {
                 var exists = await ValidateQuestionnaireExists(questionnaireId);
                 if (!exists)
-                {
                     throw new ArgumentException($"Missing questionnaires: {questionnaireId}");
-                }
             }
         }
 
         var taskId = Guid.NewGuid().ToString();
+        var now = DateTime.UtcNow.ToString("O");
+
         var taskData = new TaskData
         {
             Name = request.Name,
             Type = request.Type,
             Description = request.Description,
-            Configuration = request.Configuration,
+            Configuration = request.Configuration ?? new(),
             EstimatedDuration = request.EstimatedDuration
         };
 
         await _dynamoClient.PutItemAsync(new PutItemRequest
         {
             TableName = _experimentsTable,
+            ConditionExpression = "attribute_not_exists(PK) AND attribute_not_exists(SK)",
             Item = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new($"TASK#{taskId}"),
-                ["SK"] = new("METADATA"),
-                ["type"] = new("Task"),
-                ["data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(taskData)) },
-                ["createdBy"] = new(username),
-                ["createdAt"] = new(DateTime.UtcNow.ToString("O")),
-                ["updatedAt"] = new(DateTime.UtcNow.ToString("O"))
+                ["PK"] = new AttributeValue($"TASK#{taskId}"),
+                ["SK"] = new AttributeValue("METADATA"),
+
+                // GSI for fast listing + sorting
+                ["GSI1PK"] = new AttributeValue("TASK"),
+                ["GSI1SK"] = new AttributeValue(now),
+
+                ["EntityType"] = new AttributeValue("Task"),
+                ["data"] = new AttributeValue
+                {
+                    M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(taskData))
+                },
+
+                ["IsDeleted"] = new AttributeValue { BOOL = false },
+                ["createdBy"] = new AttributeValue(username),
+                ["createdAt"] = new AttributeValue(now),
+                ["updatedBy"] = new AttributeValue(username),
+                ["updatedAt"] = new AttributeValue(now),
+                ["Version"] = new AttributeValue { N = "1" }
             }
         });
 
@@ -110,33 +135,59 @@ public class TaskService : ITaskService
 
     public async Task UpdateTaskAsync(string taskId, TaskData data, string username)
     {
+        var now = DateTime.UtcNow.ToString("O");
+
         await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new($"TASK#{taskId}"),
-                ["SK"] = new("METADATA")
+                ["PK"] = new AttributeValue($"TASK#{taskId}"),
+                ["SK"] = new AttributeValue("METADATA")
             },
-            UpdateExpression = "SET #data = :data, updatedAt = :timestamp",
-            ExpressionAttributeNames = new Dictionary<string, string> { ["#data"] = "data" },
+            ConditionExpression =
+                "attribute_exists(PK) AND attribute_exists(SK) AND (attribute_not_exists(IsDeleted) OR IsDeleted = :false)",
+            UpdateExpression =
+                "SET #data = :data, updatedAt = :timestamp, updatedBy = :user ADD Version :one",
+            ExpressionAttributeNames = new Dictionary<string, string>
+            {
+                ["#data"] = "data"
+            },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
                 [":data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
-                [":timestamp"] = new(DateTime.UtcNow.ToString("O"))
+                [":timestamp"] = new AttributeValue(now),
+                [":user"] = new AttributeValue(username),
+                [":false"] = new AttributeValue { BOOL = false },
+                [":one"] = new AttributeValue { N = "1" }
             }
         });
     }
 
     public async Task DeleteTaskAsync(string taskId, string username)
     {
-        await _dynamoClient.DeleteItemAsync(new DeleteItemRequest
+        var now = DateTime.UtcNow.ToString("O");
+
+        await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new($"TASK#{taskId}"),
-                ["SK"] = new("METADATA")
+                ["PK"] = new AttributeValue($"TASK#{taskId}"),
+                ["SK"] = new AttributeValue("METADATA")
+            },
+            ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)",
+            UpdateExpression =
+                "SET IsDeleted = :true, " +
+                "DeletedAt = if_not_exists(DeletedAt, :now), " +
+                "updatedAt = :now, updatedBy = :user " +
+                "ADD Version :one",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":true"] = new AttributeValue { BOOL = true },
+                [":now"] = new AttributeValue(now),
+                [":user"] = new AttributeValue(username),
+                [":one"] = new AttributeValue { N = "1" }
             }
         });
     }

@@ -27,9 +27,9 @@ public class TaskServiceTests
     public async Task CreateTaskAsync_ShouldReturnTaskId_WhenValid()
     {
         // Arrange
-        var request = new CreateTaskRequest 
-        { 
-            Name = "Test Task", 
+        var request = new CreateTaskRequest
+        {
+            Name = "Test Task",
             Type = "TRAIN_EEG",
             Description = "Test description",
             EstimatedDuration = 300
@@ -47,7 +47,7 @@ public class TaskServiceTests
     public async Task GetTasksAsync_ShouldReturnTasks()
     {
         // Arrange
-        var scanResponse = new ScanResponse
+        var queryResponse = new QueryResponse
         {
             Items = new List<Dictionary<string, AttributeValue>>
             {
@@ -61,8 +61,8 @@ public class TaskServiceTests
             }
         };
 
-        _mockDynamoClient.Setup(x => x.ScanAsync(It.IsAny<ScanRequest>(), default))
-            .ReturnsAsync(scanResponse);
+        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
+            .ReturnsAsync(queryResponse);
 
         // Act
         var result = await _service.GetTasksAsync();
@@ -112,15 +112,15 @@ public class TaskServiceTests
     [Fact]
     public async Task DeleteTaskAsync_ShouldCallDeleteItem()
     {
-        // Arrange
-        _mockDynamoClient.Setup(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), default))
-            .ReturnsAsync(new DeleteItemResponse());
+        // Arrange: service performs a soft-delete using UpdateItemAsync
+        _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
+            .ReturnsAsync(new UpdateItemResponse());
 
         // Act
         await _service.DeleteTaskAsync("task-1", "testuser");
 
         // Assert
-        _mockDynamoClient.Verify(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), default), Times.Once);
+        _mockDynamoClient.Verify(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default), Times.Once);
     }
 
     [Fact]
