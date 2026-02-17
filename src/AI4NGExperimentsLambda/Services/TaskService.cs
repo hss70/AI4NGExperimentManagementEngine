@@ -42,7 +42,7 @@ public class TaskService : ITaskService
 
         return response.Items.Select(item => new
         {
-            id = item["PK"].S.Replace("TASK#", ""),
+            taskKey = item["PK"].S.Replace("TASK#", ""),
             data = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]),
             createdAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("createdAt")?.S),
             updatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("updatedAt")?.S)
@@ -71,7 +71,7 @@ public class TaskService : ITaskService
 
         return new
         {
-            id = taskKey,
+            taskKey = taskKey,
             data = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]),
             createdAt = Utilities.ParseIsoUtcDateTimeOrMin(response.Item.GetValueOrDefault("createdAt")?.S),
             updatedAt = Utilities.ParseIsoUtcDateTimeOrMin(response.Item.GetValueOrDefault("updatedAt")?.S)
@@ -93,31 +93,42 @@ public class TaskService : ITaskService
 
         var now = Utilities.GetCurrentTimeStampIso();
 
+        var item = new Dictionary<string, AttributeValue>
+        {
+            ["PK"] = new AttributeValue($"TASK#{taskKey}"),
+            ["SK"] = new AttributeValue("METADATA"),
+
+            // GSI for fast listing + sorting
+            ["GSI1PK"] = new AttributeValue("TASK"),
+            ["GSI1SK"] = new AttributeValue(now),
+
+            ["EntityType"] = new AttributeValue("Task"),
+            ["data"] = new AttributeValue
+            {
+                M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(taskData))
+            },
+
+            ["IsDeleted"] = new AttributeValue { BOOL = false },
+            ["createdBy"] = new AttributeValue(username),
+            ["createdAt"] = new AttributeValue(now),
+            ["updatedBy"] = new AttributeValue(username),
+            ["updatedAt"] = new AttributeValue(now),
+            ["Version"] = new AttributeValue { N = "1" }
+        };
+
         await _dynamoClient.PutItemAsync(new PutItemRequest
         {
             TableName = _experimentsTable,
-            ConditionExpression = "attribute_not_exists(PK) AND attribute_not_exists(SK)",
-            Item = new Dictionary<string, AttributeValue>
+
+            ConditionExpression =
+                    "attribute_not_exists(PK) " +
+                    "OR attribute_not_exists(syncMetadata) " +
+                    "OR attribute_not_exists(syncMetadata.isDeleted) " +
+                    "OR syncMetadata.isDeleted = :true",
+            Item = item,
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue($"TASK#{taskKey}"),
-                ["SK"] = new AttributeValue("METADATA"),
-
-                // GSI for fast listing + sorting
-                ["GSI1PK"] = new AttributeValue("TASK"),
-                ["GSI1SK"] = new AttributeValue(now),
-
-                ["EntityType"] = new AttributeValue("Task"),
-                ["data"] = new AttributeValue
-                {
-                    M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(taskData))
-                },
-
-                ["IsDeleted"] = new AttributeValue { BOOL = false },
-                ["createdBy"] = new AttributeValue(username),
-                ["createdAt"] = new AttributeValue(now),
-                ["updatedBy"] = new AttributeValue(username),
-                ["updatedAt"] = new AttributeValue(now),
-                ["Version"] = new AttributeValue { N = "1" }
+                [":true"] = new AttributeValue { BOOL = true }
             }
         });
 
@@ -222,7 +233,7 @@ public class TaskService : ITaskService
         // Keep as-is except trim; enforce canonical casing for known types
         var t = type.Trim();
 
-        // Canonicalize common variants (optional but practical)
+        // Canonicalize common variants 
         return t switch
         {
             "Neurogame" => "NeuroGame",

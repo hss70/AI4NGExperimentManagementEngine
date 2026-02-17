@@ -98,7 +98,6 @@ public class QuestionnaireService : IQuestionnaireService
         if (ids == null || ids.Count == 0)
             return Array.Empty<QuestionnaireDto>();
 
-        // Optional: normalise + de-dupe here to avoid wasted capacity
         var uniqueIds = ids
             .Where(i => !string.IsNullOrWhiteSpace(i))
             .Select(i => i.Trim())
