@@ -40,13 +40,13 @@ namespace AI4NGExperimentsLambda.Controllers
         /// <summary>
         /// Retrieves a specific task by ID (researcher-only).
         /// </summary>
-        [HttpGet("{taskId}")]
-        public async Task<IActionResult> GetById(string taskId)
+        [HttpGet("{taskKey}")]
+        public async Task<IActionResult> GetById(string taskKey)
         {
             try
             {
                 RequireResearcher();
-                var task = await _taskService.GetTaskAsync(taskId);
+                var task = await _taskService.GetTaskAsync(taskKey);
                 return task == null ? NotFound("Task not found") : Ok(task);
             }
             catch (Exception ex)
@@ -82,14 +82,14 @@ namespace AI4NGExperimentsLambda.Controllers
         /// <summary>
         /// Updates an existing task (researcher-only).
         /// </summary>
-        [HttpPut("{taskId}")]
-        public async Task<IActionResult> Update(string taskId, [FromBody] TaskData data)
+        [HttpPut("{taskKey}")]
+        public async Task<IActionResult> Update(string taskKey, [FromBody] TaskData data)
         {
             try
             {
                 RequireResearcher();
                 var username = GetAuthenticatedUsername();
-                await _taskService.UpdateTaskAsync(taskId, data, username);
+                await _taskService.UpdateTaskAsync(taskKey, data, username);
                 return Ok(new { message = "Task updated successfully" });
             }
             catch (Exception ex)
@@ -101,14 +101,14 @@ namespace AI4NGExperimentsLambda.Controllers
         /// <summary>
         /// Deletes a task (researcher-only).
         /// </summary>
-        [HttpDelete("{taskId}")]
-        public async Task<IActionResult> Delete(string taskId)
+        [HttpDelete("{taskKey}")]
+        public async Task<IActionResult> Delete(string taskKey)
         {
             try
             {
                 RequireResearcher();
                 var username = GetAuthenticatedUsername();
-                await _taskService.DeleteTaskAsync(taskId, username);
+                await _taskService.DeleteTaskAsync(taskKey, username);
                 return Ok(new { message = "Task deleted successfully" });
             }
             catch (Exception ex)

@@ -29,6 +29,7 @@ public class TaskServiceTests
         // Arrange
         var request = new CreateTaskRequest
         {
+            TaskKey = "TEST_TASK_KEY",
             Name = "Test Task",
             Type = "TRAIN_EEG",
             Description = "Test description",
@@ -129,6 +130,7 @@ public class TaskServiceTests
         // Arrange - Single questionnaire task
         var request = new CreateTaskRequest
         {
+            TaskKey = "pre_training_state_questionnaire",
             Name = "Pre-Training State Questionnaire",
             Type = "questionnaire",
             Description = "Assesses emotional and cognitive readiness before BCI training."
@@ -148,6 +150,7 @@ public class TaskServiceTests
         // Arrange - Batch questionnaire task
         var request = new CreateTaskRequest
         {
+            TaskKey = "trait_questionnaire_bank",
             Name = "Trait Questionnaire Bank",
             Type = "questionnaire_batch",
             Description = "Presents one or more trait questionnaires (once per study)."
@@ -167,6 +170,7 @@ public class TaskServiceTests
         // Arrange - EEG training task
         var request = new CreateTaskRequest
         {
+            TaskKey = "eeg_training_session",
             Name = "EEG Training Session",
             Type = "eeg_training",
             Description = "EEG-based neurofeedback training session."
@@ -178,5 +182,39 @@ public class TaskServiceTests
         // Assert
         Assert.NotNull(result);
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_ShouldThrow_WhenTaskKeyMissing()
+    {
+        // Arrange - missing TaskKey
+        var request = new CreateTaskRequest
+        {
+            TaskKey = string.Empty,
+            Name = "No Key Task",
+            Type = "eeg_training",
+            Description = "Missing key"
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateTaskAsync(request, "testuser"));
+        Assert.Contains("TaskKey is required", ex.Message);
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_ShouldThrow_WhenTaskKeyFormatInvalid()
+    {
+        // Arrange - invalid format (contains hyphen and lowercase but hyphen is the issue)
+        var request = new CreateTaskRequest
+        {
+            TaskKey = "bad-key!",
+            Name = "Bad Key Task",
+            Type = "eeg_training",
+            Description = "Invalid format"
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateTaskAsync(request, "testuser"));
+        Assert.Contains("Invalid TaskKey format", ex.Message);
     }
 }

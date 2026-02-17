@@ -4,6 +4,7 @@ using AI4NGExperimentsLambda.Interfaces;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentManagement.Shared;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace AI4NGExperimentsLambda.Services;
 
@@ -43,19 +44,19 @@ public class TaskService : ITaskService
         {
             id = item["PK"].S.Replace("TASK#", ""),
             data = DynamoDBHelper.ConvertAttributeValueToObject(item["data"]),
-            createdAt = item.TryGetValue("createdAt", out var c) ? c.S : null,
-            updatedAt = item.TryGetValue("updatedAt", out var u) ? u.S : null
+            createdAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("createdAt")?.S),
+            updatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("updatedAt")?.S)
         });
     }
 
-    public async Task<object?> GetTaskAsync(string taskId)
+    public async Task<object?> GetTaskAsync(string taskKey)
     {
         var response = await _dynamoClient.GetItemAsync(new GetItemRequest
         {
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue($"TASK#{taskId}"),
+                ["PK"] = new AttributeValue($"TASK#{taskKey}"),
                 ["SK"] = new AttributeValue("METADATA")
             }
         });
@@ -68,16 +69,22 @@ public class TaskService : ITaskService
 
         return new
         {
-            id = taskId,
+            id = taskKey,
             data = DynamoDBHelper.ConvertAttributeValueToObject(response.Item["data"]),
-            createdAt = response.Item.TryGetValue("createdAt", out var c) ? c.S : null,
-            updatedAt = response.Item.TryGetValue("updatedAt", out var u) ? u.S : null
+            createdAt = Utilities.ParseIsoUtcDateTimeOrMin(response.Item.GetValueOrDefault("createdAt")?.S),
+            updatedAt = Utilities.ParseIsoUtcDateTimeOrMin(response.Item.GetValueOrDefault("updatedAt")?.S)
         };
     }
 
 
     public async Task<object> CreateTaskAsync(CreateTaskRequest request, string username)
     {
+        if (string.IsNullOrWhiteSpace(request.TaskKey))
+            throw new ArgumentException("TaskKey is required");
+
+        var taskKey = request.TaskKey.Trim().ToUpperInvariant();
+        if (!Regex.IsMatch(taskKey, "^[A-Z0-9_]{3,64}$")) throw new ArgumentException("Invalid TaskKey format");
+
         // Keep your questionnaire validation as-is for now
         if (request.Configuration?.ContainsKey("questionnaireId") == true)
         {
@@ -90,8 +97,7 @@ public class TaskService : ITaskService
             }
         }
 
-        var taskId = Guid.NewGuid().ToString();
-        var now = DateTime.UtcNow.ToString("O");
+        var now = Utilities.GetCurrentTimeStampIso();
 
         var taskData = new TaskData
         {
@@ -108,7 +114,7 @@ public class TaskService : ITaskService
             ConditionExpression = "attribute_not_exists(PK) AND attribute_not_exists(SK)",
             Item = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue($"TASK#{taskId}"),
+                ["PK"] = new AttributeValue($"TASK#{taskKey}"),
                 ["SK"] = new AttributeValue("METADATA"),
 
                 // GSI for fast listing + sorting
@@ -130,19 +136,19 @@ public class TaskService : ITaskService
             }
         });
 
-        return new { id = taskId };
+        return new { id = taskKey };
     }
 
-    public async Task UpdateTaskAsync(string taskId, TaskData data, string username)
+    public async Task UpdateTaskAsync(string taskKey, TaskData data, string username)
     {
-        var now = DateTime.UtcNow.ToString("O");
+        var now = Utilities.GetCurrentTimeStampIso();
 
         await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue($"TASK#{taskId}"),
+                ["PK"] = new AttributeValue($"TASK#{taskKey}"),
                 ["SK"] = new AttributeValue("METADATA")
             },
             ConditionExpression =
@@ -164,16 +170,16 @@ public class TaskService : ITaskService
         });
     }
 
-    public async Task DeleteTaskAsync(string taskId, string username)
+    public async Task DeleteTaskAsync(string taskKey, string username)
     {
-        var now = DateTime.UtcNow.ToString("O");
+        var now = Utilities.GetCurrentTimeStampIso();
 
         await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue($"TASK#{taskId}"),
+                ["PK"] = new AttributeValue($"TASK#{taskKey}"),
                 ["SK"] = new AttributeValue("METADATA")
             },
             ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)",

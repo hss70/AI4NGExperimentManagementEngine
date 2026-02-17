@@ -2,7 +2,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Interfaces;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
-using System.Globalization;
+using AI4NGExperimentManagement.Shared;
 
 namespace AI4NGQuestionnairesLambda.Services;
 
@@ -18,32 +18,6 @@ public class QuestionnaireService : IQuestionnaireService
         if (string.IsNullOrWhiteSpace(_tableName))
             throw new InvalidOperationException("Missing env var QUESTIONNAIRES_TABLE");
     }
-
-    // === Utility ===
-
-    // === Utility ===
-
-    private static DateTimeOffset NowUtc() => DateTimeOffset.UtcNow;
-
-    private static string ToIso(DateTimeOffset dto) =>
-        dto.ToString("O", CultureInfo.InvariantCulture);
-
-    private static DateTimeOffset ParseIsoOrMin(string? s)
-    {
-        if (string.IsNullOrWhiteSpace(s)) return DateTimeOffset.MinValue;
-
-        return DateTimeOffset.TryParseExact(
-            s,
-            "O",
-            CultureInfo.InvariantCulture,
-            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-            out var dto)
-            ? dto
-            : DateTimeOffset.MinValue;
-    }
-
-    private static DateTime ParseIsoUtcDateTimeOrMin(string? s) =>
-        ParseIsoOrMin(s).UtcDateTime;
 
     // === READ ===
     public async Task<IEnumerable<QuestionnaireDto>> GetAllAsync(CancellationToken ct = default)
@@ -84,8 +58,8 @@ public class QuestionnaireService : IQuestionnaireService
         {
             Id = item["PK"].S.Replace("QUESTIONNAIRE#", ""),
             Data = ConvertAttributeValueToQuestionnaireData(item["data"]),
-            CreatedAt = ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("createdAt")?.S),
-            UpdatedAt = ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("updatedAt")?.S)
+            CreatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("createdAt")?.S),
+            UpdatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("updatedAt")?.S)
         };
     }
 
@@ -114,8 +88,8 @@ public class QuestionnaireService : IQuestionnaireService
         {
             Id = id,
             Data = ConvertAttributeValueToQuestionnaireData(response.Item["data"]),
-            CreatedAt = ParseIsoUtcDateTimeOrMin(response.Item.GetValueOrDefault("createdAt")?.S),
-            UpdatedAt = ParseIsoUtcDateTimeOrMin(response.Item.GetValueOrDefault("updatedAt")?.S)
+            CreatedAt = Utilities.ParseIsoUtcDateTimeOrMin(response.Item.GetValueOrDefault("createdAt")?.S),
+            UpdatedAt = Utilities.ParseIsoUtcDateTimeOrMin(response.Item.GetValueOrDefault("updatedAt")?.S)
         };
     }
 
@@ -215,7 +189,7 @@ public class QuestionnaireService : IQuestionnaireService
         data = Normalise(data);
         ValidateQuestionnaireData(data);
 
-        var timestamp = ToIso(NowUtc());
+        var timestamp = Utilities.GetCurrentTimeStampIso();
 
         var item = new Dictionary<string, AttributeValue>
         {
@@ -277,7 +251,7 @@ public class QuestionnaireService : IQuestionnaireService
         data = Normalise(data);
         ValidateQuestionnaireData(data);
 
-        var timestamp = ToIso(NowUtc());
+        var timestamp = Utilities.GetCurrentTimeStampIso();
 
         try
         {
@@ -335,7 +309,7 @@ public class QuestionnaireService : IQuestionnaireService
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("Questionnaire ID cannot be empty");
 
-        var timestamp = ToIso(NowUtc());
+        var timestamp = Utilities.GetCurrentTimeStampIso();
 
         try
         {

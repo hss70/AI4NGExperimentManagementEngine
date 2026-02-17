@@ -5,8 +5,8 @@ namespace AI4NGExperimentsLambda.Interfaces;
 public interface ITaskService
 {
     Task<IEnumerable<object>> GetTasksAsync();
-    Task<object?> GetTaskAsync(string taskId);
+    Task<object?> GetTaskAsync(string taskKey);
     Task<object> CreateTaskAsync(CreateTaskRequest request, string username);
-    Task UpdateTaskAsync(string taskId, TaskData data, string username);
-    Task DeleteTaskAsync(string taskId, string username);
+    Task UpdateTaskAsync(string taskKey, TaskData data, string username);
+    Task DeleteTaskAsync(string taskKey, string username);
 }
