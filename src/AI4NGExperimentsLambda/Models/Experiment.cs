@@ -67,26 +67,6 @@ public class SessionMetadata
     public bool IsRescheduled { get; set; }
 }
 
-public class AI4NGTask
-{
-    public string Id { get; set; } = string.Empty;
-    public TaskData Data { get; set; } = new();
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-}
-
-public class TaskData
-{
-    public string Name { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string TaskType { get; set; } = string.Empty;
-    public string? QuestionnaireId { get; set; }
-    public List<string>? QuestionnaireIds { get; set; }
-    public Dictionary<string, object> Configuration { get; set; } = new();
-    public int EstimatedDuration { get; set; }
-}
-
 public class CreateSessionRequest
 {
     public string ExperimentId { get; set; } = string.Empty;
@@ -96,15 +76,6 @@ public class CreateSessionRequest
     public string Date { get; set; } = string.Empty;
 }
 
-public class CreateTaskRequest
-{
-    public string TaskKey { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public Dictionary<string, object> Configuration { get; set; } = new();
-    public int EstimatedDuration { get; set; }
-}
 
 // For creating sessions as part of experiment creation
 public class InitialSessionRequest

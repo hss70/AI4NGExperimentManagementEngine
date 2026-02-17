@@ -51,6 +51,8 @@ public class TaskService : ITaskService
 
     public async Task<object?> GetTaskAsync(string taskKey)
     {
+        taskKey = NormaliseTaskKey(taskKey);
+
         var response = await _dynamoClient.GetItemAsync(new GetItemRequest
         {
             TableName = _experimentsTable,
@@ -76,37 +78,20 @@ public class TaskService : ITaskService
         };
     }
 
-
     public async Task<object> CreateTaskAsync(CreateTaskRequest request, string username)
     {
-        if (string.IsNullOrWhiteSpace(request.TaskKey))
-            throw new ArgumentException("TaskKey is required");
+        if (request == null) throw new ArgumentNullException(nameof(request));
+        if (request.Data == null) throw new ArgumentException("Task Data is required.");
 
-        var taskKey = request.TaskKey.Trim().ToUpperInvariant();
-        if (!Regex.IsMatch(taskKey, "^[A-Z0-9_]{3,64}$")) throw new ArgumentException("Invalid TaskKey format");
+        var taskKey = NormaliseTaskKey(request.TaskKey);
+        ValidateTaskKey(taskKey);
 
-        // Keep your questionnaire validation as-is for now
-        if (request.Configuration?.ContainsKey("questionnaireId") == true)
-        {
-            var questionnaireId = request.Configuration["questionnaireId"]?.ToString();
-            if (!string.IsNullOrWhiteSpace(questionnaireId))
-            {
-                var exists = await ValidateQuestionnaireExists(questionnaireId);
-                if (!exists)
-                    throw new ArgumentException($"Missing questionnaires: {questionnaireId}");
-            }
-        }
+        var taskData = NormaliseTaskData(request.Data);
+
+        ValidateQuestionnaireConfiguration(taskData);
+        await ValidateQuestionnairesExistAsync(taskData.QuestionnaireIds);
 
         var now = Utilities.GetCurrentTimeStampIso();
-
-        var taskData = new TaskData
-        {
-            Name = request.Name,
-            Type = request.Type,
-            Description = request.Description,
-            Configuration = request.Configuration ?? new(),
-            EstimatedDuration = request.EstimatedDuration
-        };
 
         await _dynamoClient.PutItemAsync(new PutItemRequest
         {
@@ -141,6 +126,14 @@ public class TaskService : ITaskService
 
     public async Task UpdateTaskAsync(string taskKey, TaskData data, string username)
     {
+        taskKey = NormaliseTaskKey(taskKey);
+        ValidateTaskKey(taskKey);
+
+        data = NormaliseTaskData(data);
+
+        ValidateQuestionnaireConfiguration(data);
+        await ValidateQuestionnairesExistAsync(data.QuestionnaireIds);
+
         var now = Utilities.GetCurrentTimeStampIso();
 
         await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
@@ -161,7 +154,10 @@ public class TaskService : ITaskService
             },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":data"] = new AttributeValue { M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data)) },
+                [":data"] = new AttributeValue
+                {
+                    M = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data))
+                },
                 [":timestamp"] = new AttributeValue(now),
                 [":user"] = new AttributeValue(username),
                 [":false"] = new AttributeValue { BOOL = false },
@@ -172,6 +168,7 @@ public class TaskService : ITaskService
 
     public async Task DeleteTaskAsync(string taskKey, string username)
     {
+        taskKey = NormaliseTaskKey(taskKey);
         var now = Utilities.GetCurrentTimeStampIso();
 
         await _dynamoClient.UpdateItemAsync(new UpdateItemRequest
@@ -196,6 +193,125 @@ public class TaskService : ITaskService
                 [":one"] = new AttributeValue { N = "1" }
             }
         });
+    }
+
+    private static readonly Regex TaskKeyRegex = new("^[A-Z0-9_]{3,64}$", RegexOptions.Compiled);
+
+    private static string NormaliseTaskKey(string taskKey)
+    {
+        var normalized = taskKey.Trim().ToUpperInvariant();
+
+        return normalized;
+    }
+
+    private static void ValidateTaskKey(string taskKey)
+    {
+        if (string.IsNullOrWhiteSpace(taskKey))
+            throw new ArgumentException("TaskKey is required.");
+
+        if (!TaskKeyRegex.IsMatch(taskKey))
+            throw new ArgumentException("Invalid TaskKey format. Use 3-64 chars: A-Z, 0-9, underscore. Example: TRAIN_EEG.");
+    }
+
+
+    private static string NormalizeTaskType(string type)
+    {
+        if (string.IsNullOrWhiteSpace(type))
+            throw new ArgumentException("Task Type is required.");
+
+        // Keep as-is except trim; enforce canonical casing for known types
+        var t = type.Trim();
+
+        // Canonicalize common variants (optional but practical)
+        return t switch
+        {
+            "Neurogame" => "NeuroGame",
+            "NeuroGame" => "NeuroGame",
+            "Training" => "Training",
+            "Questionnaire" => "Questionnaire",
+            "QuestionnaireSet" => "QuestionnaireSet",
+            _ => t
+        };
+    }
+
+    private static List<string> NormalizeQuestionnaireIds(IEnumerable<string>? questionnaireIds)
+    {
+        return questionnaireIds?
+            .Where(q => !string.IsNullOrWhiteSpace(q))
+            .Select(q => q.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            ?? new List<string>();
+    }
+
+    private static TaskData NormaliseTaskData(TaskData task)
+    {
+        if (task == null) throw new ArgumentNullException(nameof(task));
+
+        task.Type = NormalizeTaskType(task.Type);
+
+        // Canonical questionnaire list (even for single questionnaire tasks)
+        task.QuestionnaireIds = NormalizeQuestionnaireIds(task.QuestionnaireIds);
+
+        // Ensure Configuration is never null
+        task.Configuration ??= new Dictionary<string, object>();
+
+        // Optional: trim name/description
+        task.Name = task.Name?.Trim() ?? string.Empty;
+        task.Description = task.Description?.Trim() ?? string.Empty;
+
+        return task;
+    }
+
+    private static void ValidateQuestionnaireConfiguration(TaskData task)
+    {
+        var type = task.Type;
+        var questionnaireIds = task.QuestionnaireIds ?? new List<string>();
+
+        switch (type)
+        {
+            case "Training":
+            case "NeuroGame":
+                if (questionnaireIds.Any())
+                    throw new ArgumentException($"{type} tasks must not define QuestionnaireIds.");
+                break;
+
+            case "Questionnaire":
+                if (questionnaireIds.Count != 1)
+                    throw new ArgumentException("Questionnaire tasks must define exactly one QuestionnaireId in QuestionnaireIds.");
+                break;
+
+            case "QuestionnaireSet":
+                if (!questionnaireIds.Any())
+                    throw new ArgumentException("QuestionnaireSet tasks must define at least one QuestionnaireId in QuestionnaireIds.");
+                break;
+
+            default:
+                throw new ArgumentException($"Unsupported task Type '{type}'. Supported: Training, NeuroGame, Questionnaire, QuestionnaireSet.");
+        }
+    }
+
+    private async Task ValidateQuestionnairesExistAsync(IEnumerable<string>? questionnaireIds)
+    {
+        if (questionnaireIds == null) return;
+
+        var ids = questionnaireIds
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0) return;
+
+        var missing = new List<string>();
+
+        foreach (var questionnaireId in ids)
+        {
+            var exists = await ValidateQuestionnaireExists(questionnaireId);
+            if (!exists) missing.Add(questionnaireId);
+        }
+
+        if (missing.Count > 0)
+            throw new ArgumentException($"Missing questionnaires: {string.Join(", ", missing)}");
     }
 
     private async Task<bool> ValidateQuestionnaireExists(string questionnaireId)

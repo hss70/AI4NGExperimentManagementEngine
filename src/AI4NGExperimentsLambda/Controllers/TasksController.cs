@@ -66,7 +66,7 @@ namespace AI4NGExperimentsLambda.Controllers
                 RequireResearcher();
                 var username = GetAuthenticatedUsername();
                 var result = await _taskService.CreateTaskAsync(request, username);
-                return Ok(result);
+                return CreatedAtAction(nameof(GetById), new { taskKey = ((dynamic)result).id }, result);
             }
             catch (ArgumentException ex) when (ex.Message.Contains("Missing questionnaires"))
             {
@@ -91,6 +91,11 @@ namespace AI4NGExperimentsLambda.Controllers
                 var username = GetAuthenticatedUsername();
                 await _taskService.UpdateTaskAsync(taskKey, data, username);
                 return Ok(new { message = "Task updated successfully" });
+            }
+            catch (ArgumentException ex) when (ex.Message.Contains("Missing questionnaires"))
+            {
+                var missing = ex.Message.Replace("Missing questionnaires: ", "").Split(", ");
+                return BadRequest(new { error = "ValidationError", missingQuestionnaires = missing });
             }
             catch (Exception ex)
             {
