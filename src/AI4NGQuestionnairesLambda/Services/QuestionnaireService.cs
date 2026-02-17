@@ -246,7 +246,17 @@ public class QuestionnaireService : IQuestionnaireService
             {
                 TableName = _tableName,
                 Item = item,
-                ConditionExpression = "attribute_not_exists(PK) AND attribute_not_exists(SK)"
+
+                ConditionExpression =
+                    "attribute_not_exists(PK) " +
+                    "OR attribute_not_exists(syncMetadata) " +
+                    "OR attribute_not_exists(syncMetadata.isDeleted) " +
+                    "OR syncMetadata.isDeleted = :true",
+
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":true"] = new AttributeValue { BOOL = true }
+                }
             }, ct);
         }
         catch (ConditionalCheckFailedException)
@@ -338,7 +348,9 @@ public class QuestionnaireService : IQuestionnaireService
                     ["SK"] = new AttributeValue { S = "CONFIG" }
                 },
 
-                ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)",
+                ConditionExpression =
+                    "attribute_exists(PK) AND attribute_exists(SK)" +
+                    "AND (attribute_not_exists(syncMetadata.isDeleted) OR syncMetadata.isDeleted = :notDeleted)",
 
                 UpdateExpression = @"
                 SET deletedBy = :deletedBy,
