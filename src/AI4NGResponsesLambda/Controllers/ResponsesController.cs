@@ -27,15 +27,8 @@ namespace AI4NGResponsesLambda.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] string? experimentId = null, [FromQuery] string? sessionId = null)
         {
-            try
-            {
-                var responses = await _responseService.GetResponsesAsync(experimentId, sessionId);
-                return Ok(responses);
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex, "retrieving responses");
-            }
+            var responses = await _responseService.GetResponsesAsync(experimentId, sessionId);
+            return Ok(responses);
         }
 
         /// <summary>
@@ -45,15 +38,8 @@ namespace AI4NGResponsesLambda.Controllers
         [HttpGet("{responseId}")]
         public async Task<IActionResult> GetById(string responseId)
         {
-            try
-            {
-                var response = await _responseService.GetResponseAsync(responseId);
-                return response == null ? NotFound("Response not found") : Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex, "retrieving response");
-            }
+            var response = await _responseService.GetResponseAsync(responseId);
+            return response == null ? NotFound("Response not found") : Ok(response);
         }
 
         /// <summary>
@@ -63,16 +49,9 @@ namespace AI4NGResponsesLambda.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Response response)
         {
-            try
-            {
-                var username = GetAuthenticatedUsername();
-                var result = await _responseService.CreateResponseAsync(response, username);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex, "creating response");
-            }
+            var username = GetAuthenticatedUsername();
+            var result = await _responseService.CreateResponseAsync(response, username);
+            return Ok(result);
         }
 
         /// <summary>
@@ -83,16 +62,9 @@ namespace AI4NGResponsesLambda.Controllers
         [HttpPut("{responseId}")]
         public async Task<IActionResult> Update(string responseId, [FromBody] ResponseData data)
         {
-            try
-            {
-                var username = GetAuthenticatedUsername();
-                await _responseService.UpdateResponseAsync(responseId, data, username);
-                return Ok(new { message = "Response updated successfully" });
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex, "updating response");
-            }
+            var username = GetAuthenticatedUsername();
+            await _responseService.UpdateResponseAsync(responseId, data, username);
+            return Ok(new { message = "Response updated successfully" });
         }
 
         /// <summary>
@@ -102,16 +74,9 @@ namespace AI4NGResponsesLambda.Controllers
         [HttpDelete("{responseId}")]
         public async Task<IActionResult> Delete(string responseId)
         {
-            try
-            {
-                var username = GetAuthenticatedUsername();
-                await _responseService.DeleteResponseAsync(responseId, username);
-                return Ok(new { message = "Response deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex, "deleting response");
-            }
+            var username = GetAuthenticatedUsername();
+            await _responseService.DeleteResponseAsync(responseId, username);
+            return Ok(new { message = "Response deleted successfully" });
         }
     }
 }

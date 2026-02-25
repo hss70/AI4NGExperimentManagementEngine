@@ -15,7 +15,7 @@ This document summarizes the implementation of missing session and task manageme
 - **CreateSessionRequest**: Request model for creating new sessions
 - **CreateTaskRequest**: Request model for creating new tasks
 
-### 2. Updated Interface (Interfaces/IExperimentService.cs)
+### 2. Updated Interface (Interfaces/IExperimentsService.cs)
 Added new methods for:
 - **Session Management**: GetExperimentSessionsAsync, GetSessionAsync, CreateSessionAsync, UpdateSessionAsync, DeleteSessionAsync
 - **Task Management**: GetTasksAsync, GetTaskAsync, CreateTaskAsync, UpdateTaskAsync, DeleteTaskAsync

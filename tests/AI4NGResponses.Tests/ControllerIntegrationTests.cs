@@ -1,10 +1,8 @@
-using Xunit;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using AI4NGResponsesLambda.Controllers;
 using AI4NGResponsesLambda.Interfaces;
 using AI4NGResponsesLambda.Models;
-using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
 
 namespace AI4NGResponses.Tests;
@@ -198,14 +196,9 @@ public class ControllerIntegrationTests : ControllerTestBase<ResponsesController
         mockService.Setup(x => x.GetResponsesAsync(null, null))
             .ThrowsAsync(new InvalidOperationException("Database connection failed"));
 
-        // Act
-        var result = await controller.GetAll();
-
-        // Assert
-        var statusCodeResult = Assert.IsAssignableFrom<ObjectResult>(result);
-        // InvalidOperationException is mapped to 409 Conflict by ApiExceptionMapper
-        Assert.Equal(409, statusCodeResult.StatusCode);
-        Assert.Contains("Database connection failed", statusCodeResult.Value?.ToString());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => controller.GetAll());
+        mockService.Verify(x => x.GetResponsesAsync(null, null), Times.Once);
+        mockService.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -223,14 +216,9 @@ public class ControllerIntegrationTests : ControllerTestBase<ResponsesController
         mockService.Setup(x => x.CreateResponseAsync(response, TestDataBuilder.TestUsername))
             .ThrowsAsync(new ArgumentException("Invalid response data"));
 
-        // Act
-        var result = await controller.Create(response);
-
-        // Assert
-        var statusCodeResult = Assert.IsAssignableFrom<ObjectResult>(result);
-        // ArgumentException maps to 400 Bad Request
-        Assert.Equal(400, statusCodeResult.StatusCode);
-        Assert.Contains("Invalid response data", statusCodeResult.Value?.ToString());
+        await Assert.ThrowsAsync<ArgumentException>(() => controller.Create(response));
+        mockService.Verify(x => x.CreateResponseAsync(response, TestDataBuilder.TestUsername), Times.Once);
+        mockService.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -246,12 +234,10 @@ public class ControllerIntegrationTests : ControllerTestBase<ResponsesController
             .ThrowsAsync(new UnauthorizedAccessException("Access denied"));
 
         // Act
-        var result = await controller.Update("test-id", responseData);
-
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Update("test-id", responseData));
         // Assert
-        var statusCodeResult = Assert.IsAssignableFrom<ObjectResult>(result);
-        Assert.Equal(401, statusCodeResult.StatusCode); // Unauthorized mapping from HandleException
-        Assert.Contains("Access denied", statusCodeResult.Value?.ToString());
+        mockService.Verify(x => x.UpdateResponseAsync("test-id", responseData, TestDataBuilder.TestUsername), Times.Once);
+        mockService.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -264,15 +250,11 @@ public class ControllerIntegrationTests : ControllerTestBase<ResponsesController
         mockService.Setup(x => x.DeleteResponseAsync("test-id", TestDataBuilder.TestUsername))
             .ThrowsAsync(new KeyNotFoundException("Response not found"));
 
-        // Act
-        var result = await controller.Delete("test-id");
-
-        // Assert
-        var statusCodeResult = Assert.IsAssignableFrom<ObjectResult>(result);
-        // KeyNotFoundException maps to 404 Not Found
-        Assert.Equal(404, statusCodeResult.StatusCode);
-        Assert.Contains("Response not found", statusCodeResult.Value?.ToString());
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => controller.Delete("test-id"));
+        mockService.Verify(x => x.DeleteResponseAsync("test-id", TestDataBuilder.TestUsername), Times.Once);
+        mockService.VerifyNoOtherCalls();
     }
+
 
     [Fact]
     public async Task ResponsesController_GetById_WhenServiceTimesOut_Returns408()
@@ -284,13 +266,9 @@ public class ControllerIntegrationTests : ControllerTestBase<ResponsesController
         mockService.Setup(x => x.GetResponseAsync("test-id"))
             .ThrowsAsync(new TimeoutException("Request timeout"));
 
-        // Act
-        var result = await controller.GetById("test-id");
-
-        // Assert
-        var statusCodeResult = Assert.IsAssignableFrom<ObjectResult>(result);
-        Assert.Equal(408, statusCodeResult.StatusCode); // Timeout mapping from HandleException
-        Assert.Contains("Request timeout", statusCodeResult.Value?.ToString());
+        await Assert.ThrowsAsync<TimeoutException>(() => controller.GetById("test-id"));
+        mockService.Verify(x => x.GetResponseAsync("test-id"), Times.Once);
+        mockService.VerifyNoOtherCalls();
     }
 
     [Fact]

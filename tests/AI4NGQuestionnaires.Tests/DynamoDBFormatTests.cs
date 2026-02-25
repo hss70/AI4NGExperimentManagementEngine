@@ -4,7 +4,6 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGQuestionnairesLambda.Services;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
-using System.Text.Json;
 
 namespace AI4NGQuestionnaires.Tests;
 

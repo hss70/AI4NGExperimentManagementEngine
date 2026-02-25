@@ -1,7 +1,5 @@
-using Xunit;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
 using AI4NGResponsesLambda.Controllers;
 using AI4NGResponsesLambda.Interfaces;
 using AI4NGResponsesLambda.Models;
@@ -155,12 +153,9 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
         var (mockService, controller, authMock) = CreateController(isLocal: false);
         authMock.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Authorization header is required"));
         var response = new Response();
-
-        // Act
-        var result = await controller.Create(response);
-
-        // Assert
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        // Act & Assert - controller delegates auth check to BaseApiController and will throw
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(response));
+        mockService.Verify(x => x.CreateResponseAsync(It.IsAny<Response>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -171,10 +166,8 @@ public class ResponsesControllerTests : ControllerTestBase<ResponsesController>
         authMock.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Authorization header is required"));
         var data = new ResponseData();
 
-        // Act
-        var result = await controller.Update("test-id", data);
-
-        // Assert
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        // Act & Assert - controller delegates auth check to BaseApiController and will throw
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Update("test-id", data));
+        mockService.Verify(x => x.UpdateResponseAsync(It.IsAny<string>(), It.IsAny<ResponseData>(), It.IsAny<string>()), Times.Never);
     }
 }

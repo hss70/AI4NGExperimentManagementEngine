@@ -1,10 +1,8 @@
 using Xunit;
 using Moq;
-using Microsoft.AspNetCore.Mvc;
 using AI4NGQuestionnairesLambda.Controllers;
 using AI4NGQuestionnairesLambda.Interfaces;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
-using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
 
 namespace AI4NGQuestionnaires.Tests;
@@ -29,7 +27,7 @@ public class QuestionnaireCreateTest : ControllerTestBase<QuestionnairesControll
               .ReturnsAsync("created-id");
 
         // Act
-        var result = await controller.Create(request, System.Threading.CancellationToken.None);
+        var result = await controller.Create(request, CancellationToken.None);
 
         // Assert - Create returns 201 Created; accept 200/201
         var objectResult = Assert.IsAssignableFrom<Microsoft.AspNetCore.Mvc.ObjectResult>(result);

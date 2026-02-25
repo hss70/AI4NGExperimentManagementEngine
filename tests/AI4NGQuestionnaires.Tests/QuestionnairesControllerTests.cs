@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using AI4NGQuestionnairesLambda.Controllers;
 using AI4NGQuestionnairesLambda.Interfaces;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
-using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
 using System.Net;
 using System.IdentityModel.Tokens.Jwt;
@@ -13,12 +12,11 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using System.Text.Encodings.Web;
-using Microsoft.AspNetCore.Http;
+using AI4NGExperimentManagement.Shared;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -99,7 +97,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         mockService.Setup(x => x.GetAllAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(questionnaires);
 
         // Act
-        var result = await controller.GetAll(System.Threading.CancellationToken.None);
+        var result = await controller.GetAll(CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -120,7 +118,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
         // Act
-        var result = await controller.Create(request, System.Threading.CancellationToken.None);
+        var result = await controller.Create(request, CancellationToken.None);
 
         // Assert - controller now returns CreatedAtActionResult (201) for create; accept 200 or 201
         var objectResult = Assert.IsAssignableFrom<ObjectResult>(result);
@@ -143,7 +141,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
             mockService.Setup(x => x.GetByIdAsync(id, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync((QuestionnaireDto?)null);
 
         // Act
-        var result = await controller.GetById(id, System.Threading.CancellationToken.None);
+        var result = await controller.GetById(id, CancellationToken.None);
 
         // Assert
         if (expectOk)
@@ -171,7 +169,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
 
         var request = new UpdateQuestionnaireRequest { Data = questionnaireDto.Data };
         // Act
-        var result = await controller.Update(questionnaireDto.Id, request, System.Threading.CancellationToken.None);
+        var result = await controller.Update(questionnaireDto.Id, request, CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -190,7 +188,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
         // Act
-        var result = await controller.Delete(TestDataBuilder.TestUserId, System.Threading.CancellationToken.None);
+        var result = await controller.Delete(TestDataBuilder.TestUserId, CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -206,16 +204,8 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ParticipantQuestionnaires;
 
-        // Act
-        var result = await controller.Create(request, System.Threading.CancellationToken.None);
-
-        // Assert
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(403, objectResult.StatusCode);
-        var messageProperty = objectResult.Value?.GetType().GetProperty("message");
-        var message = messageProperty?.GetValue(objectResult.Value)?.ToString();
-
-        Assert.Equal("Participants cannot perform this action", message);
+        // Act & Assert
+        await Assert.ThrowsAsync<ForbiddenException>(() => controller.Create(request, CancellationToken.None));
     }
 
     [Fact]
@@ -228,7 +218,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         controller.HttpContext.Request.Path = TestDataBuilder.Paths.ResearcherQuestionnaires;
 
         // Act
-        var result = await controller.Create(request, System.Threading.CancellationToken.None);
+        var result = await controller.Create(request, CancellationToken.None);
 
         // Assert - accept 200 or 201
         var objectResult = Assert.IsAssignableFrom<ObjectResult>(result);
@@ -246,7 +236,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(request, System.Threading.CancellationToken.None));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(request, CancellationToken.None));
     }
 
     [Fact]
@@ -259,7 +249,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var request = new UpdateQuestionnaireRequest { Data = new QuestionnaireDataDto { Name = "Test" } };
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Update("test-id", request, System.Threading.CancellationToken.None));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Update("test-id", request, CancellationToken.None));
     }
 
     [Fact]
@@ -272,7 +262,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(request, System.Threading.CancellationToken.None));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(request, CancellationToken.None));
     }
 
     [Fact]
@@ -285,7 +275,7 @@ public class QuestionnairesControllerTests : ControllerTestBase<QuestionnairesCo
         var request = new CreateQuestionnaireRequest { Id = "test", Data = new QuestionnaireDataDto { Name = "Test" } };
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(request, System.Threading.CancellationToken.None));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(request, CancellationToken.None));
     }
 
     [Fact]

@@ -1,12 +1,10 @@
 using Xunit;
 using Microsoft.Extensions.DependencyInjection;
-using AI4NGExperimentsLambda;
-using AI4NGQuestionnairesLambda;
-using AI4NGResponsesLambda;
 using AI4NGExperimentsLambda.Interfaces;
 using AI4NGQuestionnairesLambda.Interfaces;
 using AI4NGResponsesLambda.Interfaces;
 using AI4NGExperimentManagement.Shared;
+using AI4NGExperimentsLambda.Interfaces.Researcher;
 
 namespace AI4NGExperimentManagementTests.Shared;
 
@@ -28,7 +26,7 @@ public class ServiceWiringIntegrationTests
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert - Check that all required services are registered
-        Assert.NotNull(serviceProvider.GetService<IExperimentService>());
+        Assert.NotNull(serviceProvider.GetService<IExperimentsService>());
         Assert.NotNull(serviceProvider.GetService<ITaskService>());
         Assert.NotNull(serviceProvider.GetService<IAuthenticationService>());
     }
@@ -84,7 +82,7 @@ public class ServiceWiringIntegrationTests
         startup.ConfigureServices(services);
 
         // Assert - Check service lifetimes
-        var experimentServiceDescriptor = services.FirstOrDefault(s => s.ServiceType == typeof(IExperimentService));
+        var experimentServiceDescriptor = services.FirstOrDefault(s => s.ServiceType == typeof(IExperimentsService));
         var taskServiceDescriptor = services.FirstOrDefault(s => s.ServiceType == typeof(ITaskService));
 
         Assert.NotNull(experimentServiceDescriptor);
@@ -202,7 +200,7 @@ public class ServiceWiringIntegrationTests
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert - Should not throw when resolving services
-        var experimentService = serviceProvider.GetService<IExperimentService>();
+        var experimentService = serviceProvider.GetService<IExperimentsService>();
         var taskService = serviceProvider.GetService<ITaskService>();
         var authService = serviceProvider.GetService<IAuthenticationService>();
 

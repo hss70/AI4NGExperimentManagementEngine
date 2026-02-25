@@ -5,7 +5,7 @@ using System.Net;
 
 namespace AI4NGExperimentManagement.Shared;
 
-public static class ApiExceptionMapper
+public static partial class ApiExceptionMapper
 {
     public static IActionResult Map(Exception ex)
     {
@@ -18,6 +18,8 @@ public static class ApiExceptionMapper
 
             // Auth
             UnauthorizedAccessException => new UnauthorizedObjectResult(new { error = ex.Message }),
+
+            ForbiddenException => new ObjectResult(new { error = ex.Message }) { StatusCode = 403 },
 
             // Dynamo conditional failures
             ConditionalCheckFailedException => new ConflictObjectResult(new { error = ex.Message }),

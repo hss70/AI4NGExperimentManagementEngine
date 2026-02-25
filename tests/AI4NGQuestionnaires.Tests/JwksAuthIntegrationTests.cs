@@ -1,16 +1,5 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.IdentityModel.Tokens;
 using Xunit;
-using System.Security.Cryptography;
-using System.Net;
 
 namespace AI4NGQuestionnaires.Tests
 {

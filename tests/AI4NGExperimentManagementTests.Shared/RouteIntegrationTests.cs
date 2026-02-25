@@ -4,6 +4,7 @@ using System.Reflection;
 using AI4NGExperimentsLambda.Controllers;
 using AI4NGQuestionnairesLambda.Controllers;
 using AI4NGResponsesLambda.Controllers;
+using AI4NGExperimentsLambda.Controllers.Researcher;
 
 namespace AI4NGExperimentManagementTests.Shared;
 
@@ -168,30 +169,33 @@ public class RouteIntegrationTests
     }
 
     [Fact]
-    public void ExperimentsController_ShouldHaveSpecializedEndpoints()
+    public void ExperimentsController_ShouldHaveExpectedEndpoints()
     {
         // Arrange
         var controllerType = typeof(ExperimentsController);
-        var specializedMethods = new[]
+
+        var expectedPublicMethods = new[]
         {
-            "GetMyExperiments",
-            "Sync",
-            "GetMembers",
-            "AddMember",
-            "RemoveMember",
-            "GetSessions",
-            "GetSession",
-            "CreateSession",
-            "UpdateSession",
-            "DeleteSession"
+            "GetAll",
+            "GetById",
+            "ValidateExperiment",
+            "Create",
+            "Update",
+            "Delete",
+            "Activate",
+            "Pause",
+            "Close"
         };
 
         // Act & Assert
-        foreach (var methodName in specializedMethods)
+        foreach (var methodName in expectedPublicMethods)
         {
-            var method = controllerType.GetMethod(methodName);
+            var method = controllerType
+                .GetMethods()
+                .SingleOrDefault(m => m.Name == methodName);
+
             Assert.NotNull(method);
-            Assert.True(method.IsPublic, $"{methodName} should be public");
+            Assert.True(method!.IsPublic, $"{methodName} should be public");
         }
     }
 

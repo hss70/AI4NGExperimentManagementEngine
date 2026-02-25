@@ -13,12 +13,6 @@ public abstract class BaseApiController : ControllerBase
         _authService = authService;
     }
 
-    protected ActionResult HandleException(Exception ex, string operation)
-    {
-        Console.Error.WriteLine($"Error during {operation}: {ex}");
-        return (ActionResult)ApiExceptionMapper.Map(ex);
-    }
-
     protected string GetAuthenticatedUsername()
     {
         var username = _authService.GetUsernameFromRequest();
@@ -27,12 +21,9 @@ public abstract class BaseApiController : ControllerBase
         return username;
     }
 
-    protected ActionResult RequireResearcher()
+    protected void RequireResearcher()
     {
         if (!_authService.IsResearcher())
-            return StatusCode(StatusCodes.Status403Forbidden,
-                new { message = "Participants cannot perform this action" });
-
-        return null!;
+            throw new ForbiddenException("Participants cannot perform this action");
     }
 }

@@ -1,4 +1,3 @@
-using Xunit;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
@@ -55,11 +54,8 @@ public class ErrorHandlingTests : ControllerTestBase<ResponsesController>
         authMock.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Authorization header is required"));
         var response = new Response();
 
-        // Act
-        var result = await controller.Create(response);
-
-        // Assert
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(response));
+        mockService.Verify(x => x.CreateResponseAsync(It.IsAny<Response>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]

@@ -1,5 +1,3 @@
-using System;
-
 namespace AI4NGExperimentManagementTests.Shared;
 
 public static class TestEnvironmentHelper

@@ -1,4 +1,3 @@
-using Xunit;
 using Moq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;

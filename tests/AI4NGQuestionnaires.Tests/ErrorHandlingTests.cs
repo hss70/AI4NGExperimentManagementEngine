@@ -54,7 +54,7 @@ public class ErrorHandlingTests
         // Act & Assert - controller directly uses the auth service; if no username is returned
         // GetAuthenticatedUsername will throw UnauthorizedAccessException which the test should expect
         _mockAuth.Setup(x => x.GetUsernameFromRequest()).Returns(string.Empty);
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _controller.Create(request, System.Threading.CancellationToken.None));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _controller.Create(request, CancellationToken.None));
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class ErrorHandlingTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<AmazonDynamoDBException>(
-            () => _service.GetAllAsync(System.Threading.CancellationToken.None));
+            () => _service.GetAllAsync(CancellationToken.None));
 
         Assert.Contains("Connection failed", exception.Message);
     }
@@ -96,7 +96,7 @@ public class ErrorHandlingTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            () => _service.CreateAsync(request.Id, request.Data, "testuser", System.Threading.CancellationToken.None));
+            () => _service.CreateAsync(request.Id, request.Data, "testuser", CancellationToken.None));
 
         Assert.Contains("Invalid request data", exception.Message);
     }
@@ -110,7 +110,7 @@ public class ErrorHandlingTests
 
         // Act & Assert
         await Assert.ThrowsAsync<TaskCanceledException>(
-            () => _service.GetByIdAsync("test-id", System.Threading.CancellationToken.None));
+            () => _service.GetByIdAsync("test-id", CancellationToken.None));
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class ErrorHandlingTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ResourceNotFoundException>(
-            () => _service.GetAllAsync(System.Threading.CancellationToken.None));
+            () => _service.GetAllAsync(CancellationToken.None));
 
         Assert.Contains("Table not found", exception.Message);
     }
@@ -152,7 +152,7 @@ public class ErrorHandlingTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ProvisionedThroughputExceededException>(
-            () => _service.CreateAsync(request.Id, request.Data, "testuser", System.Threading.CancellationToken.None));
+            () => _service.CreateAsync(request.Id, request.Data, "testuser", CancellationToken.None));
 
         Assert.Contains("Rate limit exceeded", exception.Message);
     }
@@ -168,7 +168,7 @@ public class ErrorHandlingTests
             .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act
-        var result = await _service.GetByIdAsync(invalidId!, System.Threading.CancellationToken.None);
+        var result = await _service.GetByIdAsync(invalidId!, CancellationToken.None);
 
         // Assert
         Assert.Null(result);

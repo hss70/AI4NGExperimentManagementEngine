@@ -1,10 +1,8 @@
-using Xunit;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using AI4NGExperimentsLambda.Controllers;
 using AI4NGExperimentsLambda.Interfaces;
 using AI4NGExperimentsLambda.Models;
-using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
 
 namespace AI4NGExperiments.Tests;

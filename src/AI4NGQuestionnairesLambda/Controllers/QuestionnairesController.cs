@@ -60,8 +60,7 @@ public class QuestionnairesController : BaseApiController
         CancellationToken ct)
     {
         var username = GetAuthenticatedUsername();
-        var researcherCheck = RequireResearcher();
-        if (researcherCheck != null) return researcherCheck;
+        RequireResearcher();
 
         var id = await _questionnaireService.CreateAsync(
             request.Id,
@@ -79,8 +78,7 @@ public class QuestionnairesController : BaseApiController
         CancellationToken ct)
     {
         var username = GetAuthenticatedUsername();
-        var researcherCheck = RequireResearcher();
-        if (researcherCheck != null) return researcherCheck;
+        RequireResearcher();
 
         if (request == null || request.Data == null)
             return BadRequest("Invalid questionnaire update request.");
@@ -97,8 +95,7 @@ public class QuestionnairesController : BaseApiController
     public async Task<ActionResult> Delete(string id, CancellationToken ct)
     {
         var username = GetAuthenticatedUsername();
-        var researcherCheck = RequireResearcher();
-        if (researcherCheck != null) return researcherCheck;
+        RequireResearcher();
 
         await _questionnaireService.DeleteAsync(id, username, ct);
 
@@ -111,8 +108,7 @@ public class QuestionnairesController : BaseApiController
         CancellationToken ct)
     {
         var username = GetAuthenticatedUsername();
-        var researcherCheck = RequireResearcher();
-        if (researcherCheck != null) return researcherCheck;
+        RequireResearcher();
 
         if (requests == null || requests.Count == 0)
             return BadRequest(new { error = "No questionnaires provided for batch import." });

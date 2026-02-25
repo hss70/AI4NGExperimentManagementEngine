@@ -1,16 +1,17 @@
-using Xunit;
 using Moq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Services;
+
 using AI4NGExperimentsLambda.Models;
+using AI4NGExperimentsLambda.Models.Dtos;
 
 namespace AI4NGExperiments.Tests;
 
 public class ExperimentServiceTests
 {
     private readonly Mock<IAmazonDynamoDB> _mockDynamoClient;
-    private readonly ExperimentService _service;
+    private readonly ExperimentsService _service;
 
     public ExperimentServiceTests()
     {
@@ -24,7 +25,7 @@ public class ExperimentServiceTests
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
-        _service = new ExperimentService(_mockDynamoClient.Object);
+        _service = new ExperimentsService(_mockDynamoClient.Object);
     }
 
     [Fact]
@@ -33,8 +34,8 @@ public class ExperimentServiceTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData 
-            { 
+            Data = new ExperimentData
+            {
                 Name = "Test Experiment",
                 SessionTypes = new Dictionary<string, SessionType>
                 {
@@ -46,14 +47,14 @@ public class ExperimentServiceTests
                     }
                 }
             },
-            QuestionnaireConfig = new QuestionnaireConfig 
-            { 
+            QuestionnaireConfig = new QuestionnaireConfig
+            {
                 Schedule = new Dictionary<string, string> { ["PQ"] = "every_session" }
             }
         };
 
         // Mock questionnaire exists
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.Is<GetItemRequest>(r => 
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.Is<GetItemRequest>(r =>
             r.Key["PK"].S == "QUESTIONNAIRE#PQ"), default))
             .ReturnsAsync(new GetItemResponse { IsItemSet = true });
 
@@ -62,47 +63,15 @@ public class ExperimentServiceTests
 
         // Assert
         Assert.NotNull(result);
+        Assert.IsType<IdResponseDto>(result);
+        Assert.False(string.IsNullOrWhiteSpace(result.Id));
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
     }
 
     [Fact]
     public async Task GetExperimentsAsync_ShouldReturnExperiments()
     {
-        // Arrange
-        var scanResponse = new ScanResponse
-        {
-            Items = new List<Dictionary<string, AttributeValue>>
-            {
-                new()
-                {
-                    ["PK"] = new AttributeValue("EXPERIMENT#test-id"),
-                    ["data"] = new AttributeValue
-                    {
-                        M = new Dictionary<string, AttributeValue>
-                        {
-                            ["name"] = new AttributeValue("Test Experiment"),
-                            ["description"] = new AttributeValue("Test Description")
-                        }
-                    }
-                }
-            }
-        };
-
-        _mockDynamoClient.Setup(x => x.ScanAsync(It.IsAny<ScanRequest>(), default))
-            .ReturnsAsync(scanResponse);
-
-        // Act
-        var result = await _service.GetExperimentsAsync();
-
-        // Assert
-        Assert.Single(result);
-        _mockDynamoClient.Verify(x => x.ScanAsync(It.IsAny<ScanRequest>(), default), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetExperimentAsync_ShouldReturnExperiment_WhenExists()
-    {
-        // Arrange
+        // Arrange - service now queries GSI1
         var queryResponse = new QueryResponse
         {
             Items = new List<Dictionary<string, AttributeValue>>
@@ -110,36 +79,85 @@ public class ExperimentServiceTests
                 new()
                 {
                     ["PK"] = new AttributeValue("EXPERIMENT#test-id"),
-                    ["SK"] = new AttributeValue("METADATA"),
-                    ["data"] = new AttributeValue { M = new Dictionary<string, AttributeValue> { ["name"] = new AttributeValue("Test") } },
-                    ["questionnaireConfig"] = new AttributeValue { M = new Dictionary<string, AttributeValue>() }
-                },
-                new()
-                {
-                    ["PK"] = new AttributeValue("EXPERIMENT#test-id"),
-                    ["SK"] = new AttributeValue("SESSION#session-1"),
-                    ["data"] = new AttributeValue { M = new Dictionary<string, AttributeValue> { ["sessionId"] = new AttributeValue("session-1") } }
+                    ["status"] = new AttributeValue("Active"),
+                    ["data"] = new AttributeValue
+                    {
+                        M = new Dictionary<string, AttributeValue>
+                        {
+                            ["Name"] = new AttributeValue("Test Experiment"),
+                            ["Description"] = new AttributeValue("Test Description")
+                        }
+                    }
                 }
             }
         };
 
+        QueryRequest? capturedQuery = null;
         _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
+            .Callback<QueryRequest, CancellationToken>((req, _) => capturedQuery = req)
             .ReturnsAsync(queryResponse);
+
+        // Provide ScanAsync handler so Verify can ensure it was not called
+        _mockDynamoClient.Setup(x => x.ScanAsync(It.IsAny<ScanRequest>(), default))
+            .ReturnsAsync(new ScanResponse());
+
+        // Act
+        var result = await _service.GetExperimentsAsync();
+
+        // Assert
+        Assert.Single(result);
+        _mockDynamoClient.Verify(x => x.QueryAsync(It.IsAny<QueryRequest>(), default), Times.Once);
+        _mockDynamoClient.Verify(x => x.ScanAsync(It.IsAny<ScanRequest>(), default), Times.Never);
+        Assert.NotNull(capturedQuery);
+        Assert.Equal("GSI1", capturedQuery.IndexName);
+        Assert.Contains("GSI1PK", capturedQuery.KeyConditionExpression);
+        Assert.Contains("#status", capturedQuery.ProjectionExpression);
+        Assert.Equal("Active", result[0].Status);
+    }
+
+    [Fact]
+    public async Task GetExperimentAsync_ShouldReturnExperiment_WhenExists()
+    {
+        // Arrange - metadata is fetched via GetItemAsync
+        var item = new Dictionary<string, AttributeValue>
+        {
+            ["PK"] = new AttributeValue { S = "EXPERIMENT#test-id" },
+            ["SK"] = new AttributeValue { S = "METADATA" },
+            ["status"] = new AttributeValue { S = "Paused" },
+            ["data"] = new AttributeValue { M = new Dictionary<string, AttributeValue> { ["Name"] = new AttributeValue("Test") } },
+            ["questionnaireConfig"] = new AttributeValue { M = new Dictionary<string, AttributeValue>() }
+        };
+
+        GetItemRequest? capturedGet = null;
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+            .Callback<GetItemRequest, CancellationToken>((req, _) => capturedGet = req)
+            .ReturnsAsync(new GetItemResponse { IsItemSet = true, Item = item });
+
+        // Provide QueryAsync handler so we can assert it was NOT used
+        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
+            .ReturnsAsync(new QueryResponse());
 
         // Act
         var result = await _service.GetExperimentAsync("test-id");
 
         // Assert
         Assert.NotNull(result);
-        _mockDynamoClient.Verify(x => x.QueryAsync(It.IsAny<QueryRequest>(), default), Times.Once);
+        _mockDynamoClient.Verify(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default), Times.Once);
+        _mockDynamoClient.Verify(x => x.QueryAsync(It.IsAny<QueryRequest>(), default), Times.Never);
+        Assert.NotNull(capturedGet);
+        Assert.True(capturedGet.Key.ContainsKey("PK"));
+        Assert.Equal("EXPERIMENT#test-id", capturedGet.Key["PK"].S);
+        Assert.True(capturedGet.Key.ContainsKey("SK"));
+        Assert.Equal("METADATA", capturedGet.Key["SK"].S);
+        Assert.Equal("Paused", result.Status);
     }
 
     [Fact]
     public async Task GetExperimentAsync_ShouldReturnNull_WhenNotExists()
     {
-        // Arrange
-        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
-            .ReturnsAsync(new QueryResponse { Items = new List<Dictionary<string, AttributeValue>>() });
+        // Arrange - GetItemAsync returns no item
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+            .ReturnsAsync(new GetItemResponse { IsItemSet = false, Item = null });
 
         // Act
         var result = await _service.GetExperimentAsync("non-existent");
@@ -149,7 +167,37 @@ public class ExperimentServiceTests
     }
 
     [Fact]
-    public async Task GetMyExperimentsAsync_ShouldReturnUserExperiments()
+    public async Task GetExperimentAsync_ShouldFallbackStatus_FromLegacyDataStatus_WhenTopLevelMissing()
+    {
+        // Arrange
+        var item = new Dictionary<string, AttributeValue>
+        {
+            ["PK"] = new AttributeValue { S = "EXPERIMENT#test-id" },
+            ["SK"] = new AttributeValue { S = "METADATA" },
+            ["data"] = new AttributeValue
+            {
+                M = new Dictionary<string, AttributeValue>
+                {
+                    ["Name"] = new AttributeValue("Test"),
+                    ["Status"] = new AttributeValue("Closed")
+                }
+            },
+            ["questionnaireConfig"] = new AttributeValue { M = new Dictionary<string, AttributeValue>() }
+        };
+
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+            .ReturnsAsync(new GetItemResponse { IsItemSet = true, Item = item });
+
+        // Act
+        var result = await _service.GetExperimentAsync("test-id");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Closed", result.Status);
+    }
+
+    [Fact]
+    public async Task GetExperimentsAsync_ShouldFallbackStatus_FromLegacyDataStatus_WhenTopLevelMissing()
     {
         // Arrange
         var queryResponse = new QueryResponse
@@ -163,10 +211,11 @@ public class ExperimentServiceTests
                     {
                         M = new Dictionary<string, AttributeValue>
                         {
-                            ["Name"] = new AttributeValue("My Experiment")
+                            ["Name"] = new AttributeValue("Test Experiment"),
+                            ["Description"] = new AttributeValue("Test Description"),
+                            ["Status"] = new AttributeValue("Draft")
                         }
-                    },
-                    ["role"] = new AttributeValue("researcher")
+                    }
                 }
             }
         };
@@ -175,10 +224,45 @@ public class ExperimentServiceTests
             .ReturnsAsync(queryResponse);
 
         // Act
-        var result = await _service.GetMyExperimentsAsync("testuser");
+        var result = await _service.GetExperimentsAsync();
 
         // Assert
         Assert.Single(result);
+        Assert.Equal("Draft", result[0].Status);
+    }
+
+    [Fact]
+    public async Task ValidateExperimentAsync_ShouldReturnValidateDto_WhenQuestionnairesExist()
+    {
+        // Arrange - prepare an experiment that references questionnaire PQ
+        var experiment = new Experiment
+        {
+            Data = new ExperimentData(),
+            QuestionnaireConfig = new QuestionnaireConfig
+            {
+                Schedule = new Dictionary<string, string> { ["PQ"] = "every_session" }
+            }
+        };
+
+        // Mock questionnaire exists
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.Is<GetItemRequest>(r => r.Key["PK"].S == "QUESTIONNAIRE#PQ"), default))
+            .ReturnsAsync(new GetItemResponse { IsItemSet = true });
+
+        // Act
+        var result = await _service.ValidateExperimentAsync(experiment);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.IsType<ValidateExperimentResponseDto>(result);
+        Assert.True(result.Valid);
+        Assert.Contains("PQ", result.ReferencedQuestionnaires);
+    }
+
+    [Fact(Skip = "Refactor: moved to Session/Membership services")]
+    public async Task GetMyExperimentsAsync_ShouldReturnUserExperiments()
+    {
+        // Quarantined - moved to LegacyMonolith/membership services
+        await Task.CompletedTask;
     }
 
     [Fact]
@@ -210,93 +294,31 @@ public class ExperimentServiceTests
         _mockDynamoClient.Verify(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), default), Times.Once);
     }
 
-    [Fact]
+    [Fact(Skip = "Refactor: moved to Session/Membership services")]
     public async Task SyncExperimentAsync_ShouldReturnChanges_WhenValid()
     {
-        // Arrange
-        var lastSyncTime = DateTime.UtcNow.AddHours(-1);
-
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
-            .ReturnsAsync(new GetItemResponse
-            {
-                IsItemSet = true,
-                Item = new Dictionary<string, AttributeValue> { ["PK"] = new AttributeValue("EXPERIMENT#test-id") }
-            });
-
-        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
-            .ReturnsAsync(new QueryResponse
-            {
-                Items = new List<Dictionary<string, AttributeValue>>
-                {
-                    new()
-                    {
-                        ["PK"] = new AttributeValue("EXPERIMENT#test-id"),
-                        ["SK"] = new AttributeValue("METADATA"),
-                        ["data"] = new AttributeValue { M = new Dictionary<string, AttributeValue> { ["name"] = new AttributeValue("Test") } },
-                        ["updatedAt"] = new AttributeValue(DateTime.UtcNow.ToString("O"))
-                    }
-                }
-            });
-
-        // Act
-        var result = await _service.SyncExperimentAsync("test-id", lastSyncTime, "testuser");
-
-        // Assert
-        Assert.NotNull(result);
-        _mockDynamoClient.Verify(x => x.QueryAsync(It.IsAny<QueryRequest>(), default), Times.Once);
+        // Quarantined - moved to LegacyMonolith/session services
+        await Task.CompletedTask;
     }
 
-    [Fact]
+    [Fact(Skip = "Refactor: moved to Session/Membership services")]
     public async Task GetExperimentMembersAsync_ShouldReturnMembers()
     {
-        // Arrange
-        var queryResponse = new QueryResponse
-        {
-            Items = new List<Dictionary<string, AttributeValue>>
-            {
-                new()
-                {
-                    ["SK"] = new AttributeValue("MEMBER#user123"),
-                    ["role"] = new AttributeValue("participant"),
-                    ["addedAt"] = new AttributeValue("2024-01-01T00:00:00Z")
-                }
-            }
-        };
-
-        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
-            .ReturnsAsync(queryResponse);
-
-        // Act
-        var result = await _service.GetExperimentMembersAsync("test-id");
-
-        // Assert
-        Assert.Single(result);
+        // Quarantined - moved to LegacyMonolith/membership services
+        await Task.CompletedTask;
     }
 
-    [Fact]
+    [Fact(Skip = "Refactor: moved to Session/Membership services")]
     public async Task AddMemberAsync_ShouldAddMember_WhenValid()
     {
-        // Arrange
-        var memberData = new MemberRequest { Role = "participant" };
-
-        // Act
-        await _service.AddMemberAsync("test-id", "user123", memberData, "testuser");
-
-        // Assert
-        _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
+        // Quarantined - moved to LegacyMonolith/membership services
+        await Task.CompletedTask;
     }
 
-    [Fact]
+    [Fact(Skip = "Refactor: moved to Session/Membership services")]
     public async Task RemoveMemberAsync_ShouldRemoveMember_WhenExists()
     {
-        // Arrange
-        _mockDynamoClient.Setup(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), default))
-            .ReturnsAsync(new DeleteItemResponse());
-
-        // Act
-        await _service.RemoveMemberAsync("test-id", "user123", "testuser");
-
-        // Assert
-        _mockDynamoClient.Verify(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), default), Times.Once);
+        // Quarantined - moved to LegacyMonolith/membership services
+        await Task.CompletedTask;
     }
 }

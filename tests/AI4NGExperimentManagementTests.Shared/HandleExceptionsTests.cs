@@ -1,13 +1,5 @@
-﻿using AI4NGResponsesLambda.Interfaces;
-using Microsoft.AspNetCore.Mvc;
-using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Mvc;
 using Xunit;
-using AI4NGExperimentManagement.Shared;
 using AI4NGResponsesLambda.Controllers;
 
 namespace AI4NGExperimentManagementTests.Shared
@@ -21,11 +13,8 @@ namespace AI4NGExperimentManagementTests.Shared
             Type expectedResultType,
             int expectedStatusCode)
         {
-            // Arrange
-            var controller = new TestBaseApiController(CreateAuthMock(false).Object);
-
-            // Act
-            var result = controller.InvokeHandleException(ex, "test operation");
+            // Act - map exception using centralized mapper
+            var result = AI4NGExperimentManagement.Shared.ApiExceptionMapper.Map(ex);
 
             // Assert – don't care about the exact subclass, just that it's some ObjectResult
             var objectResult = Assert.IsAssignableFrom<ObjectResult>(result);

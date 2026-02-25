@@ -189,11 +189,19 @@ Example Response:
 
 ## Session & Task APIs
 
-> Note: Session and Task endpoints described previously are not implemented in the current service. They are planned and retained here only as reference for future work.
+Note: Session endpoints (session execution, per-session task ordering endpoints) are partially implemented via the Experiment/session models but task management is implemented in the Experiments service. The Task Management endpoints below reflect the current controller and service behavior (request shapes, validation rules and response types).
 
 ## Task Management API (Researcher Only)
 
 **Note**: Tasks are reusable components that can be referenced in session types and ordered within sessions.
+
+Validation and canonical types
+- Task creation/update enforces a canonical set of Task Type values. Supported canonical types are: "Training", "NeuroGame", "Questionnaire", and "QuestionnaireSet". The service normalizes common variants but tests and clients should prefer the canonical values.
+- Task keys (`TaskKey`) are required and must match the pattern: ^[A-Z0-9_]{3,64}$ (uppercase, digits and underscore only, length 3-64). The service normalizes incoming keys to upper-case.
+- Questionnaire-related rules enforced on Task Data:
+  - "Questionnaire" tasks must define exactly one QuestionnaireId in `QuestionnaireIds`.
+  - "QuestionnaireSet" tasks must define at least one QuestionnaireId in `QuestionnaireIds`.
+  - "Training" and "NeuroGame" tasks must NOT define `QuestionnaireIds`.
 
 ### GET /api/tasks
 Retrieve all tasks (researchers only).
@@ -245,40 +253,49 @@ Retrieve a specific task by ID (researchers only).
 Create a new task (researchers only).
 
 **Request Body:**
+The current service expects a `CreateTaskRequest` shape that contains a `TaskKey` (string) and a nested `Data` object (the task details). Example:
+
 ```json
 {
-  "name": "EEG Training",
-  "type": "TRAIN_EEG",
-  "description": "Basic EEG neurofeedback training",
-  "configuration": {
-    "duration": 300,
-    "difficulty": "beginner"
-  },
-  "estimatedDuration": 300
+  "taskKey": "TRAIN_EEG",
+  "data": {
+    "name": "EEG Training",
+    "type": "Training",
+    "description": "Basic EEG neurofeedback training",
+    "configuration": {
+      "duration": 300,
+      "difficulty": "beginner"
+    },
+    "estimatedDuration": 300
+  }
 }
 ```
 
 **Response:**
 ```json
 {
-  "id": "task-uuid"
+  "id": "TRAIN_EEG"
 }
 ```
+
+The controller returns HTTP 201 Created (CreatedAtAction) with the created task id in the response body. Clients should read the Location header or the returned `id` value.
 
 ### PUT /api/tasks/{taskId}
 Update an existing task (researchers only).
 
 **Request Body:**
+Same `TaskKey` + `Data` shape as POST. Example update payload:
+
 ```json
 {
-  "name": "Advanced EEG Training",
-  "type": "TRAIN_EEG",
-  "description": "Advanced EEG neurofeedback training",
-  "configuration": {
-    "duration": 600,
-    "difficulty": "advanced"
-  },
-  "estimatedDuration": 600
+  "taskKey": "TRAIN_EEG",
+  "data": {
+    "name": "Advanced EEG Training",
+    "type": "Training",
+    "description": "Advanced EEG neurofeedback training",
+    "configuration": { "duration": 600, "difficulty": "advanced" },
+    "estimatedDuration": 600
+  }
 }
 ```
 
@@ -298,6 +315,13 @@ Delete a task (researchers only).
   "message": "Task deleted successfully"
 }
 ```
+
+Notes about task identifiers
+- The API uses the `taskKey` as the canonical identifier for tasks (returned as `id` in responses). The service normalizes to upper-case and validates the format.
+- Clients should provide consistent `TaskKey` values when referencing tasks in session types or when performing updates.
+
+Cancellation tokens
+- The current API and controllers do not expose or document HTTP-level cancellation tokens for requests. If you plan to add support for request cancellation (e.g., via middleware or explicit controller method signatures), the documentation should be extended to describe how clients can cancel long-running requests.
 
 ## Questionnaires API
 

@@ -15,9 +15,6 @@ public abstract class ControllerTestBase<TController> where TController : Contro
             : base(service, auth)
         {
         }
-
-        public ActionResult InvokeHandleException(Exception ex, string operation)
-            => HandleException(ex, operation);
     }
 
     public class TestBaseApiController : BaseApiController
@@ -28,9 +25,6 @@ public abstract class ControllerTestBase<TController> where TController : Contro
         {
         }
 
-        // Public wrapper around the protected method
-        public ActionResult InvokeHandleException(Exception ex, string operation)
-            => HandleException(ex, operation);
     }
 
     public static IEnumerable<object[]> ExceptionTestData =>
@@ -41,6 +35,12 @@ public abstract class ControllerTestBase<TController> where TController : Contro
             new UnauthorizedAccessException("Unauthorized!"),
             typeof(UnauthorizedObjectResult),
             401
+        },
+        new object[]
+        {
+            new AI4NGExperimentManagement.Shared.ForbiddenException("Forbidden!"),
+            typeof(ObjectResult),
+            403
         },
         new object[]
         {

@@ -4,8 +4,8 @@ using Moq;
 using AI4NGQuestionnairesLambda.Controllers;
 using AI4NGQuestionnairesLambda.Interfaces;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
-using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
+using AI4NGExperimentManagement.Shared;
 
 namespace AI4NGQuestionnaires.Tests;
 
@@ -283,11 +283,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         };
 
         // Act
-        var result = await controller.Create(request, CancellationToken.None);
-
-        // Assert - Should return Forbidden
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(403, objectResult.StatusCode);
+        await Assert.ThrowsAsync<ForbiddenException>(() => controller.Create(request, CancellationToken.None));
         mockService.Verify(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
     }
 
@@ -304,11 +300,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         };
 
         // Act
-        var result = await controller.Update("test-id", request, CancellationToken.None);
-
-        // Assert - Should return Forbidden
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(403, objectResult.StatusCode);
+        await Assert.ThrowsAsync<ForbiddenException>(() => controller.Update("test-id", request, CancellationToken.None));
         mockService.Verify(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
     }
 
@@ -319,12 +311,8 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth), isResearcher: false);
 
-        // Act
-        var result = await controller.Delete("test-id", CancellationToken.None);
-
-        // Assert - Should return Forbidden
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(403, objectResult.StatusCode);
+        // Act and Assert - Should return Forbidden
+        await Assert.ThrowsAsync<ForbiddenException>(() => controller.Delete("test-id", CancellationToken.None));
         mockService.Verify(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
     }
 
@@ -340,12 +328,8 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             new() { Id = "q1", Data = new QuestionnaireDataDto { Name = "Questionnaire 1" } }
         };
 
-        // Act
-        var result = await controller.CreateBatch(requests, CancellationToken.None);
-
-        // Assert - Should return Forbidden
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(403, objectResult.StatusCode);
+        // Act and Assert - Should return Forbidden
+        await Assert.ThrowsAsync<ForbiddenException>(() => controller.CreateBatch(requests, CancellationToken.None));
         mockService.Verify(x => x.CreateBatchAsync(It.IsAny<List<CreateQuestionnaireRequest>>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
     }
 }
