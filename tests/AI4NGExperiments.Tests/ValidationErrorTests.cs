@@ -56,11 +56,4 @@ public class ValidationErrorTests
         await Assert.ThrowsAsync<ArgumentException>(() => _tasksController.Create(taskRequest));
     }
 
-    [Fact(Skip = "Refactor: moved to Session services")]
-    public async Task CreateSession_WithMissingExperiment_ReturnsBadRequestWithValidationError()
-    {
-        // Quarantined - session protocol tests moved to SessionProtocolService
-        await Task.CompletedTask;
-    }
-
 }

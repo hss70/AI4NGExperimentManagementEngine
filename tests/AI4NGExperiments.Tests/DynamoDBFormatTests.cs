@@ -174,55 +174,6 @@ public class DynamoDBFormatTests
 
 
 
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task SyncExperimentAsync_ShouldReturnCorrectFormat()
-    {
-        // Quarantined - moved to LegacyMonolith/session services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task SyncExperimentAsync_ShouldValidateExperimentExists()
-    {
-        // Quarantined - moved to LegacyMonolith/session services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task SyncExperimentAsync_ShouldUseCorrectQueryFormat()
-    {
-        // Quarantined - moved to LegacyMonolith/session services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task AddMemberAsync_ShouldCreateCorrectMemberPKFormat()
-    {
-        // Quarantined - moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task AddMemberAsync_ShouldCreateCorrectMemberSKFormat()
-    {
-        // Quarantined - moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task AddMemberAsync_ShouldSetCorrectMemberType()
-    {
-        // Quarantined - moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task AddMemberAsync_ShouldIncludeMemberAuditFields()
-    {
-        // Quarantined - moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
-
     [Fact]
     public async Task UpdateExperimentAsync_ShouldUseCorrectKeyFormat()
     {

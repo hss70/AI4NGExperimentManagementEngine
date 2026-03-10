@@ -214,10 +214,4 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         Assert.Null(result);
     }
 
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task Service_ShouldHandleNullSyncTime()
-    {
-        // Quarantined - moved to LegacyMonolith/session services
-        await Task.CompletedTask;
-    }
 }

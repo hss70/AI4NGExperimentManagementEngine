@@ -21,20 +21,6 @@ public class IntegrationTests
         _service = new ExperimentsService(_mockDynamoClient.Object);
     }
 
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task CompleteExperimentWorkflow_ShouldSucceed()
-    {
-        // Quarantined - moved to LegacyMonolith/session & membership services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task ExperimentMemberManagementWorkflow_ShouldSucceed()
-    {
-        // Quarantined - moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
-
     [Fact]
     public async Task ErrorHandling_ShouldPropagateExceptions()
     {
@@ -46,13 +32,6 @@ public class IntegrationTests
         // Act & Assert
         await Assert.ThrowsAsync<AmazonDynamoDBException>(
             () => _service.GetExperimentsAsync());
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task ConcurrentOperations_ShouldHandleMultipleQueries()
-    {
-        // Quarantined - moved to LegacyMonolith/session services
-        await Task.CompletedTask;
     }
 
     [Fact]

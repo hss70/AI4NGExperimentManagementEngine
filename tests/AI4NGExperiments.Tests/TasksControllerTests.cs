@@ -45,12 +45,6 @@ public class TasksControllerTests : ControllerTestBase<TasksController>
         Assert.Equal(task, okResult.Value);
     }
 
-    [Fact(Skip = "Controller currently expects dynamic lowercase id field")]
-    public async Task TasksController_Create_ShouldReturnOkWithResult()
-    {
-        await Task.CompletedTask;
-    }
-
     [Fact]
     public async Task TasksController_Update_ShouldReturnOkWithMessage()
     {

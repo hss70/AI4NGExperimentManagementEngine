@@ -221,19 +221,6 @@ public class ExperimentServiceTests
         Assert.Null(result[0].Status);
     }
 
-    [Fact(Skip = "Questionnaire validation moved out of ExperimentsService")]
-    public async Task ValidateExperimentAsync_ShouldReturnValidateDto_WhenQuestionnairesExist()
-    {
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task GetMyExperimentsAsync_ShouldReturnUserExperiments()
-    {
-        // Quarantined - moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
-
     [Fact]
     public async Task UpdateExperimentAsync_ShouldCallUpdateItem()
     {
@@ -263,31 +250,4 @@ public class ExperimentServiceTests
         _mockDynamoClient.Verify(x => x.DeleteItemAsync(It.IsAny<DeleteItemRequest>(), default), Times.Once);
     }
 
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task SyncExperimentAsync_ShouldReturnChanges_WhenValid()
-    {
-        // Quarantined - moved to LegacyMonolith/session services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task GetExperimentMembersAsync_ShouldReturnMembers()
-    {
-        // Quarantined - moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task AddMemberAsync_ShouldAddMember_WhenValid()
-    {
-        // Quarantined - moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task RemoveMemberAsync_ShouldRemoveMember_WhenExists()
-    {
-        // Quarantined - moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
 }
