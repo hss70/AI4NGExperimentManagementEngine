@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using AI4NGExperimentManagement.Shared;
+using AI4NGExperimentsLambda.Interfaces.Researcher;
 
 namespace AI4NGExperimentsLambda.Controllers.Researcher
 {
@@ -9,9 +10,13 @@ namespace AI4NGExperimentsLambda.Controllers.Researcher
     [Route("api/experiments/{experimentId}/participants")]
     public class ExperimentParticipantsController : BaseApiController
     {
-        public ExperimentParticipantsController(IAuthenticationService authService)
+        private readonly IExperimentParticipantsService _experimentParticipantsService;
+
+        public ExperimentParticipantsController(IExperimentParticipantsService experimentParticipantsService, IAuthenticationService authService)
             : base(authService)
-        { }
+        {
+            _experimentParticipantsService = experimentParticipantsService;
+        }
 
         /// <summary>
         /// Lists participants enrolled in an experiment (researcher-only).

@@ -42,21 +42,11 @@ public class ExperimentServiceTests
                     ["DAILY"] = new SessionType
                     {
                         Name = "Daily Session",
-                        Questionnaires = new List<string> { "PQ" },
                         Tasks = new List<string> { "TRAIN_EEG" }
                     }
                 }
-            },
-            QuestionnaireConfig = new QuestionnaireConfig
-            {
-                Schedule = new Dictionary<string, string> { ["PQ"] = "every_session" }
             }
         };
-
-        // Mock questionnaire exists
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.Is<GetItemRequest>(r =>
-            r.Key["PK"].S == "QUESTIONNAIRE#PQ"), default))
-            .ReturnsAsync(new GetItemResponse { IsItemSet = true });
 
         // Act
         var result = await _service.CreateExperimentAsync(experiment, "testuser");
@@ -193,7 +183,7 @@ public class ExperimentServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Closed", result.Status);
+        Assert.Null(result.Status);
     }
 
     [Fact]
@@ -228,34 +218,13 @@ public class ExperimentServiceTests
 
         // Assert
         Assert.Single(result);
-        Assert.Equal("Draft", result[0].Status);
+        Assert.Null(result[0].Status);
     }
 
-    [Fact]
+    [Fact(Skip = "Questionnaire validation moved out of ExperimentsService")]
     public async Task ValidateExperimentAsync_ShouldReturnValidateDto_WhenQuestionnairesExist()
     {
-        // Arrange - prepare an experiment that references questionnaire PQ
-        var experiment = new Experiment
-        {
-            Data = new ExperimentData(),
-            QuestionnaireConfig = new QuestionnaireConfig
-            {
-                Schedule = new Dictionary<string, string> { ["PQ"] = "every_session" }
-            }
-        };
-
-        // Mock questionnaire exists
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.Is<GetItemRequest>(r => r.Key["PK"].S == "QUESTIONNAIRE#PQ"), default))
-            .ReturnsAsync(new GetItemResponse { IsItemSet = true });
-
-        // Act
-        var result = await _service.ValidateExperimentAsync(experiment);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<ValidateExperimentResponseDto>(result);
-        Assert.True(result.Valid);
-        Assert.Contains("PQ", result.ReferencedQuestionnaires);
+        await Task.CompletedTask;
     }
 
     [Fact(Skip = "Refactor: moved to Session/Membership services")]

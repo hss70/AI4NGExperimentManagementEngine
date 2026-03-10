@@ -107,8 +107,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
 
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test" },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = "Test" }
         };
 
         // Act & Assert
@@ -153,8 +152,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
 
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test" },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = "Test" }
         };
 
         // Act & Assert
@@ -189,8 +187,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
 
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test" },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = "Test" }
         };
 
         // Act & Assert

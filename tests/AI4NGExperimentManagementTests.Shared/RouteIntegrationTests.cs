@@ -5,6 +5,7 @@ using AI4NGExperimentsLambda.Controllers;
 using AI4NGQuestionnairesLambda.Controllers;
 using AI4NGResponsesLambda.Controllers;
 using AI4NGExperimentsLambda.Controllers.Researcher;
+using System.Linq.Expressions;
 
 namespace AI4NGExperimentManagementTests.Shared;
 
@@ -15,21 +16,21 @@ public class RouteIntegrationTests
     {
         // Arrange
         var controllerType = typeof(ExperimentsController);
-        
+
         // Act & Assert - Check controller route
         var routeAttribute = controllerType.GetCustomAttribute<RouteAttribute>();
         Assert.NotNull(routeAttribute);
         Assert.Equal("api/experiments", routeAttribute.Template);
-        
+
         // Check individual action routes
         var methods = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.DeclaringType == controllerType);
-            
+
         var httpGetMethods = methods.Where(m => m.GetCustomAttribute<HttpGetAttribute>() != null);
         var httpPostMethods = methods.Where(m => m.GetCustomAttribute<HttpPostAttribute>() != null);
         var httpPutMethods = methods.Where(m => m.GetCustomAttribute<HttpPutAttribute>() != null);
         var httpDeleteMethods = methods.Where(m => m.GetCustomAttribute<HttpDeleteAttribute>() != null);
-        
+
         Assert.True(httpGetMethods.Any(), "Should have GET methods");
         Assert.True(httpPostMethods.Any(), "Should have POST methods");
         Assert.True(httpPutMethods.Any(), "Should have PUT methods");
@@ -41,21 +42,21 @@ public class RouteIntegrationTests
     {
         // Arrange
         var controllerType = typeof(TasksController);
-        
+
         // Act & Assert - Check controller route
         var routeAttribute = controllerType.GetCustomAttribute<RouteAttribute>();
         Assert.NotNull(routeAttribute);
         Assert.Equal("api/tasks", routeAttribute.Template);
-        
+
         // Check individual action routes
         var methods = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.DeclaringType == controllerType);
-            
+
         var httpGetMethods = methods.Where(m => m.GetCustomAttribute<HttpGetAttribute>() != null);
         var httpPostMethods = methods.Where(m => m.GetCustomAttribute<HttpPostAttribute>() != null);
         var httpPutMethods = methods.Where(m => m.GetCustomAttribute<HttpPutAttribute>() != null);
         var httpDeleteMethods = methods.Where(m => m.GetCustomAttribute<HttpDeleteAttribute>() != null);
-        
+
         Assert.True(httpGetMethods.Any(), "Should have GET methods");
         Assert.True(httpPostMethods.Any(), "Should have POST methods");
         Assert.True(httpPutMethods.Any(), "Should have PUT methods");
@@ -67,21 +68,21 @@ public class RouteIntegrationTests
     {
         // Arrange
         var controllerType = typeof(QuestionnairesController);
-        
+
         // Act & Assert - Check controller route
         var routeAttribute = controllerType.GetCustomAttribute<RouteAttribute>();
         Assert.NotNull(routeAttribute);
         Assert.Equal("api/[controller]", routeAttribute.Template);
-        
+
         // Check individual action routes
         var methods = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.DeclaringType == controllerType);
-            
+
         var httpGetMethods = methods.Where(m => m.GetCustomAttribute<HttpGetAttribute>() != null);
         var httpPostMethods = methods.Where(m => m.GetCustomAttribute<HttpPostAttribute>() != null);
         var httpPutMethods = methods.Where(m => m.GetCustomAttribute<HttpPutAttribute>() != null);
         var httpDeleteMethods = methods.Where(m => m.GetCustomAttribute<HttpDeleteAttribute>() != null);
-        
+
         Assert.True(httpGetMethods.Any(), "Should have GET methods");
         Assert.True(httpPostMethods.Any(), "Should have POST methods");
         Assert.True(httpPutMethods.Any(), "Should have PUT methods");
@@ -93,21 +94,21 @@ public class RouteIntegrationTests
     {
         // Arrange
         var controllerType = typeof(ResponsesController);
-        
+
         // Act & Assert - Check controller route
         var routeAttribute = controllerType.GetCustomAttribute<RouteAttribute>();
         Assert.NotNull(routeAttribute);
         Assert.Equal("api/responses", routeAttribute.Template);
-        
+
         // Check individual action routes
         var methods = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.DeclaringType == controllerType);
-            
+
         var httpGetMethods = methods.Where(m => m.GetCustomAttribute<HttpGetAttribute>() != null);
         var httpPostMethods = methods.Where(m => m.GetCustomAttribute<HttpPostAttribute>() != null);
         var httpPutMethods = methods.Where(m => m.GetCustomAttribute<HttpPutAttribute>() != null);
         var httpDeleteMethods = methods.Where(m => m.GetCustomAttribute<HttpDeleteAttribute>() != null);
-        
+
         Assert.True(httpGetMethods.Any(), "Should have GET methods");
         Assert.True(httpPostMethods.Any(), "Should have POST methods");
         Assert.True(httpPutMethods.Any(), "Should have PUT methods");
@@ -163,7 +164,7 @@ public class RouteIntegrationTests
         // Assert
         Assert.NotNull(method);
         Assert.True(method.IsPublic, $"{methodName} should be public");
-        Assert.True(method.ReturnType == typeof(Task<IActionResult>) || 
+        Assert.True(method.ReturnType == typeof(Task<IActionResult>) ||
                    method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>),
                    $"{methodName} should return Task<IActionResult> or Task<ActionResult<T>>");
     }
@@ -178,7 +179,6 @@ public class RouteIntegrationTests
         {
             "GetAll",
             "GetById",
-            "ValidateExperiment",
             "Create",
             "Update",
             "Delete",
@@ -194,8 +194,21 @@ public class RouteIntegrationTests
                 .GetMethods()
                 .SingleOrDefault(m => m.Name == methodName);
 
-            Assert.NotNull(method);
+            CheckIfMethodIsNull(methodName, method);
+
             Assert.True(method!.IsPublic, $"{methodName} should be public");
+        }
+    }
+
+    private void CheckIfMethodIsNull(string methodName, MethodInfo? method)
+    {
+        try
+        {
+            Assert.NotNull(method);
+        }
+        catch (Exception)
+        {
+            Assert.Fail($"{methodName} method should exist in ExperimentsController");
         }
     }
 
@@ -211,7 +224,7 @@ public class RouteIntegrationTests
         // Assert
         Assert.NotNull(batchMethod);
         Assert.True(batchMethod.IsPublic, "CreateBatch should be public");
-        
+
         var httpPostAttribute = batchMethod.GetCustomAttribute<HttpPostAttribute>();
         Assert.NotNull(httpPostAttribute);
         Assert.Equal("batch", httpPostAttribute.Template);
@@ -233,17 +246,17 @@ public class RouteIntegrationTests
         foreach (var controllerType in controllerTypes)
         {
             var publicMethods = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .Where(m => m.DeclaringType == controllerType && 
-                           m.ReturnType.IsGenericType && 
+                .Where(m => m.DeclaringType == controllerType &&
+                           m.ReturnType.IsGenericType &&
                            m.ReturnType.GetGenericTypeDefinition() == typeof(Task<>));
 
             foreach (var method in publicMethods)
             {
                 var hasHttpAttribute = method.GetCustomAttributes()
-                    .Any(attr => attr.GetType().Name.StartsWith("Http") && 
+                    .Any(attr => attr.GetType().Name.StartsWith("Http") &&
                                 attr.GetType().Name.EndsWith("Attribute"));
-                
-                Assert.True(hasHttpAttribute, 
+
+                Assert.True(hasHttpAttribute,
                     $"{controllerType.Name}.{method.Name} should have an HTTP method attribute");
             }
         }

@@ -30,8 +30,7 @@ public class BusinessRuleTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = invalidName! },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = invalidName! }
         };
 
         // Act - Currently this passes but should validate name
@@ -43,7 +42,7 @@ public class BusinessRuleTests
         Assert.NotNull(result);
     }
 
-    [Fact]
+    [Fact(Skip = "Questionnaire validation moved to TaskService")]
     public async Task CreateExperimentAsync_ShouldThrowException_WhenQuestionnaireNotFound()
     {
         // Arrange
@@ -54,10 +53,9 @@ public class BusinessRuleTests
                 Name = "Test Experiment",
                 SessionTypes = new Dictionary<string, SessionType>
                 {
-                    ["daily"] = new SessionType { Questionnaires = new List<string> { "non-existent-questionnaire" } }
+                    ["daily"] = new SessionType { Tasks = new List<string> { "TASK_1" } }
                 }
-            },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            }
         };
 
         // Mock questionnaire not found
@@ -71,7 +69,7 @@ public class BusinessRuleTests
         Assert.Contains("missing questionnaire", exception.Message.ToLower());
     }
 
-    [Fact]
+    [Fact(Skip = "Questionnaire validation moved to TaskService")]
     public async Task CreateExperimentAsync_ShouldSucceed_WhenAllQuestionnairesExist()
     {
         // Arrange
@@ -82,10 +80,9 @@ public class BusinessRuleTests
                 Name = "Valid Experiment",
                 SessionTypes = new Dictionary<string, SessionType>
                 {
-                    ["daily"] = new SessionType { Questionnaires = new List<string> { "questionnaire-1", "questionnaire-2" } }
+                    ["daily"] = new SessionType { Tasks = new List<string> { "TASK_1", "TASK_2" } }
                 }
-            },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            }
         };
 
         // Mock questionnaires exist
@@ -117,8 +114,7 @@ public class BusinessRuleTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Experiment Without Questionnaires" },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = "Experiment Without Questionnaires" }
         };
 
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))

@@ -11,10 +11,6 @@ public interface IExperimentsService
         string experimentId,
         CancellationToken ct = default);
 
-    Task<ValidateExperimentResponseDto> ValidateExperimentAsync(
-        Experiment experiment,
-        CancellationToken ct = default);
-
     Task<IdResponseDto> CreateExperimentAsync(
         Experiment experiment,
         string performedBy,

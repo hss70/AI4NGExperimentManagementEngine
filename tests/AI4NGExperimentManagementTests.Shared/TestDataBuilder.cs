@@ -21,24 +21,22 @@ public static class TestDataBuilder
         return new Experiment
         {
             Id = "test-experiment-id",
+            Status = "active",
             Data = new ExperimentData
             {
                 Name = "Test Experiment",
                 Description = "A test experiment for integration testing",
-                Status = "active",
+
                 SessionTypes = new Dictionary<string, SessionType>
                 {
                     ["daily"] = new SessionType
                     {
                         Name = "Daily Session",
-                        Questionnaires = new List<string> { "test-questionnaire" },
                         Tasks = new List<string> { "test-task" },
-                        EstimatedDuration = 30
+                        EstimatedDurationMinutes = 30
                     }
                 }
             },
-            QuestionnaireConfig = new QuestionnaireConfig(),
-            Sessions = new List<Session>(),
             CreatedBy = TestUsername,
             CreatedAt = DateTime.UtcNow
         };

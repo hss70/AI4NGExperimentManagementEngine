@@ -5,28 +5,32 @@ namespace AI4NGExperimentsLambda.Interfaces.Researcher;
 
 public interface ISessionProtocolService
 {
-    Task<IEnumerable<ProtocolSessionDto>> ListProtocolSessionsAsync(
+    Task<IReadOnlyList<ProtocolSessionDto>> GetProtocolSessionsAsync(
         string experimentId,
         CancellationToken ct = default);
 
     Task<ProtocolSessionDto?> GetProtocolSessionAsync(
         string experimentId,
-        string protocolSessionKey,
+        string protocolKey,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// Idempotent upsert for FIRST/DAILY/WEEKLY definitions.
-    /// </summary>
-    Task<ProtocolSessionDto> UpsertProtocolSessionAsync(
+    Task<ProtocolSessionDto> CreateProtocolSessionAsync(
         string experimentId,
-        string protocolSessionKey,
+        string protocolKey,
+        UpsertProtocolSessionRequest request,
+        string performedBy,
+        CancellationToken ct = default);
+
+    Task<ProtocolSessionDto> UpdateProtocolSessionAsync(
+        string experimentId,
+        string protocolKey,
         UpsertProtocolSessionRequest request,
         string performedBy,
         CancellationToken ct = default);
 
     Task DeleteProtocolSessionAsync(
         string experimentId,
-        string protocolSessionKey,
+        string protocolKey,
         string performedBy,
         CancellationToken ct = default);
 }

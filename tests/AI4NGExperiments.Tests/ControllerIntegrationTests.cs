@@ -41,7 +41,6 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
         {
             Id = experiment.Id,
             Data = experiment.Data,
-            QuestionnaireConfig = experiment.QuestionnaireConfig,
             UpdatedAt = DateTime.UtcNow.ToString("O")
         };
         mockService.Setup(x => x.GetExperimentAsync("test-id", It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(expDto);
@@ -179,7 +178,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
         // Researcher participant listing is now a dedicated controller and is stubbed
         var authMock2 = CreateAuthMock();
         authMock2.Setup(x => x.GetUsernameFromRequest()).Returns(TestDataBuilder.TestUsername);
-        var participantsController = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(authMock2.Object);
+        var participantsController = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(new Mock<IExperimentParticipantsService>().Object, authMock2.Object);
         participantsController.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
         // Act
@@ -201,7 +200,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
         var memberData = new MemberRequest { Role = "participant" };
         var authMock3 = CreateAuthMock();
         authMock3.Setup(x => x.GetUsernameFromRequest()).Returns(TestDataBuilder.TestUsername);
-        var participantsController2 = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(authMock3.Object);
+        var participantsController2 = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(new Mock<IExperimentParticipantsService>().Object, authMock3.Object);
         participantsController2.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
         // Act
@@ -223,7 +222,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
 
         var authMock4 = CreateAuthMock();
         authMock4.Setup(x => x.GetUsernameFromRequest()).Returns(TestDataBuilder.TestUsername);
-        var participantsController3 = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(authMock4.Object);
+        var participantsController3 = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(new Mock<IExperimentParticipantsService>().Object, authMock4.Object);
         participantsController3.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
         // Act
@@ -243,7 +242,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentsService>(
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
-        var sessionController = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(CreateAuthMock().Object);
+        var sessionController = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(new Mock<ISessionProtocolService>().Object, CreateAuthMock().Object);
         sessionController.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
         // Act
@@ -262,7 +261,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentsService>(
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
-        var sessionController2 = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(CreateAuthMock().Object);
+        var sessionController2 = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(new Mock<ISessionProtocolService>().Object, CreateAuthMock().Object);
         sessionController2.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
         // Act
@@ -283,7 +282,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
         // Non-existent session behaviour is not modelled by the stubbed controller; assert the stub returns OK with the provided key
-        var sessionController3 = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(CreateAuthMock().Object);
+        var sessionController3 = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(new Mock<ISessionProtocolService>().Object, CreateAuthMock().Object);
         sessionController3.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
         var sessionResult2 = sessionController3.Get("test-id", "nonexistent");
@@ -300,10 +299,10 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
         var request = new CreateSessionRequest { SessionName = "Test Session" };
-        var sessionCtrl = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(CreateAuthMock().Object);
+        var sessionCtrl = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(new Mock<ISessionProtocolService>().Object, CreateAuthMock().Object);
         sessionCtrl.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
-        var upsertResult2 = sessionCtrl.Upsert("test-id", "session1", request);
+        var upsertResult2 = await sessionCtrl.Create("test-id", "session1", request);
         var okUpsert2 = Assert.IsType<OkObjectResult>(upsertResult2);
         var upsertBody2 = okUpsert2.Value as dynamic;
         Assert.Equal("session1", (string)upsertBody2.protocolSessionKey);
@@ -317,10 +316,10 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
         var sessionData = new SessionData { SessionName = "Updated Session" };
-        var sessionCtrl2 = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(CreateAuthMock().Object);
+        var sessionCtrl2 = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(new Mock<ISessionProtocolService>().Object, CreateAuthMock().Object);
         sessionCtrl2.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
-        var upsertResult3 = sessionCtrl2.Upsert("test-id", "session1", sessionData);
+        var upsertResult3 = await sessionCtrl2.Update("test-id", "session1", sessionData);
         var okUpsert3 = Assert.IsType<OkObjectResult>(upsertResult3);
         var upsertBody3 = okUpsert3.Value as dynamic;
         Assert.Equal("session1", (string)upsertBody3.protocolSessionKey);
@@ -333,7 +332,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentsService>(
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
-        var sessionCtrl4 = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(CreateAuthMock().Object);
+        var sessionCtrl4 = new AI4NGExperimentsLambda.Controllers.Researcher.SessionProtocolController(new Mock<ISessionProtocolService>().Object, CreateAuthMock().Object);
         sessionCtrl4.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
         var deleteResult = sessionCtrl4.Delete("test-id", "session1");

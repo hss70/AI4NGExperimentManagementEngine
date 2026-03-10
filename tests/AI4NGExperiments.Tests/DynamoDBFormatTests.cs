@@ -29,8 +29,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = "Test Experiment" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -53,8 +52,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = "Test Experiment" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -77,8 +75,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = "Test Experiment" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -101,8 +98,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = "Test Experiment" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -127,8 +123,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = "Test Experiment" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -160,8 +155,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new Experiment
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig()
+            Data = new ExperimentData { Name = "Test Experiment" }
         };
 
         PutItemRequest? capturedRequest = null;

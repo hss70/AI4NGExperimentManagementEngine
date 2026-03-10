@@ -14,5 +14,6 @@ public class Startup : BaseStartup
         services.AddScoped<IExperimentsService, ExperimentsService>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddSingleton<IAuthorisationService, AuthorisationService>();
+        services.AddScoped<ISessionProtocolService, SessionProtocolService>();
     }
 }

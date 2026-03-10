@@ -2,21 +2,17 @@
 
 public sealed class UpsertProtocolSessionRequest
 {
-    public string ProtocolSessionKey { get; init; } = string.Empty; // FIRST/DAILY/WEEKLY
-    public string Name { get; init; } = string.Empty;
-    public string Description { get; init; } = string.Empty;
-    public string Cadence { get; init; } = string.Empty; // once|daily|weekly
-    public List<string> TaskSequence { get; init; } = new();
-    public int? EstimatedDuration
-    {
-        get; init;
-    }
-    public string? WindowStartLocal
-    {
-        get; init;
-    }
-    public string? WindowEndLocal
-    {
-        get; init;
-    }
+    public string SessionTypeKey { get; set; } = string.Empty;
+
+    public int Order { get; set; }
+
+    // ONCE | DAILY | WEEKLY | ADHOC
+    public string CadenceType { get; set; } = "ONCE";
+
+    public int? MaxPerDay { get; set; }
+
+    public string? WindowStartLocal { get; set; }
+    public string? WindowEndLocal { get; set; }
+
+    public int? Weekday { get; set; }
 }

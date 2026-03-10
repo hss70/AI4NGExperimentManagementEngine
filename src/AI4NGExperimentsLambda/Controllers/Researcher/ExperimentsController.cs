@@ -32,14 +32,6 @@ namespace AI4NGExperimentsLambda.Controllers.Researcher
             return experiment == null ? NotFound("Experiment not found") : Ok(experiment);
         }
 
-        [HttpPost("validate")]
-        public async Task<IActionResult> ValidateExperiment([FromBody] Experiment experiment, CancellationToken ct)
-        {
-            RequireResearcher();
-            var result = await _experimentService.ValidateExperimentAsync(experiment, ct);
-            return Ok(result);
-        }
-
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Experiment experiment, CancellationToken ct)
         {

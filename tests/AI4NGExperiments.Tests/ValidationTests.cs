@@ -29,7 +29,6 @@ public class ValidationTests
         var experiment = new Experiment
         {
             Data = new ExperimentData { Name = "" }, // Empty name
-            QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         // Act & Assert - This would need validation logic in the service
@@ -45,7 +44,6 @@ public class ValidationTests
         var experiment = new Experiment
         {
             Data = new ExperimentData { Name = "   " }, // Whitespace only
-            QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         // Act & Assert - This would need validation logic in the service
@@ -64,7 +62,6 @@ public class ValidationTests
                 Name = "Valid Experiment Name",
                 Description = "Valid description"
             },
-            QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
@@ -78,33 +75,7 @@ public class ValidationTests
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
     }
 
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task SyncExperimentAsync_ShouldValidateTimestampFormat()
-    {
-        // Quarantined: moved to LegacyMonolith/session services
-        await Task.CompletedTask;
-    }
 
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task AddMemberAsync_ShouldValidateRoleValues()
-    {
-        // Quarantined: moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task AddMemberAsync_ShouldSucceed_WithValidRole()
-    {
-        // Quarantined: moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "Refactor: moved to Session/Membership services")]
-    public async Task AddMemberAsync_ShouldSucceed_WithResearcherRole()
-    {
-        // Quarantined: moved to LegacyMonolith/membership services
-        await Task.CompletedTask;
-    }
 
     [Theory]
     [InlineData("")]
@@ -116,7 +87,6 @@ public class ValidationTests
         var experiment = new Experiment
         {
             Data = new ExperimentData { Name = "Test Experiment" },
-            QuestionnaireConfig = new QuestionnaireConfig()
         };
 
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))

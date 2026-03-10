@@ -3,6 +3,7 @@ using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Interfaces;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentManagement.Shared;
+using AI4NGExperimentsLambda.Models.Dtos;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -79,7 +80,7 @@ public class TaskService : ITaskService
         };
     }
 
-    public async Task<object> CreateTaskAsync(CreateTaskRequest request, string username)
+    public async Task<IdResponseDto> CreateTaskAsync(CreateTaskRequest request, string username)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
         if (request.Data == null) throw new ArgumentException("Task Data is required.");
@@ -133,7 +134,7 @@ public class TaskService : ITaskService
             }
         });
 
-        return new { id = taskKey };
+        return new IdResponseDto { Id = taskKey };
     }
 
     public async Task UpdateTaskAsync(string taskKey, TaskData data, string username)

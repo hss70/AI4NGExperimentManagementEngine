@@ -3,5 +3,4 @@
 public sealed class CreateExperimentRequest
 {
     public ExperimentData Data { get; init; } = new();
-    public QuestionnaireConfig QuestionnaireConfig { get; init; } = new();
 }

@@ -23,7 +23,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
     {
         // Arrange
         var (mockService, controller, _) = CreateController();
-        var experiment = new AI4NGExperimentsLambda.Models.Dtos.ExperimentDto { Id = TestDataBuilder.TestUserId, Data = new ExperimentData { Name = "Test Experiment" }, QuestionnaireConfig = new QuestionnaireConfig() };
+        var experiment = new AI4NGExperimentsLambda.Models.Dtos.ExperimentDto { Id = TestDataBuilder.TestUserId, Data = new ExperimentData { Name = "Test Experiment" } };
         if (exists)
             mockService.Setup(x => x.GetExperimentAsync(id, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(experiment);
         else
@@ -87,7 +87,8 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
     {
         // Arrange
         var authMock = CreateAuthMock();
-        var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(authMock.Object);
+        var participantService = new Mock<IExperimentParticipantsService>();
+        var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(participantService.Object, authMock.Object);
         controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
         // Act (controller is currently stubbed)
@@ -105,7 +106,8 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
     {
         // Arrange - participant endpoints are now in ExperimentParticipantsController (stubbed)
         var authMock = CreateAuthMock();
-        var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(authMock.Object);
+        var participantService = new Mock<IExperimentParticipantsService>();
+        var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(participantService.Object, authMock.Object);
         controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
         var member = new MemberRequest { Role = "participant" };
 
@@ -123,7 +125,8 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
     {
         // Arrange - unauthorized researcher should be forbidden
         var authMock = CreateAuthMock(isResearcher: false);
-        var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(authMock.Object);
+        var participantService = new Mock<IExperimentParticipantsService>();
+        var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(participantService.Object, authMock.Object);
         controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
         var member = new MemberRequest { Role = "participant" };
 
@@ -136,7 +139,8 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
     {
         // Arrange - use participant controller stub
         var authMock = CreateAuthMock();
-        var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(authMock.Object);
+        var participantService = new Mock<IExperimentParticipantsService>();
+        var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(participantService.Object, authMock.Object);
         controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
         // Act
@@ -153,7 +157,8 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
     {
         // Arrange - non-researcher should be forbidden
         var authMock = CreateAuthMock(isResearcher: false);
-        var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(authMock.Object);
+        var participantService = new Mock<IExperimentParticipantsService>();
+        var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(participantService.Object, authMock.Object);
         controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
 
         // Act & Assert
