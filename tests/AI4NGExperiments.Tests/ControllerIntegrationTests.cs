@@ -100,7 +100,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentsService>(
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
-        var updateData = new ExperimentData { Name = "Updated Experiment" };
+        var updateData = new ExperimentDataPatch { Name = "Updated Experiment" };
         var updateRequest = new UpdateExperimentRequest { Data = updateData };
         mockService.Setup(x => x.UpdateExperimentAsync("test-id", updateRequest, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
 

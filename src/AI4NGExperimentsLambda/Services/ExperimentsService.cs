@@ -113,7 +113,13 @@ public sealed class ExperimentsService : IExperimentsService
         if (!resp.IsItemSet)
             return null;
 
-        var item = resp.Item;
+        var response = MapExperimentDtoFromItem(resp.Item, experimentId);
+
+        return response;
+    }
+
+    private ExperimentDto MapExperimentDtoFromItem(Dictionary<string, AttributeValue> item, string experimentId)
+    {
         var status = item.GetValueOrDefault("status")?.S;
         var data = (DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data")) as ExperimentData) ?? new ExperimentData();
 
@@ -122,10 +128,12 @@ public sealed class ExperimentsService : IExperimentsService
             Id = experimentId,
             Status = status,
             Data = data,
-            UpdatedAt = item.GetValueOrDefault("updatedAt")?.S
+            UpdatedAt = item.GetValueOrDefault("updatedAt")?.S,
+            UpdatedBy = item.GetValueOrDefault("updatedBy")?.S,
+            CreatedAt = item.GetValueOrDefault("createdAt")?.S,
+            CreatedBy = item.GetValueOrDefault("createdBy")?.S
         };
     }
-
 
     public async Task<IdResponseDto> CreateExperimentAsync(CreateExperimentRequest experiment, string performedBy, CancellationToken ct = default)
     {
@@ -174,7 +182,11 @@ public sealed class ExperimentsService : IExperimentsService
         return new IdResponseDto { Id = experimentId };
     }
 
-    public async Task UpdateExperimentAsync(string experimentId, UpdateExperimentRequest experiment, string performedBy, CancellationToken ct = default)
+    public async Task UpdateExperimentAsync(
+        string experimentId,
+        UpdateExperimentRequest experiment,
+        string performedBy,
+        CancellationToken ct = default)
     {
         experimentId = (experimentId ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(experimentId))
@@ -187,10 +199,30 @@ public sealed class ExperimentsService : IExperimentsService
         if (experiment == null)
             throw new ArgumentException("Experiment data is required");
 
-        var data = MapAndValidateExperimentData(experiment.Data);
+        var existing = await GetExperimentAsync(experimentId, ct);
+        if (existing == null)
+            throw new KeyNotFoundException($"Experiment '{experimentId}' was not found");
 
-        var dataMap = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data));
+        var changed = false;
+
+        var mergedStatus = existing.Status;
+
+        var existingData = MapAndValidateExperimentData(existing.Data);
+        var mergedData = existingData;
+
+        if (experiment.Data != null)
+        {
+            mergedData = MapAndValidateExperimentData(existingData, experiment.Data);
+
+            if (!ExperimentDataEquals(existingData, mergedData))
+                changed = true;
+        }
+
+        if (!changed)
+            return;
+
         var nowIso = DateTime.UtcNow.ToString("O");
+        var dataMap = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(mergedData));
 
         await _dynamo.UpdateItemAsync(new UpdateItemRequest
         {
@@ -214,7 +246,6 @@ public sealed class ExperimentsService : IExperimentsService
             }
         }, ct);
     }
-
     private static ExperimentData MapAndValidateExperimentData(ExperimentData? source)
     {
         if (source == null)
@@ -250,9 +281,98 @@ public sealed class ExperimentsService : IExperimentsService
             };
         }
 
+        ValidateExperimentData(mapped);
         return mapped;
     }
 
+    private static ExperimentData MapAndValidateExperimentData(ExperimentData existing, ExperimentDataPatch patch)
+    {
+        if (existing == null)
+            throw new ArgumentException("Existing experiment data is required");
+
+        if (patch == null)
+            throw new ArgumentException("Experiment data patch is required");
+
+        var merged = new ExperimentData
+        {
+            Name = patch.Name != null ? patch.Name.Trim() : existing.Name,
+            Description = patch.Description != null ? patch.Description.Trim() : existing.Description,
+            StudyStartDate = patch.StudyStartDate != null
+                ? NormalizeOptionalString(patch.StudyStartDate)
+                : NormalizeOptionalString(existing.StudyStartDate),
+            StudyEndDate = patch.StudyEndDate != null
+                ? NormalizeOptionalString(patch.StudyEndDate)
+                : NormalizeOptionalString(existing.StudyEndDate),
+            ParticipantDurationDays = patch.ParticipantDurationDays ?? existing.ParticipantDurationDays,
+            SessionTypes = patch.SessionTypes != null
+                ? MapSessionTypes(patch.SessionTypes)
+                : MapSessionTypes(existing.SessionTypes)
+        };
+
+        ValidateExperimentData(merged);
+        return merged;
+    }
+
+    private static Dictionary<string, SessionType> MapSessionTypes(IDictionary<string, SessionType>? source)
+    {
+        var mapped = new Dictionary<string, SessionType>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kvp in source ?? new Dictionary<string, SessionType>())
+        {
+            var key = (kvp.Key ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(key))
+                throw new ArgumentException("Session type key cannot be empty");
+
+            var value = kvp.Value ?? throw new ArgumentException($"Session type '{key}' is required");
+
+            mapped[key] = new SessionType
+            {
+                Name = (value.Name ?? string.Empty).Trim(),
+                Tasks = (value.Tasks ?? new List<string>())
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Select(t => t.Trim())
+                    .ToList(),
+                EstimatedDurationMinutes = value.EstimatedDurationMinutes,
+                Schedule = NormalizeOptionalString(value.Schedule)
+            };
+        }
+
+        return mapped;
+    }
+
+    private static string? NormalizeOptionalString(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+    private static void ValidateExperimentData(ExperimentData data)
+    {
+        if (string.IsNullOrWhiteSpace(data.Name))
+            throw new ArgumentException("Experiment data name is required");
+
+        if (string.IsNullOrWhiteSpace(data.Description))
+            throw new ArgumentException("Experiment data description is required");
+
+        if (data.ParticipantDurationDays.HasValue && data.ParticipantDurationDays.Value <= 0)
+            throw new ArgumentException("Participant duration days must be greater than zero");
+
+        if (data.StudyStartDate != null && !DateOnly.TryParse(data.StudyStartDate, out _))
+            throw new ArgumentException("Study start date must be a valid date in YYYY-MM-DD format");
+
+        if (data.StudyEndDate != null && !DateOnly.TryParse(data.StudyEndDate, out _))
+            throw new ArgumentException("Study end date must be a valid date in YYYY-MM-DD format");
+
+        if (data.StudyStartDate != null &&
+            data.StudyEndDate != null &&
+            DateOnly.Parse(data.StudyStartDate) > DateOnly.Parse(data.StudyEndDate))
+        {
+            throw new ArgumentException("Study start date cannot be after study end date");
+        }
+    }
+
+    private static bool ExperimentDataEquals(ExperimentData left, ExperimentData right)
+    {
+        return JsonSerializer.Serialize(left) == JsonSerializer.Serialize(right);
+    }
     public async Task DeleteExperimentAsync(string experimentId, string performedBy, CancellationToken ct = default)
     {
         experimentId = (experimentId ?? string.Empty).Trim();

@@ -31,16 +31,11 @@ public class BusinessRuleTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = invalidName! }
+            Data = new ExperimentData { Name = invalidName!, Description = "Valid description" }
         };
 
-        // Act - Currently this passes but should validate name
-        // This test documents the expected behavior that should be implemented
-        var result = await _service.CreateExperimentAsync(experiment, "testuser");
-
-        // Assert - For now, just verify it doesn't crash
-        // TODO: Should throw ArgumentException when validation is implemented
-        Assert.NotNull(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateExperimentAsync(experiment, "testuser"));
     }
 
     [Fact]
@@ -49,7 +44,11 @@ public class BusinessRuleTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Experiment Without Questionnaires" }
+            Data = new ExperimentData
+            {
+                Name = "Experiment Without Questionnaires",
+                Description = "No questionnaires attached"
+            }
         };
 
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))

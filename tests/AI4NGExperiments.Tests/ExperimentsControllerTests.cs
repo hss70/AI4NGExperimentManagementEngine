@@ -52,7 +52,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
         // Arrange
         using var _ = TestEnvironmentHelper.SetLocalTestingMode();
         var (mockService, controller, _) = CreateController();
-        var data = new ExperimentData { Name = "Updated Experiment" };
+        var data = new ExperimentDataPatch { Name = "Updated Experiment" };
         var request = new UpdateExperimentRequest { Data = data };
         mockService.Setup(x => x.UpdateExperimentAsync(TestDataBuilder.TestUserId, request, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(System.Threading.Tasks.Task.CompletedTask);
 

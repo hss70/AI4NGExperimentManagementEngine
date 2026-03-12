@@ -108,7 +108,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
 
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test" },
+            Data = new ExperimentData { Name = "Test", Description = "Valid description" },
         };
 
         // Act & Assert
@@ -153,7 +153,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
 
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test" },
+            Data = new ExperimentData { Name = "Test", Description = "Valid description" },
         };
 
         // Act & Assert
@@ -170,13 +170,37 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .ThrowsAsync(new ConditionalCheckFailedException("Condition not met"));
 
-        var data = new UpdateExperimentRequest { Data = new ExperimentData { Name = "Updated" } };
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+            .ReturnsAsync(new GetItemResponse
+            {
+                IsItemSet = true,
+                Item = new Dictionary<string, AttributeValue>
+                {
+                    ["PK"] = new AttributeValue { S = "EXPERIMENT#test-id" },
+                    ["SK"] = new AttributeValue { S = "METADATA" },
+                    ["status"] = new AttributeValue { S = "Draft" },
+                    ["data"] = new AttributeValue
+                    {
+                        M = new Dictionary<string, AttributeValue>
+                        {
+                            ["Name"] = new AttributeValue("Test Experiment"),
+                            ["Description"] = new AttributeValue("Test Description")
+                        }
+                    }
+                }
+            });
+
+        var data = new UpdateExperimentRequest
+        {
+            Data = new ExperimentDataPatch
+            {
+                Name = "Updated",
+                Description = "Updated description"
+            }
+        };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ConditionalCheckFailedException>(
-            () => _service.UpdateExperimentAsync("test-id", data, "testuser"));
-
-        Assert.Contains("Condition not met", exception.Message);
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.UpdateExperimentAsync("test-id", data, "testuser"));
     }
 
     [Fact]
@@ -188,7 +212,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
 
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test" }
+            Data = new ExperimentData { Name = "Test", Description = "Valid description" }
         };
 
         // Act & Assert

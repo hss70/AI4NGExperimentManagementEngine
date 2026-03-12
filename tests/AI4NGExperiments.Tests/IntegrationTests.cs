@@ -41,7 +41,11 @@ public class IntegrationTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Audit Test Experiment" }
+            Data = new ExperimentData
+            {
+                Name = "Audit Test Experiment",
+                Description = "Audit Test Description"
+            }
         };
 
         PutItemRequest? capturedRequest = null;

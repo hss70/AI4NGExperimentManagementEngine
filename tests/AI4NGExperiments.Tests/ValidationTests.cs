@@ -28,13 +28,11 @@ public class ValidationTests
         // Arrange
         var experiment = new CreateExperimentRequest()
         {
-            Data = new ExperimentData { Name = "" }, // Empty name
+            Data = new ExperimentData { Name = "", Description = "Valid description" }, // Empty name
         };
 
-        // Act & Assert - This would need validation logic in the service
-        // For now, this test documents the expected behavior
-        var result = await _service.CreateExperimentAsync(experiment, "testuser");
-        Assert.NotNull(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateExperimentAsync(experiment, "testuser"));
     }
 
     [Fact]
@@ -43,12 +41,11 @@ public class ValidationTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "   " }, // Whitespace only
+            Data = new ExperimentData { Name = "   ", Description = "Valid description" }, // Whitespace only
         };
 
-        // Act & Assert - This would need validation logic in the service
-        var result = await _service.CreateExperimentAsync(experiment, "testuser");
-        Assert.NotNull(result);
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateExperimentAsync(experiment, "testuser"));
     }
 
     [Fact]
@@ -86,7 +83,7 @@ public class ValidationTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test Experiment" },
+            Data = new ExperimentData { Name = "Test Experiment", Description = "Test Description" },
         };
 
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))

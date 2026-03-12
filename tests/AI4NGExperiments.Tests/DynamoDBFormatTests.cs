@@ -30,7 +30,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test Experiment" }
+            Data = new ExperimentData { Name = "Test Experiment", Description = "Test Description" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -53,7 +53,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test Experiment" }
+            Data = new ExperimentData { Name = "Test Experiment", Description = "Test Description" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -76,7 +76,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test Experiment" }
+            Data = new ExperimentData { Name = "Test Experiment", Description = "Test Description" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -99,7 +99,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test Experiment" }
+            Data = new ExperimentData { Name = "Test Experiment", Description = "Test Description" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -124,7 +124,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test Experiment" }
+            Data = new ExperimentData { Name = "Test Experiment", Description = "Test Description" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -156,7 +156,7 @@ public class DynamoDBFormatTests
         // Arrange
         var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test Experiment" }
+            Data = new ExperimentData { Name = "Test Experiment", Description = "Test Description" }
         };
 
         PutItemRequest? capturedRequest = null;
@@ -176,25 +176,48 @@ public class DynamoDBFormatTests
 
 
     [Fact]
-    public async Task UpdateExperimentAsync_ShouldUseCorrectKeyFormat()
+    public async Task UpdateExperimentAsync_ShouldThrow_WhenExistingExperimentDataCannotBeMapped()
     {
         // Arrange
-        var data = new UpdateExperimentRequest { Data = new ExperimentData { Name = "Updated Experiment" } };
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
+            .ReturnsAsync(new GetItemResponse
+            {
+                IsItemSet = true,
+                Item = new Dictionary<string, AttributeValue>
+                {
+                    ["PK"] = new AttributeValue { S = "EXPERIMENT#test-id" },
+                    ["SK"] = new AttributeValue { S = "METADATA" },
+                    ["status"] = new AttributeValue { S = "Draft" },
+                    ["data"] = new AttributeValue
+                    {
+                        M = new Dictionary<string, AttributeValue>
+                        {
+                            ["Name"] = new AttributeValue("Test Experiment"),
+                            ["Description"] = new AttributeValue("Test Description")
+                        }
+                    }
+                }
+            });
+
+        var data = new UpdateExperimentRequest
+        {
+            Data = new ExperimentDataPatch
+            {
+                Name = "Updated Experiment",
+                Description = "Updated Description"
+            }
+        };
 
         UpdateItemRequest? capturedRequest = null;
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .Callback<UpdateItemRequest, CancellationToken>((request, _) => capturedRequest = request)
             .ReturnsAsync(new UpdateItemResponse());
 
-        // Act
-        await _service.UpdateExperimentAsync("test-id", data, "testuser");
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.UpdateExperimentAsync("test-id", data, "testuser"));
 
         // Assert
-        Assert.NotNull(capturedRequest);
-        Assert.True(capturedRequest.Key.ContainsKey("PK"));
-        Assert.Equal("EXPERIMENT#test-id", capturedRequest.Key["PK"].S);
-        Assert.True(capturedRequest.Key.ContainsKey("SK"));
-        Assert.Equal("METADATA", capturedRequest.Key["SK"].S);
+        Assert.Null(capturedRequest);
     }
 
     [Fact]
