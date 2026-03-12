@@ -5,6 +5,7 @@ using ResearcherExperimentsController = AI4NGExperimentsLambda.Controllers.Resea
 using AI4NGExperimentsLambda.Interfaces.Researcher;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
+using AI4NGExperimentsLambda.Models.Requests;
 using AI4NGExperimentManagementTests.Shared;
 
 namespace AI4NGExperiments.Tests;
@@ -80,11 +81,12 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
         var experiment = TestDataBuilder.CreateValidExperiment();
+        var createRequest = new CreateExperimentRequest { Id = experiment.Id, Data = experiment.Data };
         var createResult = new AI4NGExperimentsLambda.Models.Dtos.IdResponseDto { Id = "test-id" };
-        mockService.Setup(x => x.CreateExperimentAsync(experiment, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(createResult);
+        mockService.Setup(x => x.CreateExperimentAsync(createRequest, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(createResult);
 
         // Act
-        var result = await controller.Create(experiment, System.Threading.CancellationToken.None);
+        var result = await controller.Create(createRequest, System.Threading.CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -99,10 +101,11 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
         var updateData = new ExperimentData { Name = "Updated Experiment" };
-        mockService.Setup(x => x.UpdateExperimentAsync("test-id", updateData, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
+        var updateRequest = new UpdateExperimentRequest { Data = updateData };
+        mockService.Setup(x => x.UpdateExperimentAsync("test-id", updateRequest, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
 
         // Act
-        var result = await controller.Update("test-id", updateData, System.Threading.CancellationToken.None);
+        var result = await controller.Update("test-id", updateRequest, System.Threading.CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

@@ -5,6 +5,7 @@ using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
 using System.Text.Json;
 using AI4NGExperimentManagement.Shared;
+using AI4NGExperimentsLambda.Models.Requests;
 
 namespace AI4NGExperimentsLambda.Services;
 
@@ -126,7 +127,7 @@ public sealed class ExperimentsService : IExperimentsService
     }
 
 
-    public async Task<IdResponseDto> CreateExperimentAsync(Experiment experiment, string performedBy, CancellationToken ct = default)
+    public async Task<IdResponseDto> CreateExperimentAsync(CreateExperimentRequest experiment, string performedBy, CancellationToken ct = default)
     {
         if (experiment == null)
             throw new ArgumentException("Experiment payload is required");
@@ -141,7 +142,7 @@ public sealed class ExperimentsService : IExperimentsService
             ? Guid.NewGuid().ToString()
             : experiment.Id.Trim();
 
-        var data = experiment.Data ?? new ExperimentData();
+        var data = MapAndValidateExperimentData(experiment.Data);
 
         var dataMap = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data));
 
@@ -173,7 +174,7 @@ public sealed class ExperimentsService : IExperimentsService
         return new IdResponseDto { Id = experimentId };
     }
 
-    public async Task UpdateExperimentAsync(string experimentId, ExperimentData data, string performedBy, CancellationToken ct = default)
+    public async Task UpdateExperimentAsync(string experimentId, UpdateExperimentRequest experiment, string performedBy, CancellationToken ct = default)
     {
         experimentId = (experimentId ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(experimentId))
@@ -183,11 +184,12 @@ public sealed class ExperimentsService : IExperimentsService
         if (string.IsNullOrWhiteSpace(performedBy))
             throw new UnauthorizedAccessException("Authentication required");
 
-        if (data == null)
+        if (experiment == null)
             throw new ArgumentException("Experiment data is required");
 
-        var normalised = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data));
+        var data = MapAndValidateExperimentData(experiment.Data);
 
+        var dataMap = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data));
         var nowIso = DateTime.UtcNow.ToString("O");
 
         await _dynamo.UpdateItemAsync(new UpdateItemRequest
@@ -206,11 +208,49 @@ public sealed class ExperimentsService : IExperimentsService
             },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":data"] = new AttributeValue { M = normalised },
+                [":data"] = new AttributeValue { M = dataMap },
                 [":u"] = new AttributeValue { S = performedBy },
                 [":t"] = new AttributeValue { S = nowIso }
             }
         }, ct);
+    }
+
+    private static ExperimentData MapAndValidateExperimentData(ExperimentData? source)
+    {
+        if (source == null)
+            throw new ArgumentException("Experiment data is required");
+
+        var mapped = new ExperimentData
+        {
+            Name = (source.Name ?? string.Empty).Trim(),
+            Description = (source.Description ?? string.Empty).Trim(),
+            StudyStartDate = string.IsNullOrWhiteSpace(source.StudyStartDate) ? null : source.StudyStartDate.Trim(),
+            StudyEndDate = string.IsNullOrWhiteSpace(source.StudyEndDate) ? null : source.StudyEndDate.Trim(),
+            ParticipantDurationDays = source.ParticipantDurationDays,
+            SessionTypes = new Dictionary<string, SessionType>(StringComparer.OrdinalIgnoreCase)
+        };
+
+        foreach (var kvp in source.SessionTypes ?? new Dictionary<string, SessionType>())
+        {
+            var key = (kvp.Key ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(key))
+                throw new ArgumentException("Session type key cannot be empty");
+
+            var value = kvp.Value ?? throw new ArgumentException($"Session type '{key}' is required");
+
+            mapped.SessionTypes[key] = new SessionType
+            {
+                Name = (value.Name ?? string.Empty).Trim(),
+                Tasks = (value.Tasks ?? new List<string>())
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Select(t => t.Trim())
+                    .ToList(),
+                EstimatedDurationMinutes = value.EstimatedDurationMinutes,
+                Schedule = string.IsNullOrWhiteSpace(value.Schedule) ? null : value.Schedule.Trim()
+            };
+        }
+
+        return mapped;
     }
 
     public async Task DeleteExperimentAsync(string experimentId, string performedBy, CancellationToken ct = default)

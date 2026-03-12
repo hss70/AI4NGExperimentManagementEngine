@@ -7,6 +7,7 @@ using ResearcherExperimentsController = AI4NGExperimentsLambda.Controllers.Resea
 using AI4NGExperimentsLambda.Interfaces.Researcher;
 using AI4NGExperimentsLambda.Services;
 using AI4NGExperimentsLambda.Models;
+using AI4NGExperimentsLambda.Models.Requests;
 using System.ComponentModel.DataAnnotations;
 using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
@@ -54,7 +55,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         // Arrange
         var (mockService, controller, authMock) = CreateController(isLocal: false);
         authMock.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Authorization header is required"));
-        var experiment = new Experiment();
+        var experiment = new CreateExperimentRequest();
 
         // Act & Assert - controller delegates auth check to BaseApiController and will throw
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(experiment, System.Threading.CancellationToken.None));
@@ -66,7 +67,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         // Arrange
         var (mockService, controller, authMock) = CreateController(isLocal: false);
         authMock.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Invalid token format"));
-        var experiment = new Experiment();
+        var experiment = new CreateExperimentRequest();
 
         // Act & Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(experiment, System.Threading.CancellationToken.None));
@@ -78,7 +79,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         // Arrange
         var (mockService, controller, authMock) = CreateController(isLocal: false);
         authMock.Setup(x => x.GetUsernameFromRequest()).Throws(new UnauthorizedAccessException("Bearer token required"));
-        var experiment = new Experiment();
+        var experiment = new CreateExperimentRequest();
 
         // Act & Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => controller.Create(experiment, System.Threading.CancellationToken.None));
@@ -105,9 +106,9 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ThrowsAsync(new ValidationException("Invalid request data"));
 
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test" }
+            Data = new ExperimentData { Name = "Test" },
         };
 
         // Act & Assert
@@ -150,9 +151,9 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ThrowsAsync(new ProvisionedThroughputExceededException("Rate limit exceeded"));
 
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
-            Data = new ExperimentData { Name = "Test" }
+            Data = new ExperimentData { Name = "Test" },
         };
 
         // Act & Assert
@@ -169,7 +170,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .ThrowsAsync(new ConditionalCheckFailedException("Condition not met"));
 
-        var data = new ExperimentData { Name = "Updated" };
+        var data = new UpdateExperimentRequest { Data = new ExperimentData { Name = "Updated" } };
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ConditionalCheckFailedException>(
@@ -185,7 +186,7 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ThrowsAsync(new LimitExceededException("Item too large"));
 
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData { Name = "Test" }
         };
@@ -214,4 +215,10 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         Assert.Null(result);
     }
 
+    [Fact(Skip = "Refactor: moved to Session/Membership services")]
+    public async Task Service_ShouldHandleNullSyncTime()
+    {
+        // Quarantined - moved to LegacyMonolith/session services
+        await Task.CompletedTask;
+    }
 }

@@ -2,8 +2,8 @@ using Moq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Services;
-
 using AI4NGExperimentsLambda.Models;
+using AI4NGExperimentsLambda.Models.Requests;
 
 namespace AI4NGExperiments.Tests;
 
@@ -26,7 +26,7 @@ public class ValidationTests
     public async Task CreateExperimentAsync_ShouldThrowException_WhenNameIsEmpty()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest()
         {
             Data = new ExperimentData { Name = "" }, // Empty name
         };
@@ -41,7 +41,7 @@ public class ValidationTests
     public async Task CreateExperimentAsync_ShouldThrowException_WhenNameIsWhitespace()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData { Name = "   " }, // Whitespace only
         };
@@ -55,7 +55,7 @@ public class ValidationTests
     public async Task CreateExperimentAsync_ShouldSucceed_WhenValidData()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData
             {
@@ -84,7 +84,7 @@ public class ValidationTests
     public async Task CreateExperimentAsync_ShouldHandleInvalidUsernames(string? username)
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData { Name = "Test Experiment" },
         };

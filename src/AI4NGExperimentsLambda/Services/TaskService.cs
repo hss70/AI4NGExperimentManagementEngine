@@ -76,7 +76,8 @@ public class TaskService : ITaskService
                 JsonSerializer.Serialize(DynamoDBHelper.ConvertAttributeValueToObject(item["data"]))
             ) ?? new TaskData(),
             CreatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("createdAt")?.S),
-            UpdatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("updatedAt")?.S)
+            UpdatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("updatedAt")?.S),
+            CreatedBy = item.GetValueOrDefault("createdBy")?.S ?? string.Empty
         };
     }
 

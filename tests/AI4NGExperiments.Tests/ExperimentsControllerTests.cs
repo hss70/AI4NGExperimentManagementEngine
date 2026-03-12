@@ -7,6 +7,7 @@ using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentManagementTests.Shared;
 using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentsLambda.Interfaces.Researcher;
+using AI4NGExperimentsLambda.Models.Requests;
 
 namespace AI4NGExperiments.Tests;
 
@@ -52,10 +53,11 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
         using var _ = TestEnvironmentHelper.SetLocalTestingMode();
         var (mockService, controller, _) = CreateController();
         var data = new ExperimentData { Name = "Updated Experiment" };
-        mockService.Setup(x => x.UpdateExperimentAsync(TestDataBuilder.TestUserId, data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(System.Threading.Tasks.Task.CompletedTask);
+        var request = new UpdateExperimentRequest { Data = data };
+        mockService.Setup(x => x.UpdateExperimentAsync(TestDataBuilder.TestUserId, request, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(System.Threading.Tasks.Task.CompletedTask);
 
         // Act
-        var result = await controller.Update(TestDataBuilder.TestUserId, data, System.Threading.CancellationToken.None);
+        var result = await controller.Update(TestDataBuilder.TestUserId, request, System.Threading.CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

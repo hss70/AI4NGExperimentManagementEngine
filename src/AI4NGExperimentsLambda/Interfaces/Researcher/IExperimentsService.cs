@@ -1,5 +1,6 @@
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
+using AI4NGExperimentsLambda.Models.Requests;
 
 namespace AI4NGExperimentsLambda.Interfaces.Researcher;
 
@@ -12,13 +13,13 @@ public interface IExperimentsService
         CancellationToken ct = default);
 
     Task<IdResponseDto> CreateExperimentAsync(
-        Experiment experiment,
+        CreateExperimentRequest experiment,
         string performedBy,
         CancellationToken ct = default);
 
     Task UpdateExperimentAsync(
         string experimentId,
-        ExperimentData data,
+        UpdateExperimentRequest data,
         string performedBy,
         CancellationToken ct = default);
 

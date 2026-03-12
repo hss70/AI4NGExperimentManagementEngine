@@ -5,6 +5,7 @@ using AI4NGExperimentsLambda.Services;
 
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
+using AI4NGExperimentsLambda.Models.Requests;
 
 namespace AI4NGExperiments.Tests;
 
@@ -32,7 +33,7 @@ public class ExperimentServiceTests
     public async Task CreateExperimentAsync_ShouldReturnId_WhenValid()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData
             {
@@ -225,7 +226,7 @@ public class ExperimentServiceTests
     public async Task UpdateExperimentAsync_ShouldCallUpdateItem()
     {
         // Arrange
-        var data = new ExperimentData { Name = "Updated Experiment" };
+        var data = new UpdateExperimentRequest { Data = new ExperimentData { Name = "Updated Experiment" } };
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
             .ReturnsAsync(new UpdateItemResponse());
 

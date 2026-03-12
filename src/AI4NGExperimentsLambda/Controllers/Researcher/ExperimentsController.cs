@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentsLambda.Interfaces.Researcher;
+using AI4NGExperimentsLambda.Models.Requests;
 
 namespace AI4NGExperimentsLambda.Controllers.Researcher
 {
@@ -33,7 +34,7 @@ namespace AI4NGExperimentsLambda.Controllers.Researcher
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Experiment experiment, CancellationToken ct)
+        public async Task<IActionResult> Create([FromBody] CreateExperimentRequest experiment, CancellationToken ct)
         {
             RequireResearcher();
             var username = GetAuthenticatedUsername();
@@ -42,7 +43,7 @@ namespace AI4NGExperimentsLambda.Controllers.Researcher
         }
 
         [HttpPut("{experimentId}")]
-        public async Task<IActionResult> Update(string experimentId, [FromBody] ExperimentData data, CancellationToken ct)
+        public async Task<IActionResult> Update(string experimentId, [FromBody] UpdateExperimentRequest data, CancellationToken ct)
         {
             RequireResearcher();
             var username = GetAuthenticatedUsername();

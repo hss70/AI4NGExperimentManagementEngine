@@ -4,6 +4,7 @@ using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Services;
 
 using AI4NGExperimentsLambda.Models;
+using AI4NGExperimentsLambda.Models.Requests;
 using AI4NGExperimentsLambda.Models.Dtos;
 
 namespace AI4NGExperiments.Tests;
@@ -27,7 +28,7 @@ public class DynamoDBFormatTests
     public async Task CreateExperimentAsync_ShouldCreateCorrectPKFormat()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData { Name = "Test Experiment" }
         };
@@ -50,7 +51,7 @@ public class DynamoDBFormatTests
     public async Task CreateExperimentAsync_ShouldCreateCorrectSKFormat()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData { Name = "Test Experiment" }
         };
@@ -73,7 +74,7 @@ public class DynamoDBFormatTests
     public async Task CreateExperimentAsync_ShouldSetCorrectTypeField()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData { Name = "Test Experiment" }
         };
@@ -96,7 +97,7 @@ public class DynamoDBFormatTests
     public async Task CreateExperimentAsync_ShouldIncludeAuditFields()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData { Name = "Test Experiment" }
         };
@@ -121,7 +122,7 @@ public class DynamoDBFormatTests
     public async Task CreateExperimentAsync_ShouldSetGsi1FieldsAndReturnId()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData { Name = "Test Experiment" }
         };
@@ -153,7 +154,7 @@ public class DynamoDBFormatTests
     public async Task CreateExperimentAsync_ShouldSetTopLevelStatusDraft()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData { Name = "Test Experiment" }
         };
@@ -178,7 +179,7 @@ public class DynamoDBFormatTests
     public async Task UpdateExperimentAsync_ShouldUseCorrectKeyFormat()
     {
         // Arrange
-        var data = new ExperimentData { Name = "Updated Experiment" };
+        var data = new UpdateExperimentRequest { Data = new ExperimentData { Name = "Updated Experiment" } };
 
         UpdateItemRequest? capturedRequest = null;
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))

@@ -3,6 +3,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Services;
 using AI4NGExperimentsLambda.Models;
+using AI4NGExperimentsLambda.Models.Requests;
 
 namespace AI4NGExperiments.Tests;
 
@@ -38,7 +39,7 @@ public class IntegrationTests
     public async Task DataConsistency_ShouldMaintainAuditTrail()
     {
         // Arrange
-        var experiment = new Experiment
+        var experiment = new CreateExperimentRequest
         {
             Data = new ExperimentData { Name = "Audit Test Experiment" }
         };
