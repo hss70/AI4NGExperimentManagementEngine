@@ -73,7 +73,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
         var participantService = new Mock<IExperimentParticipantsService>();
         var controller = new AI4NGExperimentsLambda.Controllers.Researcher.ExperimentParticipantsController(participantService.Object, authMock.Object);
         controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext() };
-        var member = new MemberRequest { Role = "participant" };
+        var member = new ExperimentMemberRequest { Role = "participant" };
 
         // Act & Assert - RequireResearcher now throws ForbiddenException for non-researchers
         Assert.Throws<AI4NGExperimentManagement.Shared.ForbiddenException>(() => controller.Upsert(TestDataBuilder.TestUserId, TestDataBuilder.TestUserId, member));

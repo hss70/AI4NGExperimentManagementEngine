@@ -27,6 +27,7 @@ public class ExperimentData
 public class SessionType
 {
     public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
 
     // Ordered list — this matters
     public List<string> Tasks { get; set; } = new();

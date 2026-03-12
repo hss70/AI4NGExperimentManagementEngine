@@ -19,6 +19,9 @@ Parameters:
   PrivateSubnetIds:
     Type: CommaDelimitedList
     Description: Private subnet IDs from network stack
+  ParticipantUserPoolId:
+    Type: String
+    Description: Cognito User Pool ID for experiment participants (from shared auth stack)
 
 Resources:
   # DynamoDB Tables
@@ -192,6 +195,7 @@ Resources:
           EXPERIMENTS_TABLE: !Ref AI4NGExperimentsTable
           RESPONSES_TABLE: !Ref AI4NGResponsesTable
           QUESTIONNAIRES_TABLE: !Ref AI4NGQuestionnairesTable
+          COGNITO_USER_POOL_ID: !Ref ParticipantUserPoolId
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSLambdaVPCAccessExecutionRole
@@ -199,8 +203,13 @@ Resources:
             TableName: !Ref AI4NGExperimentsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref AI4NGResponsesTable
-        - DynamoDBReadPolicy:
-            TableName: !Ref AI4NGQuestionnairesTable
+        - Statement:
+            - Sid: CognitoUserLookupReadOnly
+              Effect: Allow
+              Action:
+                - cognito-idp:ListUsers
+                - cognito-idp:AdminGetUser
+              Resource: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${ParticipantUserPoolId}
 
   ResponsesApi:
     Type: AWS::Serverless::Function

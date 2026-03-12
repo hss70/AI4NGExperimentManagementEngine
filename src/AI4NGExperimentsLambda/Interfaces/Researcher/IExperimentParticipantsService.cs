@@ -5,7 +5,7 @@ namespace AI4NGExperimentsLambda.Interfaces.Researcher;
 
 public interface IExperimentParticipantsService
 {
-    Task<IEnumerable<MemberDto>> GetExperimentParticipantsAsync(
+    Task<IEnumerable<ExperimentMemberDto>> GetExperimentParticipantsAsync(
         string experimentId,
         string? cohort = null,
         string? status = null,
@@ -15,7 +15,7 @@ public interface IExperimentParticipantsService
     Task AddParticipantAsync(
         string experimentId,
         string participantId,
-        MemberRequest request,
+        ExperimentMemberRequest request,
         string performedBy,
         CancellationToken ct = default);
 

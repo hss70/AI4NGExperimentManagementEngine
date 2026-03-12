@@ -39,7 +39,7 @@ public class ExperimentParticipantsServiceTests
                     ["role"] = new AttributeValue("researcher"),
                     ["status"] = new AttributeValue("active"),
                     ["cohort"] = new AttributeValue("A"),
-                    ["joinedAt"] = new AttributeValue("2024-01-01T00:00:00Z")
+                    ["createdAt"] = new AttributeValue("2024-01-01T00:00:00Z")
                 }
             }
         };
@@ -62,11 +62,11 @@ public class ExperimentParticipantsServiceTests
 
         var list = result.ToList();
         Assert.Single(list);
-        Assert.Equal("alice", list[0].Username);
+        Assert.Equal("alice", list[0].UserSub);
         Assert.Equal("researcher", list[0].Role);
         Assert.Equal("active", list[0].Status);
         Assert.Equal("A", list[0].Cohort);
-        Assert.Equal("2024-01-01T00:00:00Z", list[0].JoinedAt);
+        Assert.Equal("2024-01-01T00:00:00Z", list[0].CreatedAt);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class ExperimentParticipantsServiceTests
             .Callback<PutItemRequest, CancellationToken>((req, _) => captured = req)
             .ReturnsAsync(new PutItemResponse());
 
-        var request = new MemberRequest
+        var request = new ExperimentMemberRequest
         {
             Role = "participant",
             Status = "active",
@@ -133,7 +133,7 @@ public class ExperimentParticipantsServiceTests
             _experimentsTable = experimentsTable;
         }
 
-        public async Task AddParticipantAsync(string experimentId, string participantId, MemberRequest request, string performedBy, CancellationToken ct = default)
+        public async Task AddParticipantAsync(string experimentId, string participantId, ExperimentMemberRequest request, string performedBy, CancellationToken ct = default)
         {
             var nowIso = DateTime.UtcNow.ToString("O");
             var item = new Dictionary<string, AttributeValue>
@@ -164,12 +164,12 @@ public class ExperimentParticipantsServiceTests
         {
             foreach (var p in participants)
             {
-                var req = new MemberRequest { Cohort = p.Cohort, Role = p.Role, Status = p.Status };
-                await AddParticipantAsync(experimentId, p.Username, req, performedBy, ct);
+                var req = new ExperimentMemberRequest { Cohort = p.Cohort, Role = p.Role, Status = p.Status };
+                await AddParticipantAsync(experimentId, p.UserSub, req, performedBy, ct);
             }
         }
 
-        public async Task<IEnumerable<MemberDto>> GetExperimentParticipantsAsync(string experimentId, string? cohort = null, string? status = null, string? role = null, CancellationToken ct = default)
+        public async Task<IEnumerable<ExperimentMemberDto>> GetExperimentParticipantsAsync(string experimentId, string? cohort = null, string? status = null, string? role = null, CancellationToken ct = default)
         {
             var resp = await _dynamo.QueryAsync(new QueryRequest
             {
@@ -182,20 +182,23 @@ public class ExperimentParticipantsServiceTests
                 }
             }, ct);
 
-            var list = new List<MemberDto>();
+            var list = new List<ExperimentMemberDto>();
             foreach (var item in resp.Items)
             {
                 var sk = item.GetValueOrDefault("SK")?.S ?? string.Empty;
                 var username = sk.StartsWith("MEMBER#", StringComparison.OrdinalIgnoreCase)
                     ? sk.Substring("MEMBER#".Length)
                     : sk;
-                list.Add(new MemberDto
+                list.Add(new ExperimentMemberDto
                 {
-                    Username = username,
+                    UserSub = username,
                     Role = item.GetValueOrDefault("role")?.S ?? "participant",
                     Status = item.GetValueOrDefault("status")?.S ?? "active",
                     Cohort = item.GetValueOrDefault("cohort")?.S ?? string.Empty,
-                    JoinedAt = item.GetValueOrDefault("joinedAt")?.S
+                    CreatedAt = item.GetValueOrDefault("createdAt")?.S,
+                    UpdatedAt = item.GetValueOrDefault("updatedAt")?.S,
+                    CreatedBy = item.GetValueOrDefault("createdBy")?.S ?? string.Empty,
+                    UpdatedBy = item.GetValueOrDefault("updatedBy")?.S ?? string.Empty
                 });
             }
 

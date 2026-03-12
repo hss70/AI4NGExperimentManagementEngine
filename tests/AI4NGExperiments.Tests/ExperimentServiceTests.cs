@@ -159,7 +159,7 @@ public class ExperimentServiceTests
     }
 
     [Fact]
-    public async Task GetExperimentAsync_ShouldFallbackStatus_FromLegacyDataStatus_WhenTopLevelMissing()
+    public async Task GetExperimentAsync_ShouldReturnEmptyStatus_WhenTopLevelStatusMissing()
     {
         // Arrange
         var item = new Dictionary<string, AttributeValue>
@@ -185,11 +185,11 @@ public class ExperimentServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Null(result.Status);
+        Assert.Equal(string.Empty, result.Status);
     }
 
     [Fact]
-    public async Task GetExperimentsAsync_ShouldFallbackStatus_FromLegacyDataStatus_WhenTopLevelMissing()
+    public async Task GetExperimentsAsync_ShouldReturnEmptyStatus_WhenTopLevelStatusMissing()
     {
         // Arrange
         var queryResponse = new QueryResponse
@@ -220,7 +220,7 @@ public class ExperimentServiceTests
 
         // Assert
         Assert.Single(result);
-        Assert.Null(result[0].Status);
+        Assert.Equal(string.Empty, result[0].Status);
     }
 
     [Fact]
@@ -235,15 +235,7 @@ public class ExperimentServiceTests
                 {
                     ["PK"] = new AttributeValue { S = "EXPERIMENT#test-id" },
                     ["SK"] = new AttributeValue { S = "METADATA" },
-                    ["status"] = new AttributeValue { S = "Draft" },
-                    ["data"] = new AttributeValue
-                    {
-                        M = new Dictionary<string, AttributeValue>
-                        {
-                            ["Name"] = new AttributeValue("Test Experiment"),
-                            ["Description"] = new AttributeValue("Test Description")
-                        }
-                    }
+                    ["status"] = new AttributeValue { S = "Draft" }
                 }
             });
 

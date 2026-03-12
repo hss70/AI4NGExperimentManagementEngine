@@ -200,7 +200,9 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.UpdateExperimentAsync("test-id", data, "testuser"));
+        var ex = await Assert.ThrowsAsync<ConditionalCheckFailedException>(
+            () => _service.UpdateExperimentAsync("test-id", data, "testuser"));
+        Assert.Contains("Condition not met", ex.Message);
     }
 
     [Fact]
@@ -228,15 +230,9 @@ public class ErrorHandlingTests : ControllerTestBase<ResearcherExperimentsContro
     [InlineData("   ")]
     public async Task Service_ShouldHandleInvalidExperimentIds(string? invalidId)
     {
-        // Arrange
-        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
-            .ReturnsAsync(new QueryResponse { Items = new List<Dictionary<string, AttributeValue>>() });
-
-        // Act
-        var result = await _service.GetExperimentAsync(invalidId);
-
-        // Assert
-        Assert.Null(result);
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.GetExperimentAsync(invalidId!));
+        Assert.Contains("Experiment ID is required", ex.Message);
     }
 
     [Fact(Skip = "Refactor: moved to Session/Membership services")]

@@ -187,15 +187,7 @@ public class DynamoDBFormatTests
                 {
                     ["PK"] = new AttributeValue { S = "EXPERIMENT#test-id" },
                     ["SK"] = new AttributeValue { S = "METADATA" },
-                    ["status"] = new AttributeValue { S = "Draft" },
-                    ["data"] = new AttributeValue
-                    {
-                        M = new Dictionary<string, AttributeValue>
-                        {
-                            ["Name"] = new AttributeValue("Test Experiment"),
-                            ["Description"] = new AttributeValue("Test Description")
-                        }
-                    }
+                    ["status"] = new AttributeValue { S = "Draft" }
                 }
             });
 

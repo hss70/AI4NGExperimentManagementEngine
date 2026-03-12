@@ -3,9 +3,8 @@ using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Interfaces.Researcher;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
-using System.Text.Json;
-using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentsLambda.Models.Requests;
+using System.Text.Json;
 
 namespace AI4NGExperimentsLambda.Services;
 
@@ -20,28 +19,19 @@ public sealed class ExperimentsService : IExperimentsService
 
     private readonly IAmazonDynamoDB _dynamo;
     private readonly string _experimentsTable;
-    private readonly string _questionnairesTable;
 
     public ExperimentsService(IAmazonDynamoDB dynamo)
     {
-        _dynamo = dynamo;
+        _dynamo = dynamo ?? throw new ArgumentNullException(nameof(dynamo));
 
         _experimentsTable = Environment.GetEnvironmentVariable("EXPERIMENTS_TABLE") ?? string.Empty;
-        var questionnairesTable = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(_experimentsTable))
             throw new InvalidOperationException("EXPERIMENTS_TABLE environment variable is not set");
-
-        // Optional, but Validate depends on it
-        if (string.IsNullOrWhiteSpace(questionnairesTable))
-            questionnairesTable = "AI4NGQuestionnaires-dev"; // keep your existing fallback
-
-        _questionnairesTable = questionnairesTable;
     }
 
     public async Task<IReadOnlyList<ExperimentListDto>> GetExperimentsAsync(CancellationToken ct = default)
     {
-        // Query GSI1 (NO scans)
         var resp = await _dynamo.QueryAsync(new QueryRequest
         {
             TableName = _experimentsTable,
@@ -51,8 +41,8 @@ public sealed class ExperimentsService : IExperimentsService
             {
                 [":pk"] = new AttributeValue { S = Gsi1Pk_Experiments }
             },
-            ScanIndexForward = false, // newest first
-            ProjectionExpression = "PK, #data, #status",
+            ScanIndexForward = false,
+            ProjectionExpression = "PK, #data, #status, createdBy, createdAt, updatedBy, updatedAt",
             ExpressionAttributeNames = new Dictionary<string, string>
             {
                 ["#data"] = "data",
@@ -64,29 +54,19 @@ public sealed class ExperimentsService : IExperimentsService
 
         foreach (var item in resp.Items)
         {
-            var pk = item.GetValueOrDefault("PK")?.S ?? string.Empty;
-            var id = pk.StartsWith(ExperimentPkPrefix, StringComparison.OrdinalIgnoreCase)
-                ? pk.Substring(ExperimentPkPrefix.Length)
-                : pk;
-            var status = item.GetValueOrDefault("status")?.S;
-            var name = string.Empty;
-            var description = string.Empty;
-
-            if (item.TryGetValue("data", out var dataAttr) && dataAttr.M != null)
-            {
-                var map = dataAttr.M;
-                if (map.TryGetValue("Name", out var n) && !string.IsNullOrWhiteSpace(n.S))
-                    name = n.S;
-                if (map.TryGetValue("Description", out var d) && !string.IsNullOrWhiteSpace(d.S))
-                    description = d.S;
-            }
+            var experimentId = ExtractExperimentId(item);
+            var data = MapExperimentDataFromItem(item);
 
             list.Add(new ExperimentListDto
             {
-                Id = id,
-                Status = status,
-                Name = name,
-                Description = description
+                Id = experimentId,
+                Status = item.GetValueOrDefault("status")?.S ?? string.Empty,
+                Name = data.Name,
+                Description = data.Description,
+                UpdatedAt = item.GetValueOrDefault("updatedAt")?.S,
+                UpdatedBy = item.GetValueOrDefault("updatedBy")?.S,
+                CreatedAt = item.GetValueOrDefault("createdAt")?.S,
+                CreatedBy = item.GetValueOrDefault("createdBy")?.S ?? string.Empty
             });
         }
 
@@ -95,16 +75,14 @@ public sealed class ExperimentsService : IExperimentsService
 
     public async Task<ExperimentDto?> GetExperimentAsync(string experimentId, CancellationToken ct = default)
     {
-        experimentId = (experimentId ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(experimentId))
-            return null;
+        experimentId = NormalizeRequired(experimentId, "Experiment ID is required");
 
         var resp = await _dynamo.GetItemAsync(new GetItemRequest
         {
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
+                ["PK"] = new AttributeValue { S = BuildExperimentPk(experimentId) },
                 ["SK"] = new AttributeValue { S = MetadataSk }
             },
             ConsistentRead = true
@@ -113,37 +91,18 @@ public sealed class ExperimentsService : IExperimentsService
         if (!resp.IsItemSet)
             return null;
 
-        var response = MapExperimentDtoFromItem(resp.Item, experimentId);
-
-        return response;
+        return MapExperimentDtoFromItem(resp.Item, experimentId);
     }
 
-    private ExperimentDto MapExperimentDtoFromItem(Dictionary<string, AttributeValue> item, string experimentId)
-    {
-        var status = item.GetValueOrDefault("status")?.S;
-        var data = (DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data")) as ExperimentData) ?? new ExperimentData();
-
-        return new ExperimentDto
-        {
-            Id = experimentId,
-            Status = status,
-            Data = data,
-            UpdatedAt = item.GetValueOrDefault("updatedAt")?.S,
-            UpdatedBy = item.GetValueOrDefault("updatedBy")?.S,
-            CreatedAt = item.GetValueOrDefault("createdAt")?.S,
-            CreatedBy = item.GetValueOrDefault("createdBy")?.S
-        };
-    }
-
-    public async Task<IdResponseDto> CreateExperimentAsync(CreateExperimentRequest experiment, string performedBy, CancellationToken ct = default)
+    public async Task<IdResponseDto> CreateExperimentAsync(
+        CreateExperimentRequest experiment,
+        string performedBy,
+        CancellationToken ct = default)
     {
         if (experiment == null)
             throw new ArgumentException("Experiment payload is required");
 
-        performedBy = (performedBy ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(performedBy))
-            throw new UnauthorizedAccessException("Authentication required");
-
+        performedBy = NormalizeRequired(performedBy, "Authentication required");
 
         var nowIso = DateTime.UtcNow.ToString("O");
         var experimentId = string.IsNullOrWhiteSpace(experiment.Id)
@@ -151,8 +110,7 @@ public sealed class ExperimentsService : IExperimentsService
             : experiment.Id.Trim();
 
         var data = MapAndValidateExperimentData(experiment.Data);
-
-        var dataMap = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(data));
+        var dataMap = MapExperimentDataToAttributeMap(data);
 
         await _dynamo.PutItemAsync(new PutItemRequest
         {
@@ -160,16 +118,13 @@ public sealed class ExperimentsService : IExperimentsService
             ConditionExpression = "attribute_not_exists(PK) AND attribute_not_exists(SK)",
             Item = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
+                ["PK"] = new AttributeValue { S = BuildExperimentPk(experimentId) },
                 ["SK"] = new AttributeValue { S = MetadataSk },
 
                 ["type"] = new AttributeValue { S = "Experiment" },
-
-                // GSI1 for list page
                 ["GSI1PK"] = new AttributeValue { S = Gsi1Pk_Experiments },
                 ["GSI1SK"] = new AttributeValue { S = nowIso },
                 ["status"] = new AttributeValue { S = StatusDraft },
-
                 ["data"] = new AttributeValue { M = dataMap },
 
                 ["createdBy"] = new AttributeValue { S = performedBy },
@@ -179,7 +134,10 @@ public sealed class ExperimentsService : IExperimentsService
             }
         }, ct);
 
-        return new IdResponseDto { Id = experimentId };
+        return new IdResponseDto
+        {
+            Id = experimentId
+        };
     }
 
     public async Task UpdateExperimentAsync(
@@ -188,13 +146,8 @@ public sealed class ExperimentsService : IExperimentsService
         string performedBy,
         CancellationToken ct = default)
     {
-        experimentId = (experimentId ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(experimentId))
-            throw new ArgumentException("Experiment ID is required");
-
-        performedBy = (performedBy ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(performedBy))
-            throw new UnauthorizedAccessException("Authentication required");
+        experimentId = NormalizeRequired(experimentId, "Experiment ID is required");
+        performedBy = NormalizeRequired(performedBy, "Authentication required");
 
         if (experiment == null)
             throw new ArgumentException("Experiment data is required");
@@ -204,8 +157,6 @@ public sealed class ExperimentsService : IExperimentsService
             throw new KeyNotFoundException($"Experiment '{experimentId}' was not found");
 
         var changed = false;
-
-        var mergedStatus = existing.Status;
 
         var existingData = MapAndValidateExperimentData(existing.Data);
         var mergedData = existingData;
@@ -222,14 +173,14 @@ public sealed class ExperimentsService : IExperimentsService
             return;
 
         var nowIso = DateTime.UtcNow.ToString("O");
-        var dataMap = DynamoDBHelper.JsonToAttributeValue(JsonSerializer.SerializeToElement(mergedData));
+        var dataMap = MapExperimentDataToAttributeMap(mergedData);
 
         await _dynamo.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
+                ["PK"] = new AttributeValue { S = BuildExperimentPk(experimentId) },
                 ["SK"] = new AttributeValue { S = MetadataSk }
             },
             ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)",
@@ -246,6 +197,237 @@ public sealed class ExperimentsService : IExperimentsService
             }
         }, ct);
     }
+
+    public async Task DeleteExperimentAsync(string experimentId, string performedBy, CancellationToken ct = default)
+    {
+        experimentId = NormalizeRequired(experimentId, "Experiment ID is required");
+        performedBy = NormalizeRequired(performedBy, "Authentication required");
+
+        await _dynamo.DeleteItemAsync(new DeleteItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new AttributeValue { S = BuildExperimentPk(experimentId) },
+                ["SK"] = new AttributeValue { S = MetadataSk }
+            },
+            ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)"
+        }, ct);
+    }
+
+    public Task ActivateExperimentAsync(string experimentId, string performedBy, CancellationToken ct = default)
+        => SetExperimentStatusAsync(experimentId, performedBy, "Active", new[] { "Draft", "Paused" }, ct);
+
+    public Task PauseExperimentAsync(string experimentId, string performedBy, CancellationToken ct = default)
+        => SetExperimentStatusAsync(experimentId, performedBy, "Paused", new[] { "Active" }, ct);
+
+    public Task CloseExperimentAsync(string experimentId, string performedBy, CancellationToken ct = default)
+        => SetExperimentStatusAsync(experimentId, performedBy, "Closed", new[] { "Active", "Paused" }, ct);
+
+    private async Task SetExperimentStatusAsync(
+        string experimentId,
+        string performedBy,
+        string targetStatus,
+        IEnumerable<string> allowedFrom,
+        CancellationToken ct)
+    {
+        experimentId = NormalizeRequired(experimentId, "Experiment ID is required");
+        performedBy = NormalizeRequired(performedBy, "Authentication required");
+
+        var nowIso = DateTime.UtcNow.ToString("O");
+        var allowed = allowedFrom.ToList();
+
+        var allowedChecks = string.Join(" OR ", allowed.Select((_, i) => $"#status = :from{i}"));
+
+        var exprAttrNames = new Dictionary<string, string>
+        {
+            ["#status"] = "status"
+        };
+
+        var exprAttrValues = new Dictionary<string, AttributeValue>
+        {
+            [":to"] = new AttributeValue { S = targetStatus },
+            [":u"] = new AttributeValue { S = performedBy },
+            [":t"] = new AttributeValue { S = nowIso }
+        };
+
+        for (var i = 0; i < allowed.Count; i++)
+        {
+            exprAttrValues[$":from{i}"] = new AttributeValue { S = allowed[i] };
+        }
+
+        await _dynamo.UpdateItemAsync(new UpdateItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new AttributeValue { S = BuildExperimentPk(experimentId) },
+                ["SK"] = new AttributeValue { S = MetadataSk }
+            },
+            ConditionExpression = $"attribute_exists(PK) AND attribute_exists(SK) AND ({allowedChecks})",
+            UpdateExpression = "SET #status = :to, updatedBy = :u, updatedAt = :t",
+            ExpressionAttributeNames = exprAttrNames,
+            ExpressionAttributeValues = exprAttrValues
+        }, ct);
+    }
+
+    private static string BuildExperimentPk(string experimentId)
+        => $"{ExperimentPkPrefix}{experimentId}";
+
+    private static string NormalizeRequired(string? value, string errorMessage)
+    {
+        var trimmed = (value ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            throw new ArgumentException(errorMessage);
+
+        return trimmed;
+    }
+
+    private static string ExtractExperimentId(Dictionary<string, AttributeValue> item)
+    {
+        var pk = item.GetValueOrDefault("PK")?.S ?? string.Empty;
+
+        return pk.StartsWith(ExperimentPkPrefix, StringComparison.OrdinalIgnoreCase)
+            ? pk.Substring(ExperimentPkPrefix.Length)
+            : pk;
+    }
+
+    private static ExperimentDto MapExperimentDtoFromItem(
+        Dictionary<string, AttributeValue> item,
+        string experimentId)
+    {
+        return new ExperimentDto
+        {
+            Id = experimentId,
+            Status = item.GetValueOrDefault("status")?.S ?? string.Empty,
+            Data = MapExperimentDataFromItem(item),
+            UpdatedAt = item.GetValueOrDefault("updatedAt")?.S,
+            UpdatedBy = item.GetValueOrDefault("updatedBy")?.S,
+            CreatedAt = item.GetValueOrDefault("createdAt")?.S,
+            CreatedBy = item.GetValueOrDefault("createdBy")?.S ?? string.Empty
+        };
+    }
+
+    private static ExperimentData MapExperimentDataFromItem(Dictionary<string, AttributeValue> item)
+    {
+        if (!item.TryGetValue("data", out var dataAttr) || dataAttr.M == null)
+            return new ExperimentData();
+
+        return MapExperimentDataFromMap(dataAttr.M);
+    }
+
+    private static ExperimentData MapExperimentDataFromMap(Dictionary<string, AttributeValue> map)
+    {
+        var data = new ExperimentData
+        {
+            Name = map.GetValueOrDefault("Name")?.S ?? string.Empty,
+            Description = map.GetValueOrDefault("Description")?.S ?? string.Empty,
+            StudyStartDate = map.GetValueOrDefault("StudyStartDate")?.S,
+            StudyEndDate = map.GetValueOrDefault("StudyEndDate")?.S,
+            ParticipantDurationDays = TryGetNullableInt(map, "ParticipantDurationDays"),
+            SessionTypes = new Dictionary<string, SessionType>(StringComparer.OrdinalIgnoreCase)
+        };
+
+        if (map.TryGetValue("SessionTypes", out var sessionTypesAttr) && sessionTypesAttr.M != null)
+        {
+            foreach (var kvp in sessionTypesAttr.M)
+            {
+                var sessionKey = (kvp.Key ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(sessionKey))
+                    continue;
+
+                var sessionMap = kvp.Value?.M;
+                if (sessionMap == null)
+                    continue;
+
+                data.SessionTypes[sessionKey] = new SessionType
+                {
+                    Name = sessionMap.GetValueOrDefault("Name")?.S ?? string.Empty,
+                    Description = sessionMap.GetValueOrDefault("Description")?.S ?? string.Empty,
+                    EstimatedDurationMinutes = TryGetNullableInt(sessionMap, "EstimatedDurationMinutes") ?? 0,
+                    Schedule = sessionMap.GetValueOrDefault("Schedule")?.S,
+                    Tasks = TryGetStringList(sessionMap, "Tasks")
+                };
+            }
+        }
+
+        return data;
+    }
+
+    private static Dictionary<string, AttributeValue> MapExperimentDataToAttributeMap(ExperimentData data)
+    {
+        var map = new Dictionary<string, AttributeValue>
+        {
+            ["Name"] = new AttributeValue { S = data.Name ?? string.Empty },
+            ["Description"] = new AttributeValue { S = data.Description ?? string.Empty }
+        };
+
+        if (!string.IsNullOrWhiteSpace(data.StudyStartDate))
+            map["StudyStartDate"] = new AttributeValue { S = data.StudyStartDate };
+
+        if (!string.IsNullOrWhiteSpace(data.StudyEndDate))
+            map["StudyEndDate"] = new AttributeValue { S = data.StudyEndDate };
+
+        if (data.ParticipantDurationDays.HasValue)
+            map["ParticipantDurationDays"] = new AttributeValue { N = data.ParticipantDurationDays.Value.ToString() };
+
+        var sessionTypesMap = new Dictionary<string, AttributeValue>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kvp in data.SessionTypes ?? new Dictionary<string, SessionType>())
+        {
+            var key = (kvp.Key ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+
+            var value = kvp.Value ?? new SessionType();
+
+            var sessionMap = new Dictionary<string, AttributeValue>
+            {
+                ["Name"] = new AttributeValue { S = value.Name ?? string.Empty },
+                ["Description"] = new AttributeValue { S = value.Description ?? string.Empty },
+                ["EstimatedDurationMinutes"] = new AttributeValue { N = value.EstimatedDurationMinutes.ToString() },
+                ["Tasks"] = new AttributeValue
+                {
+                    L = (value.Tasks ?? new List<string>())
+                        .Where(t => !string.IsNullOrWhiteSpace(t))
+                        .Select(t => new AttributeValue { S = t.Trim() })
+                        .ToList()
+                }
+            };
+
+            if (!string.IsNullOrWhiteSpace(value.Schedule))
+                sessionMap["Schedule"] = new AttributeValue { S = value.Schedule };
+
+            sessionTypesMap[key] = new AttributeValue { M = sessionMap };
+        }
+
+        map["SessionTypes"] = new AttributeValue { M = sessionTypesMap };
+
+        return map;
+    }
+
+    private static int? TryGetNullableInt(Dictionary<string, AttributeValue> map, string key)
+    {
+        if (!map.TryGetValue(key, out var attr))
+            return null;
+
+        if (string.IsNullOrWhiteSpace(attr.N))
+            return null;
+
+        return int.TryParse(attr.N, out var value) ? value : null;
+    }
+
+    private static List<string> TryGetStringList(Dictionary<string, AttributeValue> map, string key)
+    {
+        if (!map.TryGetValue(key, out var attr) || attr.L == null)
+            return new List<string>();
+
+        return attr.L
+            .Where(x => !string.IsNullOrWhiteSpace(x.S))
+            .Select(x => x.S!.Trim())
+            .ToList();
+    }
+
     private static ExperimentData MapAndValidateExperimentData(ExperimentData? source)
     {
         if (source == null)
@@ -255,8 +437,8 @@ public sealed class ExperimentsService : IExperimentsService
         {
             Name = (source.Name ?? string.Empty).Trim(),
             Description = (source.Description ?? string.Empty).Trim(),
-            StudyStartDate = string.IsNullOrWhiteSpace(source.StudyStartDate) ? null : source.StudyStartDate.Trim(),
-            StudyEndDate = string.IsNullOrWhiteSpace(source.StudyEndDate) ? null : source.StudyEndDate.Trim(),
+            StudyStartDate = NormalizeOptionalString(source.StudyStartDate),
+            StudyEndDate = NormalizeOptionalString(source.StudyEndDate),
             ParticipantDurationDays = source.ParticipantDurationDays,
             SessionTypes = new Dictionary<string, SessionType>(StringComparer.OrdinalIgnoreCase)
         };
@@ -272,12 +454,13 @@ public sealed class ExperimentsService : IExperimentsService
             mapped.SessionTypes[key] = new SessionType
             {
                 Name = (value.Name ?? string.Empty).Trim(),
+                Description = (value.Description ?? string.Empty).Trim(),
                 Tasks = (value.Tasks ?? new List<string>())
                     .Where(t => !string.IsNullOrWhiteSpace(t))
                     .Select(t => t.Trim())
                     .ToList(),
                 EstimatedDurationMinutes = value.EstimatedDurationMinutes,
-                Schedule = string.IsNullOrWhiteSpace(value.Schedule) ? null : value.Schedule.Trim()
+                Schedule = NormalizeOptionalString(value.Schedule)
             };
         }
 
@@ -328,6 +511,7 @@ public sealed class ExperimentsService : IExperimentsService
             mapped[key] = new SessionType
             {
                 Name = (value.Name ?? string.Empty).Trim(),
+                Description = (value.Description ?? string.Empty).Trim(),
                 Tasks = (value.Tasks ?? new List<string>())
                     .Where(t => !string.IsNullOrWhiteSpace(t))
                     .Select(t => t.Trim())
@@ -344,6 +528,7 @@ public sealed class ExperimentsService : IExperimentsService
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
+
     private static void ValidateExperimentData(ExperimentData data)
     {
         if (string.IsNullOrWhiteSpace(data.Name))
@@ -372,95 +557,5 @@ public sealed class ExperimentsService : IExperimentsService
     private static bool ExperimentDataEquals(ExperimentData left, ExperimentData right)
     {
         return JsonSerializer.Serialize(left) == JsonSerializer.Serialize(right);
-    }
-    public async Task DeleteExperimentAsync(string experimentId, string performedBy, CancellationToken ct = default)
-    {
-        experimentId = (experimentId ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(experimentId))
-            throw new ArgumentException("Experiment ID is required");
-
-        performedBy = (performedBy ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(performedBy))
-            throw new UnauthorizedAccessException("Authentication required");
-
-        // For now: hard delete of metadata only (consistent with your current behaviour).
-        // If you introduce syncMetadata/isDeleted later, switch to soft delete.
-        await _dynamo.DeleteItemAsync(new DeleteItemRequest
-        {
-            TableName = _experimentsTable,
-            Key = new Dictionary<string, AttributeValue>
-            {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = MetadataSk }
-            },
-            ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)"
-        }, ct);
-    }
-
-    public Task ActivateExperimentAsync(string experimentId, string performedBy, CancellationToken ct = default)
-        => SetExperimentStatusAsync(experimentId, performedBy, "Active", allowedFrom: new[] { "Draft", "Paused" }, ct);
-
-    public Task PauseExperimentAsync(string experimentId, string performedBy, CancellationToken ct = default)
-        => SetExperimentStatusAsync(experimentId, performedBy, "Paused", allowedFrom: new[] { "Active" }, ct);
-
-    public Task CloseExperimentAsync(string experimentId, string performedBy, CancellationToken ct = default)
-        => SetExperimentStatusAsync(experimentId, performedBy, "Closed", allowedFrom: new[] { "Active", "Paused" }, ct);
-
-    private async Task SetExperimentStatusAsync(
-        string experimentId,
-        string performedBy,
-        string targetStatus,
-        IEnumerable<string> allowedFrom,
-        CancellationToken ct)
-    {
-        experimentId = (experimentId ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(experimentId))
-            throw new ArgumentException("Experiment ID is required");
-
-        performedBy = (performedBy ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(performedBy))
-            throw new UnauthorizedAccessException("Authentication required");
-
-        var nowIso = DateTime.UtcNow.ToString("O");
-        var allowed = allowedFrom.ToList();
-
-        // We store status inside data.Status (ExperimentData)
-        // Canonical status is top-level "status", but allow legacy reads from data.Status for transitions.
-        var allowedChecks = string.Join(" OR ", allowed.Select((_, i) => $"#status = :from{i} OR #data.#legacyStatus = :from{i}"));
-
-        var exprAttrNames = new Dictionary<string, string>
-        {
-            ["#status"] = "status",
-            ["#data"] = "data",
-            ["#legacyStatus"] = "Status"
-        };
-
-        var exprAttrValues = new Dictionary<string, AttributeValue>
-        {
-            [":to"] = new AttributeValue { S = targetStatus },
-            [":u"] = new AttributeValue { S = performedBy },
-            [":t"] = new AttributeValue { S = nowIso }
-        };
-
-        var idx = 0;
-        foreach (var s in allowed)
-        {
-            exprAttrValues[$":from{idx}"] = new AttributeValue { S = s };
-            idx++;
-        }
-
-        await _dynamo.UpdateItemAsync(new UpdateItemRequest
-        {
-            TableName = _experimentsTable,
-            Key = new Dictionary<string, AttributeValue>
-            {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = MetadataSk }
-            },
-            ConditionExpression = $"attribute_exists(PK) AND attribute_exists(SK) AND ({allowedChecks})",
-            UpdateExpression = "SET #status = :to, updatedBy = :u, updatedAt = :t",
-            ExpressionAttributeNames = exprAttrNames,
-            ExpressionAttributeValues = exprAttrValues
-        }, ct);
     }
 }

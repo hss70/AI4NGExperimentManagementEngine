@@ -89,23 +89,19 @@ public class ValidationTests
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
-        // Act & Assert - service requires a non-empty performedBy and will throw UnauthorizedAccessException
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _service.CreateExperimentAsync(experiment, username!));
+        // Act & Assert - service requires a non-empty performedBy and will throw ArgumentException
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateExperimentAsync(experiment, username!));
+        Assert.Contains("Authentication required", ex.Message);
     }
 
     [Theory]
     [InlineData("")]
     [InlineData(null)]
+    [InlineData("   ")]
     public async Task GetExperimentAsync_ShouldHandleInvalidExperimentIds(string? experimentId)
     {
-        // Arrange
-        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), default))
-            .ReturnsAsync(new QueryResponse { Items = new List<Dictionary<string, AttributeValue>>() });
-
-        // Act
-        var result = await _service.GetExperimentAsync(experimentId);
-
-        // Assert
-        Assert.Null(result);
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.GetExperimentAsync(experimentId!));
+        Assert.Contains("Experiment ID is required", ex.Message);
     }
 }

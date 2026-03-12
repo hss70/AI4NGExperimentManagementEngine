@@ -17,6 +17,8 @@ jobs:
     env:
       AWS_REGION: eu-west-2
       STACK_NAME: AI4NG-QuestionEngine-dev
+      PARTICIPANT_USER_POOL_ID: eu-west-2_EaNz6cSp0
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -60,7 +62,15 @@ jobs:
           if [ -z "$SHARED_API_AUTHORIZER_ID" ]; then
             echo "::error::SharedApiAuthorizerId export not found"
             exit 1
-          fi 
+          fi
+          if [ -z "$PRIVATE_SG" ]; then
+            echo "::error::NetworkStack-PrivateSG export not found"
+            exit 1
+          fi
+          if [ -z "$PRIVATE_SUBNETS" ]; then
+            echo "::error::NetworkStack-PrivateSubnetIds export not found"
+            exit 1
+          fi
 
           echo "shared_api_id=$SHARED_API_ID" >> $GITHUB_OUTPUT
           echo "shared_api_authorizer_id=$SHARED_API_AUTHORIZER_ID" >> $GITHUB_OUTPUT
@@ -82,4 +92,8 @@ jobs:
               "SharedApiAuthorizerId=${{ steps.get_exports.outputs.shared_api_authorizer_id }}" \
               "PrivateSG=${{ steps.get_exports.outputs.private_sg }}" \
               "PrivateSubnetIds=${{ steps.get_exports.outputs.private_subnets }}" \
-            --resolve-s3 --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset
+              "ParticipantUserPoolId=${{ env.PARTICIPANT_USER_POOL_ID }}" \
+            --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset
