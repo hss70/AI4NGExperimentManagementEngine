@@ -12,14 +12,19 @@ public interface IExperimentParticipantsService
         string? role = null,
         CancellationToken ct = default);
 
-    Task AddParticipantAsync(
+    Task<ExperimentMemberDto?> GetExperimentParticipantAsync(
+        string experimentId,
+        string participantId,
+        CancellationToken ct = default);
+
+    Task<IdResponseDto> UpsertParticipantAsync(
         string experimentId,
         string participantId,
         ExperimentMemberRequest request,
         string performedBy,
         CancellationToken ct = default);
 
-    Task AddParticipantsBatchAsync(
+    Task<List<IdResponseDto>> UpsertParticipantsBatchAsync(
         string experimentId,
         IEnumerable<MemberBatchItem> participants,
         string performedBy,

@@ -3,6 +3,7 @@ using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Interfaces.Researcher;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
+using AI4NGExperimentsLambda.Models.Helpers;
 
 namespace AI4NGExperimentsLambda.Services;
 
@@ -60,7 +61,7 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
             }
         }, ct);
 
-        var members = resp.Items.Select(MapMemberDto);
+        var members = resp.Items.Select(ExperimentMemberItemMapper.MapMemberDto);
 
         if (!string.IsNullOrWhiteSpace(cohort))
             members = members.Where(x => string.Equals(x.Cohort, cohort.Trim(), StringComparison.OrdinalIgnoreCase));
@@ -74,7 +75,7 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
         return members.ToList();
     }
 
-    public async Task AddParticipantAsync(
+    public async Task<IdResponseDto> UpsertParticipantAsync(
         string experimentId,
         string participantId,
         ExperimentMemberRequest request,
@@ -98,14 +99,17 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
             TableName = _experimentsTable,
             Item = BuildMembershipItem(experimentId, participantId, normalised, performedBy, nowIso),
         }, ct);
+
+        return new IdResponseDto { Id = participantId };
     }
 
-    public async Task AddParticipantsBatchAsync(
+    public async Task<List<IdResponseDto>> UpsertParticipantsBatchAsync(
         string experimentId,
         IEnumerable<MemberBatchItem> participants,
         string performedBy,
         CancellationToken ct = default)
     {
+        var responses = new List<IdResponseDto>();
         experimentId = RequireExperimentId(experimentId);
         performedBy = RequirePerformedBy(performedBy);
 
@@ -116,7 +120,7 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
 
         var items = participants.ToList();
         if (items.Count == 0)
-            return;
+            return responses;
 
         var nowIso = DateTime.UtcNow.ToString("O");
 
@@ -124,10 +128,13 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
         foreach (var chunk in Chunk(items, 25))
         {
             var writes = new List<WriteRequest>(chunk.Count);
+            var chunkParticipantIds = new List<string>(chunk.Count);
 
             foreach (var participant in chunk)
             {
                 var participantId = RequireParticipantId(participant.UserSub);
+                chunkParticipantIds.Add(participantId);
+
                 var request = new ExperimentMemberRequest
                 {
                     Role = participant.Role,
@@ -178,7 +185,14 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
 
             if (unprocessed != null && unprocessed.Count > 0)
                 throw new InvalidOperationException("Some participant memberships could not be written after retries");
+
+            responses.AddRange(chunkParticipantIds.Select(id => new IdResponseDto
+            {
+                Id = id
+            }));
         }
+
+        return responses;
     }
 
     public async Task RemoveParticipantAsync(
@@ -283,32 +297,6 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
             PseudoId = CleanOptional(request.PseudoId)
         };
     }
-
-    private static ExperimentMemberDto MapMemberDto(Dictionary<string, AttributeValue> item)
-    {
-        var sk = item.GetValueOrDefault("SK")?.S ?? string.Empty;
-        var participantId = sk.StartsWith(MemberSkPrefix, StringComparison.OrdinalIgnoreCase)
-            ? sk.Substring(MemberSkPrefix.Length)
-            : sk;
-
-        return new ExperimentMemberDto
-        {
-            UserSub = participantId,
-            Role = item.GetValueOrDefault("role")?.S ?? "participant",
-            Status = item.GetValueOrDefault("status")?.S ?? "active",
-            Cohort = item.GetValueOrDefault("cohort")?.S ?? string.Empty,
-            ParticipantStartDate = item.GetValueOrDefault("participantStartDate")?.S,
-            ParticipantEndDate = item.GetValueOrDefault("participantEndDate")?.S,
-            ParticipantDurationDaysOverride = TryParseInt(item.GetValueOrDefault("participantDurationDaysOverride")?.N),
-            Timezone = item.GetValueOrDefault("timezone")?.S,
-            PseudoId = item.GetValueOrDefault("pseudoId")?.S,
-            CreatedBy = item.GetValueOrDefault("createdBy")?.S,
-            CreatedAt = item.GetValueOrDefault("createdAt")?.S,
-            UpdatedBy = item.GetValueOrDefault("updatedBy")?.S,
-            UpdatedAt = item.GetValueOrDefault("updatedAt")?.S
-        };
-    }
-
     private static string RequireExperimentId(string experimentId)
     {
         experimentId = (experimentId ?? string.Empty).Trim();
@@ -365,5 +353,30 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
             chunks.Add(source.GetRange(i, Math.Min(size, source.Count - i)));
 
         return chunks;
+    }
+
+    public async Task<ExperimentMemberDto?> GetExperimentParticipantAsync(
+        string experimentId,
+        string participantId,
+        CancellationToken ct = default)
+    {
+        experimentId = RequireExperimentId(experimentId);
+        participantId = RequireParticipantId(participantId);
+
+        var response = await _dynamo.GetItemAsync(new GetItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = $"{MemberSkPrefix}{participantId}" }
+            },
+            ConsistentRead = true
+        }, ct);
+
+        if (!response.IsItemSet || response.Item == null || response.Item.Count == 0)
+            return null;
+
+        return ExperimentMemberItemMapper.MapMemberDto(response.Item);
     }
 }

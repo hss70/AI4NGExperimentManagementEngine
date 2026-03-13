@@ -1,18 +1,24 @@
 using Microsoft.AspNetCore.Mvc;
 using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentsLambda.Interfaces.Researcher;
+using AI4NGExperimentsLambda.Models;
+using AI4NGExperimentsLambda.Models.Dtos;
+using Microsoft.AspNetCore.Http;
 
 namespace AI4NGExperimentsLambda.Controllers.Researcher
 {
     /// <summary>
     /// Researcher endpoints for enrolling and managing participants in an experiment.
     /// </summary>
+    [ApiController]
     [Route("api/experiments/{experimentId}/participants")]
     public class ExperimentParticipantsController : BaseApiController
     {
         private readonly IExperimentParticipantsService _experimentParticipantsService;
 
-        public ExperimentParticipantsController(IExperimentParticipantsService experimentParticipantsService, IAuthenticationService authService)
+        public ExperimentParticipantsController(
+            IExperimentParticipantsService experimentParticipantsService,
+            IAuthenticationService authService)
             : base(authService)
         {
             _experimentParticipantsService = experimentParticipantsService;
@@ -22,80 +28,119 @@ namespace AI4NGExperimentsLambda.Controllers.Researcher
         /// Lists participants enrolled in an experiment (researcher-only).
         /// </summary>
         [HttpGet]
-        public IActionResult List(
-            string experimentId,
+        [ProducesResponseType(typeof(IEnumerable<ExperimentMemberDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> List(
+            [FromRoute] string experimentId,
             [FromQuery] string? cohort = null,
             [FromQuery] string? status = null,
-            [FromQuery] string? role = null)
+            [FromQuery] string? role = null,
+            CancellationToken ct = default)
         {
             RequireResearcher();
-            return Ok(new
-            {
+
+            var result = await _experimentParticipantsService.GetExperimentParticipantsAsync(
                 experimentId,
-                filters = new { cohort, status, role },
-                message = "Participant listing endpoint stubbed"
-            });
+                cohort,
+                status,
+                role,
+                ct);
+
+            return Ok(result);
         }
 
         /// <summary>
         /// Gets a single participant enrolment record (researcher-only).
         /// </summary>
         [HttpGet("{participantId}")]
-        public IActionResult Get(string experimentId, string participantId)
+        [ProducesResponseType(typeof(ExperimentMemberDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Get(
+            [FromRoute] string experimentId,
+            [FromRoute] string participantId,
+            CancellationToken ct = default)
         {
             RequireResearcher();
-            return Ok(new
-            {
+
+            var result = await _experimentParticipantsService.GetExperimentParticipantAsync(
                 experimentId,
                 participantId,
-                message = "Participant get endpoint stubbed"
-            });
+                ct);
+
+            if (result == null)
+                return NotFound();
+
+            return Ok(result);
         }
 
         /// <summary>
         /// Adds or updates a participant enrolment (researcher-only).
         /// </summary>
         [HttpPut("{participantId}")]
-        public IActionResult Upsert(string experimentId, string participantId, [FromBody] object request)
+        [ProducesResponseType(typeof(IdResponseDto), StatusCodes.Status200OK)]
+        public async Task<IActionResult> Upsert(
+            [FromRoute] string experimentId,
+            [FromRoute] string participantId,
+            [FromBody] ExperimentMemberRequest request,
+            CancellationToken ct = default)
         {
             RequireResearcher();
-            return Ok(new
-            {
+
+            var username = GetAuthenticatedUsername();
+
+            var result = await _experimentParticipantsService.UpsertParticipantAsync(
                 experimentId,
                 participantId,
-                received = request,
-                message = "Participant upsert endpoint stubbed"
-            });
+                request,
+                username,
+                ct);
+
+            return Ok(result);
         }
 
         /// <summary>
         /// Adds multiple participants (researcher-only).
         /// </summary>
         [HttpPost("batch")]
-        public IActionResult BatchUpsert(string experimentId, [FromBody] object request)
+        [ProducesResponseType(typeof(List<IdResponseDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> BatchUpsert(
+            [FromRoute] string experimentId,
+            [FromBody] IEnumerable<MemberBatchItem> participants,
+            CancellationToken ct = default)
         {
             RequireResearcher();
-            return Ok(new
-            {
+
+            var username = GetAuthenticatedUsername();
+
+            var result = await _experimentParticipantsService.UpsertParticipantsBatchAsync(
                 experimentId,
-                received = request,
-                message = "Participant batch upsert endpoint stubbed"
-            });
+                participants,
+                username,
+                ct);
+
+            return Ok(result);
         }
 
         /// <summary>
         /// Removes a participant from an experiment (researcher-only).
         /// </summary>
         [HttpDelete("{participantId}")]
-        public IActionResult Remove(string experimentId, string participantId)
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> Remove(
+            [FromRoute] string experimentId,
+            [FromRoute] string participantId,
+            CancellationToken ct = default)
         {
             RequireResearcher();
-            return Ok(new
-            {
+
+            var username = GetAuthenticatedUsername();
+
+            await _experimentParticipantsService.RemoveParticipantAsync(
                 experimentId,
                 participantId,
-                message = "Participant remove endpoint stubbed"
-            });
+                username,
+                ct);
+
+            return NoContent();
         }
     }
 }
