@@ -54,7 +54,7 @@ namespace AI4NGExperimentsLambda.Controllers.Researcher
         {
             RequireResearcher();
             var created = await _sessionProtocolService.CreateProtocolSessionAsync(experimentId, protocolSessionKey, request, GetAuthenticatedUsername());
-            return CreatedAtAction(nameof(Get), new { experimentId, created.ProtocolKey }, created);
+            return CreatedAtAction(nameof(Get), new { experimentId, protocolSessionKey = created.ProtocolKey }, created);
         }
 
         /// <summary>
