@@ -601,6 +601,15 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
+  CreateTasksBatchRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: POST /api/tasks/batch
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
   UpdateTaskRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
