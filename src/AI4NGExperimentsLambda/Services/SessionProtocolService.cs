@@ -6,6 +6,7 @@ using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentsLambda.Models.Requests;
 using AI4NGExperimentManagement.Shared;
 using System.Text.Json;
+using AI4NGExperimentsLambda.Helpers;
 
 namespace AI4NGExperimentsLambda.Services;
 
@@ -313,15 +314,7 @@ SET #type = if_not_exists(#type, :type),
         if (!resp.IsItemSet)
             throw new KeyNotFoundException($"Experiment '{experimentId}' not found");
 
-        var item = resp.Item;
-
-        return new ExperimentDto
-        {
-            Id = experimentId,
-            Data = (DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data")) as ExperimentData) ?? new ExperimentData(),
-            UpdatedAt = item.GetValueOrDefault("updatedAt")?.S,
-            Status = item.GetValueOrDefault("status")?.S ?? string.Empty
-        };
+        return ExperimentItemMapper.MapExperimentDtoFromItem(resp.Item, experimentId);
     }
 
     private static void EnsureSessionTypeExists(ExperimentDto exp, string sessionTypeKey)
