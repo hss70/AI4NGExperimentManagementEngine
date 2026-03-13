@@ -15,12 +15,13 @@ public class TaskServiceTests
     public TaskServiceTests()
     {
         _mockDynamoClient = new Mock<IAmazonDynamoDB>();
+
         Environment.SetEnvironmentVariable("EXPERIMENTS_TABLE", "experiments-test");
+        Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "questionnaires-test");
 
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
-        // Default GetItemAsync to return an item (questionnaire lookups) so questionnaire existence checks pass
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
             .ReturnsAsync(new GetItemResponse
             {
@@ -29,6 +30,39 @@ public class TaskServiceTests
                 {
                     ["PK"] = new AttributeValue("QUESTIONNAIRE#exists")
                 }
+            });
+
+        _mockDynamoClient.Setup(x => x.BatchGetItemAsync(It.IsAny<BatchGetItemRequest>(), default))
+            .ReturnsAsync((BatchGetItemRequest req, CancellationToken _) =>
+            {
+                var tableName = req.RequestItems.Keys.Single();
+                var requestedKeys = req.RequestItems[tableName].Keys;
+
+                var items = requestedKeys.Select(k =>
+                {
+                    var pk = k["PK"].S;
+                    return new Dictionary<string, AttributeValue>
+                    {
+                        ["PK"] = new AttributeValue(pk),
+                        ["SK"] = new AttributeValue("CONFIG"),
+                        ["syncMetadata"] = new AttributeValue
+                        {
+                            M = new Dictionary<string, AttributeValue>
+                            {
+                                ["isDeleted"] = new AttributeValue { BOOL = false }
+                            }
+                        }
+                    };
+                }).ToList();
+
+                return new BatchGetItemResponse
+                {
+                    Responses = new Dictionary<string, List<Dictionary<string, AttributeValue>>>
+                    {
+                        [tableName] = items
+                    },
+                    UnprocessedKeys = new Dictionary<string, KeysAndAttributes>()
+                };
             });
 
         _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
