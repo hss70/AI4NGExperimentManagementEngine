@@ -5,7 +5,7 @@ using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentsLambda.Models.Requests;
 using System.Text.Json;
-using AI4NGExperimentsLambda.Helpers;
+using AI4NGExperimentsLambda.Mappers;
 
 namespace AI4NGExperimentsLambda.Services;
 

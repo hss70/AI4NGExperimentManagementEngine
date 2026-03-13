@@ -1,7 +1,7 @@
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
 using Amazon.DynamoDBv2.Model;
-namespace AI4NGExperimentsLambda.Helpers;
+namespace AI4NGExperimentsLambda.Mappers;
 
 public static class ExperimentItemMapper
 {

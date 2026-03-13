@@ -3,7 +3,7 @@ using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Interfaces.Researcher;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
-using AI4NGExperimentsLambda.Models.Helpers;
+using AI4NGExperimentsLambda.Mappers;
 
 namespace AI4NGExperimentsLambda.Services;
 

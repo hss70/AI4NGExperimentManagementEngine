@@ -6,7 +6,7 @@ using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentsLambda.Models.Requests;
 using AI4NGExperimentManagement.Shared;
 using System.Text.Json;
-using AI4NGExperimentsLambda.Helpers;
+using AI4NGExperimentsLambda.Mappers;
 
 namespace AI4NGExperimentsLambda.Services;
 
@@ -57,7 +57,7 @@ public sealed class SessionProtocolService : ISessionProtocolService
                 : sk;
 
             var dataObj = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data"));
-            list.Add(MapToDto(experimentId, protocolKey, dataObj, item));
+            list.Add(ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, dataObj, item));
         }
 
         // Stable ordering for UI
@@ -94,7 +94,7 @@ public sealed class SessionProtocolService : ISessionProtocolService
 
         var item = resp.Item;
         var dataObj = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data"));
-        return MapToDto(experimentId, protocolKey, dataObj, item);
+        return ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, dataObj, item);
     }
 
     public Task<ProtocolSessionDto> CreateProtocolSessionAsync(
@@ -325,38 +325,5 @@ SET #type = if_not_exists(#type, :type),
         var exists = exp.Data.SessionTypes.Keys.Any(k => string.Equals(k, sessionTypeKey, StringComparison.OrdinalIgnoreCase));
         if (!exists)
             throw new ArgumentException($"SessionTypeKey '{sessionTypeKey}' does not exist in experiment.sessionTypes");
-    }
-
-    private static ProtocolSessionDto MapToDto(
-        string experimentId,
-        string protocolKey,
-        object? dataObj,
-        Dictionary<string, AttributeValue> item)
-    {
-        var data = dataObj as Dictionary<string, object> ?? new Dictionary<string, object>();
-
-        string GetString(string k)
-            => data.TryGetValue(k, out var v) && v != null ? v.ToString() ?? string.Empty : string.Empty;
-
-        int GetInt(string k)
-            => data.TryGetValue(k, out var v) && v != null && int.TryParse(v.ToString(), out var i) ? i : 0;
-
-        int? GetNullableInt(string k)
-            => data.TryGetValue(k, out var v) && v != null && int.TryParse(v.ToString(), out var i) ? i : null;
-
-        return new ProtocolSessionDto
-        {
-            ExperimentId = experimentId,
-            ProtocolKey = protocolKey,
-            SessionTypeKey = GetString("sessionTypeKey"),
-            Order = GetInt("order"),
-            CadenceType = string.IsNullOrWhiteSpace(GetString("cadenceType")) ? "ONCE" : GetString("cadenceType"),
-            MaxPerDay = GetNullableInt("maxPerDay"),
-            WindowStartLocal = data.TryGetValue("windowStartLocal", out var ws) ? ws?.ToString() : null,
-            WindowEndLocal = data.TryGetValue("windowEndLocal", out var we) ? we?.ToString() : null,
-            Weekday = GetNullableInt("weekday"),
-            CreatedAt = item.GetValueOrDefault("createdAt")?.S,
-            UpdatedAt = item.GetValueOrDefault("updatedAt")?.S
-        };
     }
 }

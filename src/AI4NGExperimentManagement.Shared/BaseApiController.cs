@@ -21,6 +21,14 @@ public abstract class BaseApiController : ControllerBase
         return username;
     }
 
+    protected string GetAuthenticatedUserSub()
+    {
+        var userSub = _authService.GetUserSubFromRequest();
+        if (string.IsNullOrEmpty(userSub))
+            throw new UnauthorizedAccessException("Authentication required");
+        return userSub;
+    }
+
     protected void RequireResearcher()
     {
         if (!_authService.IsResearcher())

@@ -1,0 +1,218 @@
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.Model;
+using AI4NGExperimentsLambda.Interfaces.Participant;
+using AI4NGExperimentsLambda.Mappers;
+using AI4NGExperimentsLambda.Models.Dtos;
+using AI4NGExperimentManagement.Shared;
+
+namespace AI4NGExperimentsLambda.Services;
+
+public sealed class ParticipantExperimentsService : IParticipantExperimentsService
+{
+    private const string ExperimentPkPrefix = "EXPERIMENT#";
+    private const string MetadataSk = "METADATA";
+    private const string MemberSkPrefix = "MEMBER#";
+    private const string ProtocolSkPrefix = "PROTOCOL_SESSION#";
+
+    private readonly IAmazonDynamoDB _dynamo;
+    private readonly string _experimentsTable;
+
+    public ParticipantExperimentsService(IAmazonDynamoDB dynamo)
+    {
+        _dynamo = dynamo;
+        _experimentsTable = Environment.GetEnvironmentVariable("EXPERIMENTS_TABLE") ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_experimentsTable))
+            throw new InvalidOperationException("EXPERIMENTS_TABLE environment variable is not set");
+    }
+
+    public async Task<IEnumerable<ExperimentListDto>> GetMyExperimentsAsync(
+        string participantId,
+        CancellationToken ct = default)
+    {
+        participantId = RequireParticipantId(participantId);
+
+        var membershipResp = await _dynamo.QueryAsync(new QueryRequest
+        {
+            TableName = _experimentsTable,
+            IndexName = "GSI1",
+            KeyConditionExpression = "GSI1PK = :gsi1pk",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":gsi1pk"] = new AttributeValue { S = $"USER#{participantId}" }
+            }
+        }, ct);
+
+        if (membershipResp.Items.Count == 0)
+            return [];
+
+        var experimentIds = membershipResp.Items
+            .Where(ExperimentMemberItemMapper.IsActiveParticipantMembership)
+            .Select(ExperimentMemberItemMapper.GetExperimentId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (experimentIds.Count == 0)
+            return [];
+
+        var experiments = new List<ExperimentListDto>(experimentIds.Count);
+
+        foreach (var experimentId in experimentIds)
+        {
+            var experiment = await GetExperimentAsync(experimentId, ct);
+            if (experiment == null)
+                continue;
+
+            experiments.Add(new ExperimentListDto
+            {
+                Id = experiment.Id,
+                Status = experiment.Status,
+                Name = experiment.Data?.Name ?? string.Empty,
+                Description = experiment.Data?.Description ?? string.Empty,
+                CreatedAt = experiment.CreatedAt,
+                CreatedBy = experiment.CreatedBy,
+                UpdatedAt = experiment.UpdatedAt,
+                UpdatedBy = experiment.UpdatedBy
+            });
+        }
+
+        return experiments
+            .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
+            .ToList();
+    }
+
+    public async Task<ExperimentSyncDto> GetExperimentBundleAsync(
+        string experimentId,
+        string participantId,
+        DateTime? since = null,
+        CancellationToken ct = default)
+    {
+        experimentId = RequireExperimentId(experimentId);
+        participantId = RequireParticipantId(participantId);
+
+        await EnsureParticipantMembershipAsync(experimentId, participantId, ct);
+
+        var experiment = await GetExperimentAsync(experimentId, ct)
+            ?? throw new KeyNotFoundException($"Experiment '{experimentId}' was not found");
+
+        var protocolSessions = await GetProtocolSessionsAsync(experimentId, ct);
+
+        var sessions = protocolSessions
+            .Select(p => ProtocolSessionItemMapper.MapProtocolSessionToSessionDto(experimentId, p, experiment))
+            .ToList();
+
+        var sessionTypeNames = experiment.Data?.SessionTypes?
+            .Values
+            .Select(x => x.Name)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? new List<string>();
+
+        var sessionTypeKeys = experiment.Data?.SessionTypes?
+            .Keys
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? new List<string>();
+
+        return new ExperimentSyncDto
+        {
+            Experiment = experiment,
+            Sessions = sessions,
+            Tasks = new List<TaskDto>(),
+            Questionnaires = new List<string>(),
+            SessionNames = sessionTypeNames,
+            SessionTypes = sessionTypeKeys,
+            SyncTimestamp = DateTime.UtcNow.ToString("O")
+        };
+    }
+
+    private async Task<ExperimentDto?> GetExperimentAsync(string experimentId, CancellationToken ct)
+    {
+        var resp = await _dynamo.GetItemAsync(new GetItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = MetadataSk }
+            },
+            ConsistentRead = true
+        }, ct);
+
+        if (!resp.IsItemSet || resp.Item == null || resp.Item.Count == 0)
+            return null;
+
+        return ExperimentItemMapper.MapExperimentDtoFromItem(resp.Item, experimentId);
+    }
+
+    private async Task EnsureParticipantMembershipAsync(
+        string experimentId,
+        string participantId,
+        CancellationToken ct)
+    {
+        var resp = await _dynamo.GetItemAsync(new GetItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = $"{MemberSkPrefix}{participantId}" }
+            },
+            ConsistentRead = true
+        }, ct);
+
+        if (!resp.IsItemSet || resp.Item == null || resp.Item.Count == 0)
+            throw new KeyNotFoundException($"Participant '{participantId}' is not enrolled in experiment '{experimentId}'");
+
+        if (!ExperimentMemberItemMapper.IsActiveParticipantMembership(resp.Item))
+            throw new UnauthorizedAccessException("Participant is not an active participant member of this experiment");
+    }
+
+    private async Task<List<ProtocolSessionDto>> GetProtocolSessionsAsync(
+        string experimentId,
+        CancellationToken ct)
+    {
+        var resp = await _dynamo.QueryAsync(new QueryRequest
+        {
+            TableName = _experimentsTable,
+            KeyConditionExpression = "PK = :pk AND begins_with(SK, :skprefix)",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":pk"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
+                [":skprefix"] = new AttributeValue { S = ProtocolSkPrefix }
+            }
+        }, ct);
+
+        var list = new List<ProtocolSessionDto>(resp.Items.Count);
+
+        foreach (var item in resp.Items)
+        {
+            var sk = item.GetValueOrDefault("SK")?.S ?? string.Empty;
+            var protocolKey = sk.StartsWith(ProtocolSkPrefix, StringComparison.OrdinalIgnoreCase)
+                ? sk.Substring(ProtocolSkPrefix.Length)
+                : sk;
+
+            var dataObj = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data"));
+            list.Add(ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, dataObj, item));
+        }
+
+        list.Sort((a, b) => a.Order.CompareTo(b.Order));
+        return list;
+    }
+
+    private static string RequireParticipantId(string participantId)
+    {
+        participantId = (participantId ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(participantId))
+            throw new UnauthorizedAccessException("Participant identity is required");
+        return participantId;
+    }
+
+    private static string RequireExperimentId(string experimentId)
+    {
+        experimentId = (experimentId ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(experimentId))
+            throw new ArgumentException("Experiment ID is required");
+        return experimentId;
+    }
+}

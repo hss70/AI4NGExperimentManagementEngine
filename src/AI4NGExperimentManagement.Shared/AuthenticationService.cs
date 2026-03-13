@@ -16,6 +16,21 @@ public class AuthenticationService : IAuthenticationService
         _httpContextAccessor = httpContextAccessor;
     }
 
+    public string GetUserSubFromRequest()
+    {
+        var user = GetUser();
+
+        // ✅ For local testing
+        if (Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL") != null)
+            return "testuser-sub";
+
+        var sub = user.FindFirst("sub")?.Value;
+
+        if (string.IsNullOrEmpty(sub))
+            throw new UnauthorizedAccessException("Authenticated user has no sub claim");
+
+        return sub;
+    }
     public string GetUsernameFromRequest()
     {
         var user = GetUser();
