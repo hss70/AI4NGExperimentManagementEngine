@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using AI4NGExperimentsLambda.Interfaces;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentManagement.Shared;
+using AI4NGExperimentsLambda.Models.Dtos;
+using Microsoft.AspNetCore.Http;
 
 namespace AI4NGExperimentsLambda.Controllers
 {
@@ -50,7 +52,21 @@ namespace AI4NGExperimentsLambda.Controllers
             RequireResearcher();
             var username = GetAuthenticatedUsername();
             var result = await _taskService.CreateTaskAsync(request, username);
-            return CreatedAtAction(nameof(GetById), new { taskKey = ((dynamic)result).id }, result);
+            return CreatedAtAction(nameof(GetById), new { taskKey = result.Id }, result);
+        }
+
+        [HttpPost("batch")]
+        [ProducesResponseType(typeof(List<IdResponseDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> CreateBatch(
+            [FromBody] IEnumerable<CreateTaskRequest> requests,
+            CancellationToken ct = default)
+        {
+            RequireResearcher();
+
+            var username = GetAuthenticatedUsername();
+            var result = await _taskService.CreateTasksBatchAsync(requests, username, ct);
+
+            return Ok(result);
         }
 
         /// <summary>

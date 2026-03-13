@@ -10,4 +10,8 @@ public interface ITaskService
     Task<IdResponseDto> CreateTaskAsync(CreateTaskRequest request, string username);
     Task UpdateTaskAsync(string taskKey, TaskData data, string username);
     Task DeleteTaskAsync(string taskKey, string username);
+    Task<List<IdResponseDto>> CreateTasksBatchAsync(
+        IEnumerable<CreateTaskRequest> requests,
+        string username,
+        CancellationToken ct = default);
 }

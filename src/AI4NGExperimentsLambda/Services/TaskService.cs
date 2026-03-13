@@ -14,6 +14,7 @@ public class TaskService : ITaskService
 {
     private readonly IAmazonDynamoDB _dynamoClient;
     private readonly string _experimentsTable;
+    private const int MaxBatchCreateTasks = 25;
 
     public TaskService(IAmazonDynamoDB dynamoClient)
     {
@@ -67,7 +68,34 @@ public class TaskService : ITaskService
 
         return TaskItemMapper.MapItemToTask(response.Item);
     }
+    public async Task<List<IdResponseDto>> CreateTasksBatchAsync(
+        IEnumerable<CreateTaskRequest> requests,
+        string username,
+        CancellationToken ct = default)
+    {
+        if (requests == null)
+            throw new ArgumentException("Task batch payload is required.");
 
+        var items = requests.ToList();
+
+        if (items.Count == 0)
+            return new List<IdResponseDto>();
+
+        if (items.Count > MaxBatchCreateTasks)
+            throw new ArgumentException($"A maximum of {MaxBatchCreateTasks} tasks can be created in one batch.");
+
+        var results = new List<IdResponseDto>(items.Count);
+
+        foreach (var request in items)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var created = await CreateTaskAsync(request, username);
+            results.Add(created);
+        }
+
+        return results;
+    }
     public async Task<IdResponseDto> CreateTaskAsync(CreateTaskRequest request, string username)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
