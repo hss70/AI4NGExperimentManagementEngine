@@ -17,6 +17,7 @@ public class Startup : BaseStartup
         services.AddScoped<ITaskService, TaskService>();
         services.AddSingleton<IAuthorisationService, AuthorisationService>();
         services.AddScoped<ISessionProtocolService, SessionProtocolService>();
+        services.AddScoped<IExperimentParticipantsService, ExperimentParticipantsService>();
         services.AddAWSService<IAmazonCognitoIdentityProvider>();
         services.AddScoped<IUserLookupService, UserLookupService>();
     }

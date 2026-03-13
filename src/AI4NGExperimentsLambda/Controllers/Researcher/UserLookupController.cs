@@ -22,7 +22,9 @@ public class UserLookupController : BaseApiController
     public async Task<IActionResult> GetByEmail([FromQuery] string email, CancellationToken ct)
     {
         RequireResearcher();
-
+        throw new InvalidOperationException(
+            "User lookup by email/username is not available from this VPC-isolated API. " +
+            "Use a DynamoDB-backed lookup or move this operation to a service with Cognito connectivity.");
         var user = await _userLookupService.GetByEmailAsync(email, ct);
         return user == null ? NotFound() : Ok(user);
     }
@@ -31,7 +33,9 @@ public class UserLookupController : BaseApiController
     public async Task<IActionResult> GetByUsername([FromQuery] string username, CancellationToken ct)
     {
         RequireResearcher();
-
+        throw new InvalidOperationException(
+            "User lookup by email/username is not available from this VPC-isolated API. " +
+            "Use a DynamoDB-backed lookup or move this operation to a service with Cognito connectivity.");
         var user = await _userLookupService.GetByUsernameAsync(username, ct);
         return user == null ? NotFound() : Ok(user);
     }
