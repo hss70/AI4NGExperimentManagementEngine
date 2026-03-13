@@ -14,15 +14,20 @@ public class TaskService : ITaskService
 {
     private readonly IAmazonDynamoDB _dynamoClient;
     private readonly string _experimentsTable;
+    private readonly string _questionnairesTable;
     private const int MaxBatchCreateTasks = 25;
 
     public TaskService(IAmazonDynamoDB dynamoClient)
     {
         _dynamoClient = dynamoClient;
         _experimentsTable = Environment.GetEnvironmentVariable("EXPERIMENTS_TABLE") ?? string.Empty;
+        _questionnairesTable = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(_experimentsTable))
             throw new InvalidOperationException("EXPERIMENTS_TABLE environment variable is not set");
+
+        if (string.IsNullOrWhiteSpace(_questionnairesTable))
+            throw new InvalidOperationException("QUESTIONNAIRES_TABLE environment variable is not set");
     }
 
     public async Task<IEnumerable<AI4NGTask>> GetTasksAsync()
@@ -356,45 +361,107 @@ public class TaskService : ITaskService
     }
     private async Task ValidateQuestionnairesExistAsync(IEnumerable<string>? questionnaireIds)
     {
-        if (questionnaireIds == null) return;
+        if (questionnaireIds == null)
+            return;
 
         var ids = questionnaireIds
             .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        if (ids.Count == 0) return;
+        if (ids.Count == 0)
+            return;
 
-        var missing = new List<string>();
+        const int batchSize = 100;
+        var foundIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var questionnaireId in ids)
+        for (var i = 0; i < ids.Count; i += batchSize)
         {
-            var exists = await ValidateQuestionnaireExists(questionnaireId);
-            if (!exists) missing.Add(questionnaireId);
+            var chunk = ids.Skip(i).Take(batchSize).ToList();
+
+            var requestItems = new Dictionary<string, KeysAndAttributes>
+            {
+                [_questionnairesTable] = new KeysAndAttributes
+                {
+                    Keys = chunk.Select(id => new Dictionary<string, AttributeValue>
+                    {
+                        ["PK"] = new AttributeValue { S = $"QUESTIONNAIRE#{id}" },
+                        ["SK"] = new AttributeValue { S = "CONFIG" }
+                    }).ToList()
+                }
+            };
+
+            const int maxRetries = 5;
+            var attempt = 0;
+
+            while (requestItems.Count > 0)
+            {
+                BatchGetItemResponse response;
+
+                try
+                {
+                    response = await _dynamoClient.BatchGetItemAsync(new BatchGetItemRequest
+                    {
+                        RequestItems = requestItems
+                    });
+                }
+                catch (ResourceNotFoundException ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Questionnaire table '{_questionnairesTable}' was not found while validating questionnaires.",
+                        ex);
+                }
+                catch (AmazonDynamoDBException ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to validate questionnaires in table '{_questionnairesTable}'. DynamoDB error: {ex.Message}",
+                        ex);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        "Unexpected error while validating questionnaire references.",
+                        ex);
+                }
+
+                if (response.Responses.TryGetValue(_questionnairesTable, out var items) && items != null)
+                {
+                    foreach (var item in items)
+                    {
+                        var isDeleted = item.GetValueOrDefault("syncMetadata")?.M?
+                            .GetValueOrDefault("isDeleted")?.BOOL ?? false;
+
+                        if (isDeleted)
+                            continue;
+
+                        var pk = item.GetValueOrDefault("PK")?.S ?? string.Empty;
+                        if (pk.StartsWith("QUESTIONNAIRE#", StringComparison.OrdinalIgnoreCase))
+                        {
+                            foundIds.Add(pk.Substring("QUESTIONNAIRE#".Length));
+                        }
+                    }
+                }
+
+                requestItems = response.UnprocessedKeys ?? new Dictionary<string, KeysAndAttributes>();
+
+                if (requestItems.Count > 0)
+                {
+                    attempt++;
+                    if (attempt > maxRetries)
+                        throw new TimeoutException("BatchGetItem exceeded retry limit while validating questionnaire references.");
+
+                    var delayMs = (int)(50 * Math.Pow(2, attempt)) + Random.Shared.Next(0, 75);
+                    await Task.Delay(delayMs);
+                }
+            }
         }
+
+        var missing = ids
+            .Where(id => !foundIds.Contains(id))
+            .ToList();
 
         if (missing.Count > 0)
             throw new ArgumentException($"Missing questionnaires: {string.Join(", ", missing)}");
-    }
-
-    private async Task<bool> ValidateQuestionnaireExists(string questionnaireId)
-    {
-        try
-        {
-            var response = await _dynamoClient.GetItemAsync(new GetItemRequest
-            {
-                TableName = Environment.GetEnvironmentVariable("QUESTIONNAIRES_TABLE") ?? "AI4NGQuestionnaires-dev",
-                Key = new Dictionary<string, AttributeValue>
-                {
-                    ["PK"] = new($"QUESTIONNAIRE#{questionnaireId}"),
-                    ["SK"] = new("CONFIG")
-                }
-            });
-            return response.IsItemSet;
-        }
-        catch
-        {
-            return false;
-        }
     }
 }

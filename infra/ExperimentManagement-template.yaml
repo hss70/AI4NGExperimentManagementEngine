@@ -195,7 +195,7 @@ Resources:
           EXPERIMENTS_TABLE: !Ref AI4NGExperimentsTable
           RESPONSES_TABLE: !Ref AI4NGResponsesTable
           QUESTIONNAIRES_TABLE: !Ref AI4NGQuestionnairesTable
-          COGNITO_USER_POOL_ID: !Ref ParticipantUserPoolId
+          COGNITO_USER_POOL_ID: !Ref ParticipantUserPoolId #remove
       Policies:
         - AWSLambdaBasicExecutionRole
         - AWSLambdaVPCAccessExecutionRole
@@ -203,7 +203,9 @@ Resources:
             TableName: !Ref AI4NGExperimentsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref AI4NGResponsesTable
-        - Statement:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AI4NGQuestionnairesTable
+        - Statement: #REmove at one point
             - Sid: CognitoUserLookupReadOnly
               Effect: Allow
               Action:
