@@ -6,6 +6,7 @@ using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentsLambda.Models.Dtos;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using AI4NGExperimentsLambda.Mappers;
 
 namespace AI4NGExperimentsLambda.Services;
 
@@ -41,7 +42,7 @@ public class TaskService : ITaskService
             FilterExpression = "attribute_not_exists(IsDeleted) OR IsDeleted = :false"
         });
 
-        return response.Items.Select(MapItemToTask);
+        return response.Items.Select(TaskItemMapper.MapItemToTask);
     }
 
     public async Task<AI4NGTask?> GetTaskAsync(string taskKey)
@@ -64,21 +65,7 @@ public class TaskService : ITaskService
         if (response.Item.TryGetValue("IsDeleted", out var del) && del.BOOL.HasValue && del.BOOL.Value)
             return null;
 
-        return MapItemToTask(response.Item);
-    }
-
-    private static AI4NGTask MapItemToTask(Dictionary<string, AttributeValue> item)
-    {
-        return new AI4NGTask
-        {
-            TaskKey = item["PK"].S.Replace("TASK#", ""),
-            Data = JsonSerializer.Deserialize<TaskData>(
-                JsonSerializer.Serialize(DynamoDBHelper.ConvertAttributeValueToObject(item["data"]))
-            ) ?? new TaskData(),
-            CreatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("createdAt")?.S),
-            UpdatedAt = Utilities.ParseIsoUtcDateTimeOrMin(item.GetValueOrDefault("updatedAt")?.S),
-            CreatedBy = item.GetValueOrDefault("createdBy")?.S ?? string.Empty
-        };
+        return TaskItemMapper.MapItemToTask(response.Item);
     }
 
     public async Task<IdResponseDto> CreateTaskAsync(CreateTaskRequest request, string username)
@@ -91,7 +78,7 @@ public class TaskService : ITaskService
 
         var taskData = NormaliseTaskData(request.Data);
 
-        ValidateQuestionnaireConfiguration(taskData);
+        ValidateTaskConfiguration(taskData);
         await ValidateQuestionnairesExistAsync(taskData.QuestionnaireIds);
 
         var now = Utilities.GetCurrentTimeStampIso();
@@ -145,7 +132,7 @@ public class TaskService : ITaskService
 
         data = NormaliseTaskData(data);
 
-        ValidateQuestionnaireConfiguration(data);
+        ValidateTaskConfiguration(data);
         await ValidateQuestionnairesExistAsync(data.QuestionnaireIds);
 
         var now = Utilities.GetCurrentTimeStampIso();
@@ -277,10 +264,11 @@ public class TaskService : ITaskService
         return task;
     }
 
-    private static void ValidateQuestionnaireConfiguration(TaskData task)
+    private static void ValidateTaskConfiguration(TaskData task)
     {
         var type = task.Type;
         var questionnaireIds = task.QuestionnaireIds ?? new List<string>();
+        var configuration = task.Configuration ?? new Dictionary<string, object>();
 
         switch (type)
         {
@@ -288,23 +276,56 @@ public class TaskService : ITaskService
             case "NeuroGame":
                 if (questionnaireIds.Any())
                     throw new ArgumentException($"{type} tasks must not define QuestionnaireIds.");
+
+                var sceneName = GetRequiredConfigurationString(configuration, "sceneName");
+                if (string.IsNullOrWhiteSpace(sceneName))
+                    throw new ArgumentException($"{type} tasks must define Configuration.sceneName.");
+
+                if (configuration.TryGetValue("hasFeedback", out var hasFeedbackValue) &&
+                    !TryParseBoolean(hasFeedbackValue, out _))
+                {
+                    throw new ArgumentException($"{type} tasks Configuration.hasFeedback must be a boolean when provided.");
+                }
                 break;
 
             case "Questionnaire":
                 if (questionnaireIds.Count != 1)
                     throw new ArgumentException("Questionnaire tasks must define exactly one QuestionnaireId in QuestionnaireIds.");
+
+                if (configuration.ContainsKey("sceneName"))
+                    throw new ArgumentException("Questionnaire tasks must not define Configuration.sceneName.");
                 break;
 
             case "QuestionnaireSet":
                 if (!questionnaireIds.Any())
                     throw new ArgumentException("QuestionnaireSet tasks must define at least one QuestionnaireId in QuestionnaireIds.");
+
+                if (configuration.ContainsKey("sceneName"))
+                    throw new ArgumentException("QuestionnaireSet tasks must not define Configuration.sceneName.");
                 break;
 
             default:
                 throw new ArgumentException($"Unsupported task Type '{type}'. Supported: Training, NeuroGame, Questionnaire, QuestionnaireSet.");
         }
     }
+    private static string GetRequiredConfigurationString(Dictionary<string, object> configuration, string key)
+    {
+        if (!configuration.TryGetValue(key, out var value) || value == null)
+            return string.Empty;
 
+        return value.ToString()?.Trim() ?? string.Empty;
+    }
+
+    private static bool TryParseBoolean(object? value, out bool result)
+    {
+        if (value is bool b)
+        {
+            result = b;
+            return true;
+        }
+
+        return bool.TryParse(value?.ToString(), out result);
+    }
     private async Task ValidateQuestionnairesExistAsync(IEnumerable<string>? questionnaireIds)
     {
         if (questionnaireIds == null) return;

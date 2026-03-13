@@ -3,6 +3,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Services;
 using AI4NGExperimentsLambda.Models;
+using AI4NGExperimentsLambda.Models.Requests;
 
 namespace AI4NGExperiments.Tests;
 
@@ -19,7 +20,7 @@ public class TaskServiceTests
         _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default))
             .ReturnsAsync(new PutItemResponse());
 
-        // Default GetItemAsync to return an item (questionnaires lookups) so questionnaire existence checks pass
+        // Default GetItemAsync to return an item (questionnaire lookups) so questionnaire existence checks pass
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
             .ReturnsAsync(new GetItemResponse
             {
@@ -29,6 +30,9 @@ public class TaskServiceTests
                     ["PK"] = new AttributeValue("QUESTIONNAIRE#exists")
                 }
             });
+
+        _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
+            .ReturnsAsync(new UpdateItemResponse());
 
         _service = new TaskService(_mockDynamoClient.Object);
     }
@@ -45,7 +49,11 @@ public class TaskServiceTests
                 Name = "Test Task",
                 Type = "Training",
                 Description = "Test description",
-                EstimatedDuration = 300
+                EstimatedDuration = 300,
+                Configuration = new Dictionary<string, object>
+                {
+                    ["sceneName"] = "NeuroSensi1"
+                }
             }
         };
 
@@ -54,6 +62,7 @@ public class TaskServiceTests
 
         // Assert
         Assert.NotNull(result);
+        Assert.Equal("TEST_TASK_KEY", result.Id);
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
     }
 
@@ -61,16 +70,35 @@ public class TaskServiceTests
     public async Task GetTasksAsync_ShouldReturnTasks()
     {
         // Arrange
+        var now = DateTime.UtcNow.ToString("O");
+
         var queryResponse = new QueryResponse
         {
             Items = new List<Dictionary<string, AttributeValue>>
             {
                 new()
                 {
-                    ["PK"] = new AttributeValue("TASK#task-1"),
-                    ["data"] = new AttributeValue { M = new Dictionary<string, AttributeValue> { ["name"] = new AttributeValue("Test Task") } },
-                    ["createdAt"] = new AttributeValue(DateTime.UtcNow.ToString("O")),
-                    ["updatedAt"] = new AttributeValue(DateTime.UtcNow.ToString("O"))
+                    ["PK"] = new AttributeValue("TASK#TASK_1"),
+                    ["data"] = new AttributeValue
+                    {
+                        M = new Dictionary<string, AttributeValue>
+                        {
+                            ["Name"] = new AttributeValue("Test Task"),
+                            ["Type"] = new AttributeValue("Training"),
+                            ["Description"] = new AttributeValue("Test description"),
+                            ["EstimatedDuration"] = new AttributeValue { N = "300" },
+                            ["QuestionnaireIds"] = new AttributeValue { L = new List<AttributeValue>() },
+                            ["Configuration"] = new AttributeValue
+                            {
+                                M = new Dictionary<string, AttributeValue>
+                                {
+                                    ["sceneName"] = new AttributeValue("NeuroSensi1")
+                                }
+                            }
+                        }
+                    },
+                    ["createdAt"] = new AttributeValue(now),
+                    ["updatedAt"] = new AttributeValue(now)
                 }
             }
         };
@@ -79,43 +107,74 @@ public class TaskServiceTests
             .ReturnsAsync(queryResponse);
 
         // Act
-        var result = await _service.GetTasksAsync();
+        var result = (await _service.GetTasksAsync()).ToList();
 
         // Assert
         Assert.Single(result);
+        Assert.Equal("TASK_1", result[0].TaskKey);
+        Assert.Equal("Training", result[0].Data.Type);
     }
 
     [Fact]
     public async Task GetTaskAsync_ShouldReturnTask_WhenExists()
     {
         // Arrange
+        var now = DateTime.UtcNow.ToString("O");
+
         _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), default))
             .ReturnsAsync(new GetItemResponse
             {
                 IsItemSet = true,
                 Item = new Dictionary<string, AttributeValue>
                 {
-                    ["PK"] = new AttributeValue("TASK#task-1"),
-                    ["data"] = new AttributeValue { M = new Dictionary<string, AttributeValue> { ["name"] = new AttributeValue("Test Task") } },
-                    ["createdAt"] = new AttributeValue(DateTime.UtcNow.ToString("O")),
-                    ["updatedAt"] = new AttributeValue(DateTime.UtcNow.ToString("O"))
+                    ["PK"] = new AttributeValue("TASK#TASK_1"),
+                    ["data"] = new AttributeValue
+                    {
+                        M = new Dictionary<string, AttributeValue>
+                        {
+                            ["Name"] = new AttributeValue("Test Task"),
+                            ["Type"] = new AttributeValue("Training"),
+                            ["Description"] = new AttributeValue("Test description"),
+                            ["EstimatedDuration"] = new AttributeValue { N = "300" },
+                            ["QuestionnaireIds"] = new AttributeValue { L = new List<AttributeValue>() },
+                            ["Configuration"] = new AttributeValue
+                            {
+                                M = new Dictionary<string, AttributeValue>
+                                {
+                                    ["sceneName"] = new AttributeValue("NeuroSensi1")
+                                }
+                            }
+                        }
+                    },
+                    ["createdAt"] = new AttributeValue(now),
+                    ["updatedAt"] = new AttributeValue(now)
                 }
             });
 
         // Act
-        var result = await _service.GetTaskAsync("task-1");
+        var result = await _service.GetTaskAsync("task_1");
 
         // Assert
         Assert.NotNull(result);
+        Assert.Equal("TASK_1", result!.TaskKey);
+        Assert.Equal("Training", result.Data.Type);
     }
 
     [Fact]
     public async Task UpdateTaskAsync_ShouldCallUpdateItem()
     {
         // Arrange
-        var data = new TaskData { Name = "Updated Task", Type = "Training" };
-        _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
-            .ReturnsAsync(new UpdateItemResponse());
+        var data = new TaskData
+        {
+            Name = "Updated Task",
+            Type = "Training",
+            Description = "Updated description",
+            EstimatedDuration = 300,
+            Configuration = new Dictionary<string, object>
+            {
+                ["sceneName"] = "NeuroSensi1"
+            }
+        };
 
         // Act
         await _service.UpdateTaskAsync("TASK1", data, "testuser");
@@ -125,12 +184,8 @@ public class TaskServiceTests
     }
 
     [Fact]
-    public async Task DeleteTaskAsync_ShouldCallDeleteItem()
+    public async Task DeleteTaskAsync_ShouldCallUpdateItem()
     {
-        // Arrange: service performs a soft-delete using UpdateItemAsync
-        _mockDynamoClient.Setup(x => x.UpdateItemAsync(It.IsAny<UpdateItemRequest>(), default))
-            .ReturnsAsync(new UpdateItemResponse());
-
         // Act
         await _service.DeleteTaskAsync("task-1", "testuser");
 
@@ -141,17 +196,17 @@ public class TaskServiceTests
     [Fact]
     public async Task CreateTaskAsync_ShouldHandleQuestionnaireTask()
     {
-        // Arrange - Single questionnaire task
+        // Arrange
         var request = new CreateTaskRequest
         {
-            TaskKey = "pre_training_state_questionnaire",
+            TaskKey = "PRE_TRAINING_STATE_QUESTIONNAIRE",
             Data = new TaskData
             {
                 Name = "Pre-Training State Questionnaire",
                 Type = "Questionnaire",
-                Description = "Assesses emotional and cognitive readiness before BCI training."
-                ,
-                QuestionnaireIds = new List<string> { "preq1" }
+                Description = "Assesses emotional and cognitive readiness before BCI training.",
+                QuestionnaireIds = new List<string> { "preq1" },
+                Configuration = new Dictionary<string, object>()
             }
         };
 
@@ -160,23 +215,24 @@ public class TaskServiceTests
 
         // Assert
         Assert.NotNull(result);
+        Assert.Equal("PRE_TRAINING_STATE_QUESTIONNAIRE", result.Id);
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
     }
 
     [Fact]
     public async Task CreateTaskAsync_ShouldHandleBatchQuestionnaireTask()
     {
-        // Arrange - Batch questionnaire task
+        // Arrange
         var request = new CreateTaskRequest
         {
-            TaskKey = "trait_questionnaire_bank",
+            TaskKey = "TRAIT_QUESTIONNAIRE_BANK",
             Data = new TaskData
             {
                 Name = "Trait Questionnaire Bank",
                 Type = "QuestionnaireSet",
-                Description = "Presents one or more trait questionnaires (once per study)."
-                ,
-                QuestionnaireIds = new List<string> { "trait_q1" }
+                Description = "Presents one or more trait questionnaires (once per study).",
+                QuestionnaireIds = new List<string> { "trait_q1" },
+                Configuration = new Dictionary<string, object>()
             }
         };
 
@@ -185,21 +241,27 @@ public class TaskServiceTests
 
         // Assert
         Assert.NotNull(result);
+        Assert.Equal("TRAIT_QUESTIONNAIRE_BANK", result.Id);
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
     }
 
     [Fact]
     public async Task CreateTaskAsync_ShouldHandleEEGTrainingTask()
     {
-        // Arrange - EEG training task
+        // Arrange
         var request = new CreateTaskRequest
         {
-            TaskKey = "eeg_training_session",
+            TaskKey = "EEG_TRAINING_SESSION",
             Data = new TaskData
             {
                 Name = "EEG Training Session",
                 Type = "Training",
-                Description = "EEG-based neurofeedback training session."
+                Description = "EEG-based neurofeedback training session.",
+                Configuration = new Dictionary<string, object>
+                {
+                    ["sceneName"] = "NeuroSensi1",
+                    ["hasFeedback"] = true
+                }
             }
         };
 
@@ -208,21 +270,26 @@ public class TaskServiceTests
 
         // Assert
         Assert.NotNull(result);
+        Assert.Equal("EEG_TRAINING_SESSION", result.Id);
         _mockDynamoClient.Verify(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), default), Times.Once);
     }
 
     [Fact]
     public async Task CreateTaskAsync_ShouldThrow_WhenTaskKeyMissing()
     {
-        // Arrange - missing TaskKey
+        // Arrange
         var request = new CreateTaskRequest
         {
             TaskKey = string.Empty,
             Data = new TaskData
             {
                 Name = "No Key Task",
-                Type = "eeg_training",
-                Description = "Missing key"
+                Type = "Training",
+                Description = "Missing key",
+                Configuration = new Dictionary<string, object>
+                {
+                    ["sceneName"] = "NeuroSensi1"
+                }
             }
         };
 
@@ -234,15 +301,19 @@ public class TaskServiceTests
     [Fact]
     public async Task CreateTaskAsync_ShouldThrow_WhenTaskKeyFormatInvalid()
     {
-        // Arrange - invalid format (contains hyphen and lowercase but hyphen is the issue)
+        // Arrange
         var request = new CreateTaskRequest
         {
             TaskKey = "bad-key!",
             Data = new TaskData
             {
                 Name = "Bad Key Task",
-                Type = "eeg_training",
-                Description = "Invalid format"
+                Type = "Training",
+                Description = "Invalid format",
+                Configuration = new Dictionary<string, object>
+                {
+                    ["sceneName"] = "NeuroSensi1"
+                }
             }
         };
 

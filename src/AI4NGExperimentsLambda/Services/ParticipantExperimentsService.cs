@@ -2,6 +2,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Interfaces.Participant;
 using AI4NGExperimentsLambda.Mappers;
+using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentManagement.Shared;
 
@@ -13,6 +14,7 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
     private const string MetadataSk = "METADATA";
     private const string MemberSkPrefix = "MEMBER#";
     private const string ProtocolSkPrefix = "PROTOCOL_SESSION#";
+    private const string TaskPkPrefix = "TASK#";
 
     private readonly IAmazonDynamoDB _dynamo;
     private readonly string _experimentsTable;
@@ -102,6 +104,21 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
             .Select(p => ProtocolSessionItemMapper.MapProtocolSessionToSessionDto(experimentId, p, experiment))
             .ToList();
 
+        var taskKeys = sessions
+            .SelectMany(s => s.TaskOrder ?? new List<string>())
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(NormaliseTaskKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var tasks = await GetTasksByKeysAsync(taskKeys, ct);
+
+        var questionnaireIds = tasks
+            .SelectMany(t => t.Data?.QuestionnaireIds ?? new List<string>())
+            .Where(q => !string.IsNullOrWhiteSpace(q))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         var sessionTypeNames = experiment.Data?.SessionTypes?
             .Values
             .Select(x => x.Name)
@@ -118,8 +135,8 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
         {
             Experiment = experiment,
             Sessions = sessions,
-            Tasks = new List<TaskDto>(),
-            Questionnaires = new List<string>(),
+            Tasks = tasks,
+            Questionnaires = questionnaireIds,
             SessionNames = sessionTypeNames,
             SessionTypes = sessionTypeKeys,
             SyncTimestamp = DateTime.UtcNow.ToString("O")
@@ -198,6 +215,56 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
 
         list.Sort((a, b) => a.Order.CompareTo(b.Order));
         return list;
+    }
+
+    private async Task<List<TaskDto>> GetTasksByKeysAsync(
+        IEnumerable<string> taskKeys,
+        CancellationToken ct)
+    {
+        var keys = taskKeys
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(NormaliseTaskKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (keys.Count == 0)
+            return new List<TaskDto>();
+
+        var tasks = new List<TaskDto>(keys.Count);
+
+        foreach (var taskKey in keys)
+        {
+            var resp = await _dynamo.GetItemAsync(new GetItemRequest
+            {
+                TableName = _experimentsTable,
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    ["PK"] = new AttributeValue { S = $"{TaskPkPrefix}{taskKey}" },
+                    ["SK"] = new AttributeValue { S = MetadataSk }
+                },
+                ConsistentRead = true
+            }, ct);
+
+            if (!resp.IsItemSet || resp.Item == null || resp.Item.Count == 0)
+                continue;
+
+            if (resp.Item.TryGetValue("IsDeleted", out var isDeleted) &&
+                isDeleted.BOOL.HasValue &&
+                isDeleted.BOOL.Value)
+            {
+                continue;
+            }
+
+            var task = TaskItemMapper.MapItemToTask(resp.Item);
+            tasks.Add(TaskItemMapper.MapTaskToDto(task));
+        }
+
+        return tasks;
+    }
+
+    private static string NormaliseTaskKey(string taskKey)
+    {
+        return (taskKey ?? string.Empty).Trim().ToUpperInvariant();
     }
 
     private static string RequireParticipantId(string participantId)
