@@ -1,7 +1,7 @@
 using Moq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
-using AI4NGExperimentsLambda.Services;
+using AI4NGExperimentsLambda.Services.Researcher;
 
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;

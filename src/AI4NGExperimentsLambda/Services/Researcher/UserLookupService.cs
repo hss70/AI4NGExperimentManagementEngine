@@ -4,7 +4,7 @@ using Amazon.CognitoIdentityProvider.Model;
 using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentsLambda.Interfaces.Researcher;
 
-namespace AI4NGExperimentsLambda.Services;
+namespace AI4NGExperimentsLambda.Services.Researcher;
 
 public sealed class UserLookupService : IUserLookupService
 {

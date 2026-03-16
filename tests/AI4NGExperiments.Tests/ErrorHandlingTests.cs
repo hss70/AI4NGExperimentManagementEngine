@@ -5,7 +5,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using ResearcherExperimentsController = AI4NGExperimentsLambda.Controllers.Researcher.ExperimentsController;
 using AI4NGExperimentsLambda.Interfaces.Researcher;
-using AI4NGExperimentsLambda.Services;
+using AI4NGExperimentsLambda.Services.Researcher;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Requests;
 using System.ComponentModel.DataAnnotations;

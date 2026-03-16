@@ -1,10 +1,12 @@
 using AI4NGExperimentsLambda.Models.Dtos;
+using AI4NGExperimentsLambda.Models.Dtos.Responses;
+using AI4NGExperimentsLambda.Models.Requests.Participant;
 
 namespace AI4NGExperimentsLambda.Interfaces.Participant;
 
 public interface IParticipantSessionOccurrencesService
 {
-    Task<IEnumerable<OccurrenceDto>> ListOccurrencesAsync(
+    Task<IReadOnlyList<OccurrenceDto>> ListOccurrencesAsync(
         string experimentId,
         string participantId,
         string? from = null,
@@ -21,19 +23,24 @@ public interface IParticipantSessionOccurrencesService
         string experimentId,
         string participantId,
         string occurrenceKey,
+        StartOccurrenceRequest? request = null,
         CancellationToken ct = default);
 
     Task<OccurrenceDto> CompleteOccurrenceAsync(
         string experimentId,
         string participantId,
         string occurrenceKey,
+        CompleteOccurrenceRequest? request = null,
         CancellationToken ct = default);
 
-    // Optional (only include if you actually support it)
-    Task<OccurrenceDto> RescheduleOccurrenceAsync(
+    Task<OccurrenceDto> CreateOccurrenceAsync(
         string experimentId,
         string participantId,
-        string occurrenceKey,
-        string newScheduledFor,
+        CreateOccurrenceRequest request,
+        CancellationToken ct = default);
+
+    Task<ResolveOccurrenceDto> ResolveCurrentOccurrenceAsync(
+        string experimentId,
+        string participantId,
         CancellationToken ct = default);
 }

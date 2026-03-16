@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using AI4NGExperimentsLambda.Mappers;
 
-namespace AI4NGExperimentsLambda.Services;
+namespace AI4NGExperimentsLambda.Services.Researcher;
 
 public class TaskService : ITaskService
 {

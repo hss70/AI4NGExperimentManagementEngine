@@ -6,7 +6,7 @@ using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentManagement.Shared;
 
-namespace AI4NGExperimentsLambda.Services;
+namespace AI4NGExperimentsLambda.Services.Participant;
 
 public sealed class ParticipantExperimentsService : IParticipantExperimentsService
 {
@@ -32,7 +32,7 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
         string participantId,
         CancellationToken ct = default)
     {
-        participantId = RequireParticipantId(participantId);
+        participantId = Guard.RequireParticipantId(participantId);
 
         var membershipResp = await _dynamo.QueryAsync(new QueryRequest
         {
@@ -90,8 +90,8 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
         DateTime? since = null,
         CancellationToken ct = default)
     {
-        experimentId = RequireExperimentId(experimentId);
-        participantId = RequireParticipantId(participantId);
+        experimentId = Guard.RequireExperimentId(experimentId);
+        participantId = Guard.RequireParticipantId(participantId);
 
         await EnsureParticipantMembershipAsync(experimentId, participantId, ct);
 
@@ -265,21 +265,5 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
     private static string NormaliseTaskKey(string taskKey)
     {
         return (taskKey ?? string.Empty).Trim().ToUpperInvariant();
-    }
-
-    private static string RequireParticipantId(string participantId)
-    {
-        participantId = (participantId ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(participantId))
-            throw new UnauthorizedAccessException("Participant identity is required");
-        return participantId;
-    }
-
-    private static string RequireExperimentId(string experimentId)
-    {
-        experimentId = (experimentId ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(experimentId))
-            throw new ArgumentException("Experiment ID is required");
-        return experimentId;
     }
 }

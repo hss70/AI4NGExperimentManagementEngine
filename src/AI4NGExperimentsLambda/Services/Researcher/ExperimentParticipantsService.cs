@@ -5,7 +5,7 @@ using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentsLambda.Mappers;
 
-namespace AI4NGExperimentsLambda.Services;
+namespace AI4NGExperimentsLambda.Services.Researcher;
 
 public sealed class ExperimentParticipantsService : IExperimentParticipantsService
 {
@@ -48,7 +48,7 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
         string? role = null,
         CancellationToken ct = default)
     {
-        experimentId = RequireExperimentId(experimentId);
+        experimentId = Guard.RequireExperimentId(experimentId);
 
         var resp = await _dynamo.QueryAsync(new QueryRequest
         {
@@ -82,9 +82,9 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
         string performedBy,
         CancellationToken ct = default)
     {
-        experimentId = RequireExperimentId(experimentId);
-        participantId = RequireParticipantId(participantId);
-        performedBy = RequirePerformedBy(performedBy);
+        experimentId = Guard.RequireExperimentId(experimentId);
+        participantId = Guard.RequireParticipantId(participantId);
+        performedBy = Guard.RequirePerformedBy(performedBy);
 
         if (request == null)
             throw new ArgumentException("Participant request is required");
@@ -110,8 +110,8 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
         CancellationToken ct = default)
     {
         var responses = new List<IdResponseDto>();
-        experimentId = RequireExperimentId(experimentId);
-        performedBy = RequirePerformedBy(performedBy);
+        experimentId = Guard.RequireExperimentId(experimentId);
+        performedBy = Guard.RequirePerformedBy(performedBy);
 
         if (participants == null)
             throw new ArgumentException("Participants payload is required");
@@ -132,7 +132,7 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
 
             foreach (var participant in chunk)
             {
-                var participantId = RequireParticipantId(participant.UserSub);
+                var participantId = Guard.RequireParticipantId(participant.UserSub);
                 chunkParticipantIds.Add(participantId);
 
                 var request = new ExperimentMemberRequest
@@ -201,9 +201,9 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
         string performedBy,
         CancellationToken ct = default)
     {
-        experimentId = RequireExperimentId(experimentId);
-        participantId = RequireParticipantId(participantId);
-        performedBy = RequirePerformedBy(performedBy);
+        experimentId = Guard.RequireExperimentId(experimentId);
+        participantId = Guard.RequireParticipantId(participantId);
+        performedBy = Guard.RequirePerformedBy(performedBy);
 
         await _dynamo.DeleteItemAsync(new DeleteItemRequest
         {
@@ -297,29 +297,6 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
             PseudoId = CleanOptional(request.PseudoId)
         };
     }
-    private static string RequireExperimentId(string experimentId)
-    {
-        experimentId = (experimentId ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(experimentId))
-            throw new ArgumentException("Experiment ID is required");
-        return experimentId;
-    }
-
-    private static string RequireParticipantId(string participantId)
-    {
-        participantId = (participantId ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(participantId))
-            throw new ArgumentException("Participant ID is required");
-        return participantId;
-    }
-
-    private static string RequirePerformedBy(string performedBy)
-    {
-        performedBy = (performedBy ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(performedBy))
-            throw new UnauthorizedAccessException("Authentication required");
-        return performedBy;
-    }
 
     private static string? CleanOptional(string? value)
     {
@@ -360,8 +337,8 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
         string participantId,
         CancellationToken ct = default)
     {
-        experimentId = RequireExperimentId(experimentId);
-        participantId = RequireParticipantId(participantId);
+        experimentId = Guard.RequireExperimentId(experimentId);
+        participantId = Guard.RequireParticipantId(participantId);
 
         var response = await _dynamo.GetItemAsync(new GetItemRequest
         {

@@ -8,7 +8,7 @@ using AI4NGExperimentManagement.Shared;
 using System.Text.Json;
 using AI4NGExperimentsLambda.Mappers;
 
-namespace AI4NGExperimentsLambda.Services;
+namespace AI4NGExperimentsLambda.Services.Researcher;
 
 public sealed class SessionProtocolService : ISessionProtocolService
 {
