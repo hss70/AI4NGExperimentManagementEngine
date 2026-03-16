@@ -56,8 +56,7 @@ public sealed class SessionProtocolService : ISessionProtocolService
                 ? sk.Substring(ProtocolSkPrefix.Length)
                 : sk;
 
-            var dataObj = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data"));
-            list.Add(ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, dataObj, item));
+            list.Add(ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, item));
         }
 
         // Stable ordering for UI
@@ -92,38 +91,40 @@ public sealed class SessionProtocolService : ISessionProtocolService
         if (!resp.IsItemSet)
             return null;
 
-        var item = resp.Item;
-        var dataObj = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data"));
-        return ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, dataObj, item);
+        return ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, resp.Item);
     }
 
-    public Task<ProtocolSessionDto> CreateProtocolSessionAsync(
+    public async Task<ProtocolSessionDto> CreateProtocolSessionAsync(
         string experimentId,
         string protocolKey,
         UpsertProtocolSessionRequest request,
         string performedBy,
         CancellationToken ct = default)
-        => WriteProtocolSessionAsync(
-            experimentId,
-            protocolKey,
-            request,
-            performedBy,
-            mode: WriteMode.Create,
-            ct);
+    {
+        return await WriteProtocolSessionAsync(
+         experimentId,
+         protocolKey,
+         request,
+         performedBy,
+         mode: WriteMode.Create,
+         ct);
+    }
 
-    public Task<ProtocolSessionDto> UpdateProtocolSessionAsync(
+    public async Task<ProtocolSessionDto> UpdateProtocolSessionAsync(
         string experimentId,
         string protocolKey,
         UpsertProtocolSessionRequest request,
         string performedBy,
         CancellationToken ct = default)
-        => WriteProtocolSessionAsync(
-            experimentId,
-            protocolKey,
-            request,
-            performedBy,
-            mode: WriteMode.Update,
-            ct);
+    {
+        return await WriteProtocolSessionAsync(
+        experimentId,
+        protocolKey,
+        request,
+        performedBy,
+        mode: WriteMode.Update,
+        ct);
+    }
 
     public async Task DeleteProtocolSessionAsync(
         string experimentId,

@@ -209,8 +209,7 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
                 ? sk.Substring(ProtocolSkPrefix.Length)
                 : sk;
 
-            var dataObj = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data"));
-            list.Add(ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, dataObj, item));
+            list.Add(ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, item));
         }
 
         list.Sort((a, b) => a.Order.CompareTo(b.Order));

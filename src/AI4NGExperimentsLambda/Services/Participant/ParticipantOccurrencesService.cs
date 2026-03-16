@@ -3,11 +3,11 @@ using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Interfaces.Participant;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
-using AI4NGExperimentsLambda.Models.Requests;
 using AI4NGExperimentsLambda.Mappers;
 using AI4NGExperimentsLambda.Models.Dtos.Responses;
 using AI4NGExperimentsLambda.Models.Requests.Participant;
 using AI4NGExperimentsLambda.Models.Constants;
+using System.Globalization;
 
 namespace AI4NGExperimentsLambda.Services.Participant;
 
@@ -234,11 +234,13 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
 
         await EnsureParticipantMembershipAsync(experimentId, participantId, ct);
 
-        // 1. Resume unfinished occurrence first
-        var existing = await ListOccurrencesAsync(experimentId, participantId, ct: ct);
-        var inProgress = existing
+        // 1. Resume any in-progress occurrence first
+        var existingDtos = await ListOccurrencesAsync(experimentId, participantId, ct: ct);
+
+        var inProgress = existingDtos
+            .Where(x => string.Equals(x.Status, OccurrenceStatuses.InProgress, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.UpdatedAt)
-            .FirstOrDefault(x => string.Equals(x.Status, OccurrenceStatuses.InProgress, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault();
 
         if (inProgress != null)
         {
@@ -249,22 +251,71 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
             };
         }
 
-        // 2. TODO: resolve/generate required protocol occurrence based on membership + protocol rules
-        // For now return available optional actions
+        // 2. Load experiment + protocol sessions
+        var experiment = await LoadExperimentOrThrowAsync(experimentId, ct);
+        var protocolSessions = await LoadProtocolSessionsAsync(experimentId, ct);
+
+        if (protocolSessions.Count == 0)
+        {
+            return new ResolveOccurrenceDto
+            {
+                ResolutionType = "none_available",
+                AvailableActions = BuildOptionalActions(experiment)
+            };
+        }
+
+        var nowUtc = DateTime.UtcNow;
+        var todayLocal = DateOnly.FromDateTime(nowUtc);
+
+        var isoYear = ISOWeek.GetYear(todayLocal.ToDateTime(TimeOnly.MinValue));
+        var isoWeek = ISOWeek.GetWeekOfYear(todayLocal.ToDateTime(TimeOnly.MinValue));
+
+        // 3. Work through required protocol sessions in order
+        foreach (var protocol in protocolSessions.OrderBy(x => x.Order))
+        {
+            var occurrenceKey = GetRequiredOccurrenceKey(protocol, todayLocal, isoYear, isoWeek);
+            if (occurrenceKey == null)
+                continue;
+
+            var existing = existingDtos.FirstOrDefault(x =>
+                string.Equals(x.OccurrenceKey, occurrenceKey, StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null)
+            {
+                // If it already exists and is scheduled, this is what they should do now.
+                if (!string.Equals(existing.Status, OccurrenceStatuses.Completed, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(existing.Status, OccurrenceStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ResolveOccurrenceDto
+                    {
+                        ResolutionType = "start_required",
+                        Occurrence = existing
+                    };
+                }
+
+                continue;
+            }
+
+            var created = await CreateRequiredOccurrenceAsync(
+                experiment,
+                participantId,
+                protocol,
+                occurrenceKey,
+                nowUtc,
+                ct);
+
+            return new ResolveOccurrenceDto
+            {
+                ResolutionType = "start_required",
+                Occurrence = created
+            };
+        }
+
+        // 4. No required work due right now -> offer optional actions
         return new ResolveOccurrenceDto
         {
             ResolutionType = "none_available",
-            AvailableActions = new List<OccurrenceActionDto>
-            {
-                new()
-                {
-                    ActionKey = "start-freeplay",
-                    Label = "Start free play",
-                    OccurrenceType = OccurrenceTypes.FreePlay,
-                    SessionTypeKey = "FREEPLAY",
-                    IsRequired = false
-                }
-            }
+            AvailableActions = BuildOptionalActions(experiment)
         };
     }
 
@@ -386,6 +437,216 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
             _ => OccurrenceKeyHelper.BuildOptionalKey("OPTIONAL")
         };
     }
+
+    private static string? GetRequiredOccurrenceKey(
+    ProtocolSessionDto protocol,
+    DateOnly todayLocal,
+    int isoYear,
+    int isoWeek)
+    {
+        var cadence = (protocol.CadenceType ?? string.Empty).Trim().ToUpperInvariant();
+
+        return cadence switch
+        {
+            "ONCE" => string.IsNullOrWhiteSpace(protocol.ProtocolKey)
+                ? "FIRST"
+                : protocol.ProtocolKey,
+
+            "DAILY" => OccurrenceKeyHelper.BuildDailyKey(todayLocal),
+
+            "WEEKLY" => OccurrenceKeyHelper.BuildWeeklyKey(isoYear, isoWeek),
+
+            _ => null
+        };
+    }
     private static string? NormalizeOptional(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private async Task<ExperimentDto> LoadExperimentOrThrowAsync(
+string experimentId,
+CancellationToken ct)
+    {
+        var resp = await _dynamo.GetItemAsync(new GetItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = MetadataSk }
+            },
+            ConsistentRead = true
+        }, ct);
+
+        if (!resp.IsItemSet)
+            throw new KeyNotFoundException($"Experiment '{experimentId}' was not found");
+
+        var item = resp.Item;
+
+        return new ExperimentDto
+        {
+            Id = experimentId,
+            Status = item.GetValueOrDefault("status")?.S ?? string.Empty,
+            Data = ExperimentItemMapper.MapExperimentDataFromItem(item),
+            UpdatedAt = item.GetValueOrDefault("updatedAt")?.S,
+            UpdatedBy = item.GetValueOrDefault("updatedBy")?.S,
+            CreatedAt = item.GetValueOrDefault("createdAt")?.S,
+            CreatedBy = item.GetValueOrDefault("createdBy")?.S ?? string.Empty
+        };
+    }
+
+    private async Task<List<ProtocolSessionDto>> LoadProtocolSessionsAsync(
+    string experimentId,
+    CancellationToken ct)
+    {
+        var resp = await _dynamo.QueryAsync(new QueryRequest
+        {
+            TableName = _experimentsTable,
+            KeyConditionExpression = "PK = :pk AND begins_with(SK, :skprefix)",
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            {
+                [":pk"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
+                [":skprefix"] = new AttributeValue { S = "PROTOCOL_SESSION#" }
+            }
+        }, ct);
+
+        var list = new List<ProtocolSessionDto>();
+
+        foreach (var item in resp.Items)
+        {
+            var sk = item.GetValueOrDefault("SK")?.S ?? string.Empty;
+            var protocolKey = sk.StartsWith("PROTOCOL_SESSION#", StringComparison.OrdinalIgnoreCase)
+                ? sk.Substring("PROTOCOL_SESSION#".Length)
+                : sk;
+
+            list.Add(ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, item));
+        }
+
+        return list
+            .OrderBy(x => x.Order)
+            .ToList();
+    }
+
+    private async Task<OccurrenceDto> CreateRequiredOccurrenceAsync(
+    ExperimentDto experiment,
+    string participantId,
+    ProtocolSessionDto protocol,
+    string occurrenceKey,
+    DateTime nowUtc,
+    CancellationToken ct)
+    {
+        var taskOrder = await ResolveTaskOrderAsync(
+            experiment.Id,
+            protocol.SessionTypeKey,
+            ct);
+
+        var nowIso = nowUtc.ToString("O");
+
+        var studyDay = TryCalculateStudyDay(experiment.Data?.StudyStartDate, nowUtc);
+        var studyWeek = TryCalculateStudyWeek(experiment.Data?.StudyStartDate, nowUtc);
+
+        var occurrence = new ParticipantSessionOccurrence
+        {
+            ExperimentId = experiment.Id,
+            ParticipantId = participantId,
+            OccurrenceKey = occurrenceKey,
+            ProtocolSessionKey = protocol.ProtocolKey,
+            SessionTypeKey = protocol.SessionTypeKey,
+            OccurrenceType = OccurrenceTypes.Protocol,
+            IsRequired = true,
+            Status = OccurrenceStatuses.Scheduled,
+            ScheduledAt = nowIso,
+            DateLocal = DateOnly.FromDateTime(nowUtc).ToString("yyyy-MM-dd"),
+            StudyDay = studyDay,
+            StudyWeek = studyWeek,
+            Source = OccurrenceSources.Scheduled,
+            TaskOrder = taskOrder,
+            TotalTaskCount = taskOrder.Count,
+            CompletedTaskCount = 0,
+            CurrentTaskIndex = 0,
+            TaskState = taskOrder
+                .Select((taskKey, index) => new OccurrenceTaskState
+                {
+                    Order = index + 1,
+                    TaskKey = taskKey,
+                    Status = OccurrenceTaskStatuses.Pending,
+                    IsRequired = true
+                })
+                .ToList(),
+            CreatedAt = nowIso,
+            CreatedBy = participantId,
+            UpdatedAt = nowIso,
+            UpdatedBy = participantId
+        };
+
+        var item = OccurrenceItemMapper.MapToItem(occurrence, participantId, participantId);
+
+        await _dynamo.PutItemAsync(new PutItemRequest
+        {
+            TableName = _experimentsTable,
+            Item = item,
+            ConditionExpression = "attribute_not_exists(PK) AND attribute_not_exists(SK)"
+        }, ct);
+
+        return OccurrenceItemMapper.MapToDto(occurrence);
+    }
+
+    private static List<OccurrenceActionDto> BuildOptionalActions(ExperimentDto experiment)
+    {
+        var actions = new List<OccurrenceActionDto>();
+
+        foreach (var kvp in experiment.Data?.SessionTypes ?? new Dictionary<string, SessionType>())
+        {
+            var sessionTypeKey = (kvp.Key ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(sessionTypeKey))
+                continue;
+
+            var sessionType = kvp.Value ?? new SessionType();
+
+            actions.Add(new OccurrenceActionDto
+            {
+                ActionKey = $"start-optional-{sessionTypeKey.ToLowerInvariant()}",
+                Label = string.IsNullOrWhiteSpace(sessionType.Name)
+                    ? $"Start optional {sessionTypeKey}"
+                    : $"Start optional {sessionType.Name}",
+                OccurrenceType = OccurrenceTypes.Optional,
+                SessionTypeKey = sessionTypeKey,
+                IsRequired = false
+            });
+        }
+
+        return actions;
+    }
+
+    private static int? TryGetNullableInt(Dictionary<string, AttributeValue> map, string key)
+    {
+        if (!map.TryGetValue(key, out var attr))
+            return null;
+
+        if (string.IsNullOrWhiteSpace(attr.N))
+            return null;
+
+        return int.TryParse(attr.N, out var value) ? value : null;
+    }
+
+    private static int? TryCalculateStudyDay(string? studyStartDate, DateTime nowUtc)
+    {
+        if (string.IsNullOrWhiteSpace(studyStartDate) || !DateOnly.TryParse(studyStartDate, out var start))
+            return null;
+
+        var today = DateOnly.FromDateTime(nowUtc);
+
+        if (today < start)
+            return 0;
+
+        return today.DayNumber - start.DayNumber + 1;
+    }
+
+    private static int? TryCalculateStudyWeek(string? studyStartDate, DateTime nowUtc)
+    {
+        var studyDay = TryCalculateStudyDay(studyStartDate, nowUtc);
+        if (!studyDay.HasValue || studyDay.Value <= 0)
+            return null;
+
+        return ((studyDay.Value - 1) / 7) + 1;
+    }
 }

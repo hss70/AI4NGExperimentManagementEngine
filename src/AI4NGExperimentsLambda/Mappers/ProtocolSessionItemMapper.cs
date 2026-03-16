@@ -1,6 +1,7 @@
 using Amazon.DynamoDBv2.Model;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
+using AI4NGExperimentManagement.Shared;
 
 namespace AI4NGExperimentsLambda.Mappers;
 
@@ -9,9 +10,9 @@ public static class ProtocolSessionItemMapper
     public static ProtocolSessionDto MapProtocolSessionDto(
         string experimentId,
         string protocolKey,
-        object? dataObj,
         Dictionary<string, AttributeValue> item)
     {
+        var dataObj = DynamoDBHelper.ConvertAttributeValueToObject(item.GetValueOrDefault("data"));
         var data = dataObj as Dictionary<string, object> ?? new Dictionary<string, object>();
 
         string GetString(string k)
