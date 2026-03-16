@@ -409,5 +409,5 @@ public static class OccurrenceKeyHelper
         => "FIRST";
 
     public static string BuildOptionalKey(string prefix)
-        => $"{prefix.ToUpperInvariant()}#{DateTime.UtcNow:O}#{Guid.NewGuid():N[..6]}";
+        => $"{prefix.ToUpperInvariant()}#{DateTime.UtcNow:O}#{Guid.NewGuid().ToString("N")[..6]}";
 }
