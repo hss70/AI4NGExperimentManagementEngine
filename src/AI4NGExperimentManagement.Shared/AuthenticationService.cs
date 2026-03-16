@@ -24,7 +24,8 @@ public class AuthenticationService : IAuthenticationService
         if (Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL") != null)
             return "testuser-sub";
 
-        var sub = user.FindFirst("sub")?.Value;
+        var sub = user.FindFirst("sub")?.Value
+            ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(sub))
             throw new UnauthorizedAccessException("Authenticated user has no sub claim");
