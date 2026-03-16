@@ -62,9 +62,6 @@ public static class ProtocolSessionItemMapper
                 Description = sessionType?.Description ?? string.Empty,
                 SequenceNumber = protocol.Order,
                 Status = "AVAILABLE",
-                Date = string.Empty,
-                UserId = string.Empty,
-                Metadata = new SessionMetadata()
             }
         };
     }

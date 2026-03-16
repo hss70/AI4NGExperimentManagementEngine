@@ -493,6 +493,23 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
+  GetParticipantCurrentOccurrenceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: GET /api/me/experiments/{experimentId}/occurrences/current
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  CreateParticipantOccurrenceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: POST /api/me/experiments/{experimentId}/occurrences
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
   StartParticipantOccurrenceRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -589,7 +606,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: GET /api/tasks/{taskId}
+      RouteKey: GET /api/tasks/{taskKey}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
@@ -616,7 +633,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: PUT /api/tasks/{taskId}
+      RouteKey: PUT /api/tasks/{taskKey}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
@@ -625,7 +642,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: DELETE /api/tasks/{taskId}
+      RouteKey: DELETE /api/tasks/{taskKey}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
@@ -691,7 +708,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: GET /api/questionnaires/{questionnaireId}
+      RouteKey: GET /api/questionnaires/{id}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${QuestionnairesIntegration}
@@ -709,7 +726,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: PUT /api/questionnaires/{questionnaireId}
+      RouteKey: PUT /api/questionnaires/{id}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${QuestionnairesIntegration}
@@ -718,7 +735,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref SharedApiId
-      RouteKey: DELETE /api/questionnaires/{questionnaireId}
+      RouteKey: DELETE /api/questionnaires/{id}
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${QuestionnairesIntegration}
