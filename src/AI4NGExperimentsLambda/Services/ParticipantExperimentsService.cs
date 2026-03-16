@@ -136,7 +136,7 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
             Experiment = experiment,
             Sessions = sessions,
             Tasks = tasks,
-            Questionnaires = questionnaireIds,
+            RequiredQuestionnaireIds = questionnaireIds,
             SessionNames = sessionTypeNames,
             SessionTypes = sessionTypeKeys,
             SyncTimestamp = DateTime.UtcNow.ToString("O")

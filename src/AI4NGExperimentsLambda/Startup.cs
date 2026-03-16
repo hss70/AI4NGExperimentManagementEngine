@@ -4,6 +4,7 @@ using AI4NGExperimentManagement.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using AI4NGExperimentManagement.Shared.Authorisation;
 using AI4NGExperimentsLambda.Interfaces.Researcher;
+using AI4NGExperimentsLambda.Interfaces.Participant;
 using Amazon.CognitoIdentityProvider;
 using Amazon.Extensions.NETCore.Setup;
 
@@ -20,5 +21,6 @@ public class Startup : BaseStartup
         services.AddScoped<IExperimentParticipantsService, ExperimentParticipantsService>();
         services.AddAWSService<IAmazonCognitoIdentityProvider>();
         services.AddScoped<IUserLookupService, UserLookupService>();
+        services.AddScoped<IParticipantExperimentsService, ParticipantExperimentsService>();
     }
 }
