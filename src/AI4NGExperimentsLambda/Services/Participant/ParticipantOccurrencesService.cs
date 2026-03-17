@@ -251,7 +251,7 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
         {
             return new ResolveOccurrenceDto
             {
-                ResolutionType = "resume_existing",
+                ResolutionType = "resume",
                 Occurrence = inProgress
             };
         }
@@ -304,9 +304,16 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
 
             if (existing != null)
             {
-                // If it already exists and is scheduled, this is what they should do now.
-                if (!string.Equals(existing.Status, OccurrenceStatuses.Completed, StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(existing.Status, OccurrenceStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(existing.Status, OccurrenceStatuses.InProgress, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ResolveOccurrenceDto
+                    {
+                        ResolutionType = "resume",
+                        Occurrence = existing
+                    };
+                }
+
+                if (string.Equals(existing.Status, OccurrenceStatuses.Scheduled, StringComparison.OrdinalIgnoreCase))
                 {
                     return new ResolveOccurrenceDto
                     {
@@ -315,7 +322,11 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
                     };
                 }
 
-                continue;
+                if (string.Equals(existing.Status, OccurrenceStatuses.Completed, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(existing.Status, OccurrenceStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
             }
 
             var created = await CreateRequiredOccurrenceAsync(
