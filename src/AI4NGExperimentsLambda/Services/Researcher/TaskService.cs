@@ -6,6 +6,7 @@ using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentsLambda.Models.Dtos;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using AI4NGExperimentsLambda.Models.Constants;
 using AI4NGExperimentsLambda.Mappers;
 
 namespace AI4NGExperimentsLambda.Services.Researcher;
@@ -39,7 +40,7 @@ public class TaskService : ITaskService
             KeyConditionExpression = "GSI1PK = :pk",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":pk"] = new AttributeValue("TASK"),
+                [":pk"] = new AttributeValue(DynamoTableKeys.TaskGsiPk),
                 [":false"] = new AttributeValue { BOOL = false }
             },
             // newest first
@@ -60,8 +61,8 @@ public class TaskService : ITaskService
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue($"TASK#{taskKey}"),
-                ["SK"] = new AttributeValue("METADATA")
+                ["PK"] = new AttributeValue($"{DynamoTableKeys.TaskPkPrefix}{taskKey}"),
+                ["SK"] = new AttributeValue(DynamoTableKeys.MetadataSk)
             }
         });
 
@@ -118,11 +119,11 @@ public class TaskService : ITaskService
 
         var item = new Dictionary<string, AttributeValue>
         {
-            ["PK"] = new AttributeValue($"TASK#{taskKey}"),
-            ["SK"] = new AttributeValue("METADATA"),
+            ["PK"] = new AttributeValue($"{DynamoTableKeys.TaskPkPrefix}{taskKey}"),
+            ["SK"] = new AttributeValue(DynamoTableKeys.MetadataSk),
 
             // GSI for fast listing + sorting
-            ["GSI1PK"] = new AttributeValue("TASK"),
+            ["GSI1PK"] = new AttributeValue(DynamoTableKeys.TaskGsiPk),
             ["GSI1SK"] = new AttributeValue(now),
 
             ["EntityType"] = new AttributeValue("Task"),
@@ -175,8 +176,8 @@ public class TaskService : ITaskService
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue($"TASK#{taskKey}"),
-                ["SK"] = new AttributeValue("METADATA")
+                ["PK"] = new AttributeValue($"{DynamoTableKeys.TaskPkPrefix}{taskKey}"),
+                ["SK"] = new AttributeValue(DynamoTableKeys.MetadataSk)
             },
             ConditionExpression =
                 "attribute_exists(PK) AND attribute_exists(SK) AND (attribute_not_exists(IsDeleted) OR IsDeleted = :false)",
@@ -210,8 +211,8 @@ public class TaskService : ITaskService
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue($"TASK#{taskKey}"),
-                ["SK"] = new AttributeValue("METADATA")
+                ["PK"] = new AttributeValue($"{DynamoTableKeys.TaskPkPrefix}{taskKey}"),
+                ["SK"] = new AttributeValue(DynamoTableKeys.MetadataSk)
             },
             ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)",
             UpdateExpression =
@@ -386,8 +387,8 @@ public class TaskService : ITaskService
                 {
                     Keys = chunk.Select(id => new Dictionary<string, AttributeValue>
                     {
-                        ["PK"] = new AttributeValue { S = $"QUESTIONNAIRE#{id}" },
-                        ["SK"] = new AttributeValue { S = "CONFIG" }
+                        ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.QuestionnairePkPrefix}{id}" },
+                        ["SK"] = new AttributeValue { S = DynamoTableKeys.ConfigSk }
                     }).ToList()
                 }
             };
@@ -436,9 +437,9 @@ public class TaskService : ITaskService
                             continue;
 
                         var pk = item.GetValueOrDefault("PK")?.S ?? string.Empty;
-                        if (pk.StartsWith("QUESTIONNAIRE#", StringComparison.OrdinalIgnoreCase))
+                        if (pk.StartsWith(DynamoTableKeys.QuestionnairePkPrefix, StringComparison.OrdinalIgnoreCase))
                         {
-                            foundIds.Add(pk.Substring("QUESTIONNAIRE#".Length));
+                            foundIds.Add(pk.Substring(DynamoTableKeys.QuestionnairePkPrefix.Length));
                         }
                     }
                 }

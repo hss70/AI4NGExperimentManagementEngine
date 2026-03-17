@@ -4,17 +4,12 @@ using AI4NGExperimentsLambda.Interfaces.Researcher;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentsLambda.Mappers;
+using AI4NGExperimentsLambda.Models.Constants;
 
 namespace AI4NGExperimentsLambda.Services.Researcher;
 
 public sealed class ExperimentParticipantsService : IExperimentParticipantsService
 {
-    private const string ExperimentPkPrefix = "EXPERIMENT#";
-    private const string MetadataSk = "METADATA";
-    private const string MemberSkPrefix = "MEMBER#";
-
-    private const string MembershipType = "Membership";
-
     private static readonly HashSet<string> AllowedRoles = new(StringComparer.OrdinalIgnoreCase)
     {
         "participant",
@@ -56,8 +51,8 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
             KeyConditionExpression = "PK = :pk AND begins_with(SK, :skPrefix)",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":pk"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                [":skPrefix"] = new AttributeValue { S = MemberSkPrefix }
+                [":pk"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                [":skPrefix"] = new AttributeValue { S = DynamoTableKeys.MemberSkPrefix }
             }
         }, ct);
 
@@ -210,8 +205,8 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = $"{MemberSkPrefix}{participantId}" }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = $"{DynamoTableKeys.MemberSkPrefix}{participantId}" }
             },
             ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)"
         }, ct);
@@ -224,8 +219,8 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = MetadataSk }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk }
             },
             ConsistentRead = true,
             ProjectionExpression = "PK"
@@ -244,13 +239,13 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
     {
         var item = new Dictionary<string, AttributeValue>
         {
-            ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-            ["SK"] = new AttributeValue { S = $"{MemberSkPrefix}{participantId}" },
+            ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+            ["SK"] = new AttributeValue { S = $"{DynamoTableKeys.MemberSkPrefix}{participantId}" },
 
-            ["GSI1PK"] = new AttributeValue { S = $"USER#{participantId}" },
-            ["GSI1SK"] = new AttributeValue { S = $"EXPERIMENT#{experimentId}" },
+            ["GSI1PK"] = new AttributeValue { S = $"{DynamoTableKeys.UserPkPrefix}{participantId}" },
+            ["GSI1SK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
 
-            ["type"] = new AttributeValue { S = MembershipType },
+            ["type"] = new AttributeValue { S = DynamoTableKeys.MembershipType },
             ["role"] = new AttributeValue { S = request.Role },
             ["status"] = new AttributeValue { S = request.Status },
             ["cohort"] = new AttributeValue { S = request.Cohort },
@@ -345,8 +340,8 @@ public sealed class ExperimentParticipantsService : IExperimentParticipantsServi
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = $"{MemberSkPrefix}{participantId}" }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = $"{DynamoTableKeys.MemberSkPrefix}{participantId}" }
             },
             ConsistentRead = true
         }, ct);

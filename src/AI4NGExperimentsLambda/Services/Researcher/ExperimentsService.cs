@@ -6,16 +6,13 @@ using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentsLambda.Models.Requests;
 using System.Text.Json;
 using AI4NGExperimentsLambda.Mappers;
+using AI4NGExperimentsLambda.Models.Constants;
 
 namespace AI4NGExperimentsLambda.Services.Researcher;
 
 public sealed class ExperimentsService : IExperimentsService
 {
-    private const string ExperimentPkPrefix = "EXPERIMENT#";
-    private const string MetadataSk = "METADATA";
-
     private const string Gsi1Name = "GSI1";
-    private const string Gsi1Pk_Experiments = "EXPERIMENT";
     private const string StatusDraft = "Draft";
 
     private readonly IAmazonDynamoDB _dynamo;
@@ -40,7 +37,7 @@ public sealed class ExperimentsService : IExperimentsService
             KeyConditionExpression = "GSI1PK = :pk",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":pk"] = new AttributeValue { S = Gsi1Pk_Experiments }
+                [":pk"] = new AttributeValue { S = DynamoTableKeys.ExperimentGsiPk }
             },
             ScanIndexForward = false,
             ProjectionExpression = "PK, #data, #status, createdBy, createdAt, updatedBy, updatedAt",
@@ -84,7 +81,7 @@ public sealed class ExperimentsService : IExperimentsService
             Key = new Dictionary<string, AttributeValue>
             {
                 ["PK"] = new AttributeValue { S = BuildExperimentPk(experimentId) },
-                ["SK"] = new AttributeValue { S = MetadataSk }
+                ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk }
             },
             ConsistentRead = true
         }, ct);
@@ -120,10 +117,10 @@ public sealed class ExperimentsService : IExperimentsService
             Item = new Dictionary<string, AttributeValue>
             {
                 ["PK"] = new AttributeValue { S = BuildExperimentPk(experimentId) },
-                ["SK"] = new AttributeValue { S = MetadataSk },
+                ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk },
 
                 ["type"] = new AttributeValue { S = "Experiment" },
-                ["GSI1PK"] = new AttributeValue { S = Gsi1Pk_Experiments },
+                ["GSI1PK"] = new AttributeValue { S = DynamoTableKeys.ExperimentGsiPk },
                 ["GSI1SK"] = new AttributeValue { S = nowIso },
                 ["status"] = new AttributeValue { S = StatusDraft },
                 ["data"] = new AttributeValue { M = dataMap },
@@ -182,7 +179,7 @@ public sealed class ExperimentsService : IExperimentsService
             Key = new Dictionary<string, AttributeValue>
             {
                 ["PK"] = new AttributeValue { S = BuildExperimentPk(experimentId) },
-                ["SK"] = new AttributeValue { S = MetadataSk }
+                ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk }
             },
             ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)",
             UpdateExpression = "SET #data = :data, updatedBy = :u, updatedAt = :t",
@@ -210,7 +207,7 @@ public sealed class ExperimentsService : IExperimentsService
             Key = new Dictionary<string, AttributeValue>
             {
                 ["PK"] = new AttributeValue { S = BuildExperimentPk(experimentId) },
-                ["SK"] = new AttributeValue { S = MetadataSk }
+                ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk }
             },
             ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)"
         }, ct);
@@ -263,7 +260,7 @@ public sealed class ExperimentsService : IExperimentsService
             Key = new Dictionary<string, AttributeValue>
             {
                 ["PK"] = new AttributeValue { S = BuildExperimentPk(experimentId) },
-                ["SK"] = new AttributeValue { S = MetadataSk }
+                ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk }
             },
             ConditionExpression = $"attribute_exists(PK) AND attribute_exists(SK) AND ({allowedChecks})",
             UpdateExpression = "SET #status = :to, updatedBy = :u, updatedAt = :t",
@@ -273,7 +270,7 @@ public sealed class ExperimentsService : IExperimentsService
     }
 
     private static string BuildExperimentPk(string experimentId)
-        => $"{ExperimentPkPrefix}{experimentId}";
+        => $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}";
 
     private static string NormalizeRequired(string? value, string errorMessage)
     {
@@ -288,8 +285,8 @@ public sealed class ExperimentsService : IExperimentsService
     {
         var pk = item.GetValueOrDefault("PK")?.S ?? string.Empty;
 
-        return pk.StartsWith(ExperimentPkPrefix, StringComparison.OrdinalIgnoreCase)
-            ? pk.Substring(ExperimentPkPrefix.Length)
+        return pk.StartsWith(DynamoTableKeys.ExperimentPkPrefix, StringComparison.OrdinalIgnoreCase)
+            ? pk.Substring(DynamoTableKeys.ExperimentPkPrefix.Length)
             : pk;
     }
 

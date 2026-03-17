@@ -7,15 +7,12 @@ using AI4NGExperimentsLambda.Models.Requests;
 using AI4NGExperimentManagement.Shared;
 using System.Text.Json;
 using AI4NGExperimentsLambda.Mappers;
+using AI4NGExperimentsLambda.Models.Constants;
 
 namespace AI4NGExperimentsLambda.Services.Researcher;
 
 public sealed class SessionProtocolService : ISessionProtocolService
 {
-    private const string ExperimentPkPrefix = "EXPERIMENT#";
-    private const string MetadataSk = "METADATA";
-    private const string ProtocolSkPrefix = "PROTOCOL_SESSION#";
-
     private readonly IAmazonDynamoDB _dynamo;
     private readonly string _experimentsTable;
 
@@ -42,8 +39,8 @@ public sealed class SessionProtocolService : ISessionProtocolService
             KeyConditionExpression = "PK = :pk AND begins_with(SK, :skprefix)",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":pk"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                [":skprefix"] = new AttributeValue { S = ProtocolSkPrefix }
+                [":pk"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                [":skprefix"] = new AttributeValue { S = DynamoTableKeys.ProtocolSessionSkPrefix }
             }
         }, ct);
 
@@ -52,8 +49,8 @@ public sealed class SessionProtocolService : ISessionProtocolService
         foreach (var item in resp.Items)
         {
             var sk = item.GetValueOrDefault("SK")?.S ?? string.Empty;
-            var protocolKey = sk.StartsWith(ProtocolSkPrefix, StringComparison.OrdinalIgnoreCase)
-                ? sk.Substring(ProtocolSkPrefix.Length)
+            var protocolKey = sk.StartsWith(DynamoTableKeys.ProtocolSessionSkPrefix, StringComparison.OrdinalIgnoreCase)
+                ? sk.Substring(DynamoTableKeys.ProtocolSessionSkPrefix.Length)
                 : sk;
 
             list.Add(ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, item));
@@ -82,8 +79,8 @@ public sealed class SessionProtocolService : ISessionProtocolService
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = $"{ProtocolSkPrefix}{protocolKey}" }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = $"{DynamoTableKeys.ProtocolSessionSkPrefix}{protocolKey}" }
             },
             ConsistentRead = true
         }, ct);
@@ -148,8 +145,8 @@ public sealed class SessionProtocolService : ISessionProtocolService
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = $"{ProtocolSkPrefix}{protocolKey}" }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = $"{DynamoTableKeys.ProtocolSessionSkPrefix}{protocolKey}" }
             },
             ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK)"
         }, ct);
@@ -188,8 +185,8 @@ public sealed class SessionProtocolService : ISessionProtocolService
 
         var nowIso = DateTime.UtcNow.ToString("O");
 
-        var pk = $"{ExperimentPkPrefix}{experimentId}";
-        var sk = $"{ProtocolSkPrefix}{protocolKey}";
+        var pk = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}";
+        var sk = $"{DynamoTableKeys.ProtocolSessionSkPrefix}{protocolKey}";
 
         var dataAttr = BuildProtocolDataAttribute(protocolKey, request);
 
@@ -306,8 +303,8 @@ SET #type = if_not_exists(#type, :type),
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = MetadataSk }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk }
             },
             ConsistentRead = true
         }, ct);

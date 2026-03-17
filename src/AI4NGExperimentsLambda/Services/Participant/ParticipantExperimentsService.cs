@@ -5,17 +5,12 @@ using AI4NGExperimentsLambda.Mappers;
 using AI4NGExperimentsLambda.Models;
 using AI4NGExperimentsLambda.Models.Dtos;
 using AI4NGExperimentManagement.Shared;
+using AI4NGExperimentsLambda.Models.Constants;
 
 namespace AI4NGExperimentsLambda.Services.Participant;
 
 public sealed class ParticipantExperimentsService : IParticipantExperimentsService
 {
-    private const string ExperimentPkPrefix = "EXPERIMENT#";
-    private const string MetadataSk = "METADATA";
-    private const string MemberSkPrefix = "MEMBER#";
-    private const string ProtocolSkPrefix = "PROTOCOL_SESSION#";
-    private const string TaskPkPrefix = "TASK#";
-
     private readonly IAmazonDynamoDB _dynamo;
     private readonly string _experimentsTable;
 
@@ -41,7 +36,7 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
             KeyConditionExpression = "GSI1PK = :gsi1pk",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":gsi1pk"] = new AttributeValue { S = $"USER#{participantId}" }
+                [":gsi1pk"] = new AttributeValue { S = $"{DynamoTableKeys.UserPkPrefix}{participantId}" }
             }
         }, ct);
 
@@ -150,8 +145,8 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = MetadataSk }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk }
             },
             ConsistentRead = true
         }, ct);
@@ -172,8 +167,8 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = $"{MemberSkPrefix}{participantId}" }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = $"{DynamoTableKeys.MemberSkPrefix}{participantId}" }
             },
             ConsistentRead = true
         }, ct);
@@ -195,8 +190,8 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
             KeyConditionExpression = "PK = :pk AND begins_with(SK, :skprefix)",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":pk"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                [":skprefix"] = new AttributeValue { S = ProtocolSkPrefix }
+                [":pk"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                [":skprefix"] = new AttributeValue { S = DynamoTableKeys.ProtocolSessionSkPrefix }
             }
         }, ct);
 
@@ -205,8 +200,8 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
         foreach (var item in resp.Items)
         {
             var sk = item.GetValueOrDefault("SK")?.S ?? string.Empty;
-            var protocolKey = sk.StartsWith(ProtocolSkPrefix, StringComparison.OrdinalIgnoreCase)
-                ? sk.Substring(ProtocolSkPrefix.Length)
+            var protocolKey = sk.StartsWith(DynamoTableKeys.ProtocolSessionSkPrefix, StringComparison.OrdinalIgnoreCase)
+                ? sk.Substring(DynamoTableKeys.ProtocolSessionSkPrefix.Length)
                 : sk;
 
             list.Add(ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, item));
@@ -238,8 +233,8 @@ public sealed class ParticipantExperimentsService : IParticipantExperimentsServi
                 TableName = _experimentsTable,
                 Key = new Dictionary<string, AttributeValue>
                 {
-                    ["PK"] = new AttributeValue { S = $"{TaskPkPrefix}{taskKey}" },
-                    ["SK"] = new AttributeValue { S = MetadataSk }
+                    ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.TaskPkPrefix}{taskKey}" },
+                    ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk }
                 },
                 ConsistentRead = true
             }, ct);

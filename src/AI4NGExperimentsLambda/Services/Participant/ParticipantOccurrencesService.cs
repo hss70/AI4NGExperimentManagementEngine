@@ -13,10 +13,6 @@ namespace AI4NGExperimentsLambda.Services.Participant;
 
 public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOccurrencesService
 {
-    private const string ExperimentPkPrefix = "EXPERIMENT#";
-    private const string MemberSkPrefix = "MEMBER#";
-    private const string MetadataSk = "METADATA";
-
     private readonly IAmazonDynamoDB _dynamo;
     private readonly string _experimentsTable;
 
@@ -404,8 +400,8 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = $"{MemberSkPrefix}{participantId}" }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = $"{DynamoTableKeys.MemberSkPrefix}{participantId}" }
             },
             ConsistentRead = true
         }, ct);
@@ -424,8 +420,8 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = MetadataSk }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk }
             },
             ConsistentRead = true
         }, ct);
@@ -497,8 +493,8 @@ CancellationToken ct)
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = MetadataSk }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = DynamoTableKeys.MetadataSk }
             },
             ConsistentRead = true
         }, ct);
@@ -530,8 +526,8 @@ CancellationToken ct)
             KeyConditionExpression = "PK = :pk AND begins_with(SK, :skprefix)",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":pk"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                [":skprefix"] = new AttributeValue { S = "PROTOCOL_SESSION#" }
+                [":pk"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                [":skprefix"] = new AttributeValue { S = DynamoTableKeys.ProtocolSessionSkPrefix }
             }
         }, ct);
 
@@ -540,8 +536,8 @@ CancellationToken ct)
         foreach (var item in resp.Items)
         {
             var sk = item.GetValueOrDefault("SK")?.S ?? string.Empty;
-            var protocolKey = sk.StartsWith("PROTOCOL_SESSION#", StringComparison.OrdinalIgnoreCase)
-                ? sk.Substring("PROTOCOL_SESSION#".Length)
+            var protocolKey = sk.StartsWith(DynamoTableKeys.ProtocolSessionSkPrefix, StringComparison.OrdinalIgnoreCase)
+                ? sk.Substring(DynamoTableKeys.ProtocolSessionSkPrefix.Length)
                 : sk;
 
             list.Add(ProtocolSessionItemMapper.MapProtocolSessionDto(experimentId, protocolKey, item));
@@ -651,8 +647,8 @@ CancellationToken ct)
             TableName = _experimentsTable,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
-                ["SK"] = new AttributeValue { S = $"{MemberSkPrefix}{participantId}" }
+                ["PK"] = new AttributeValue { S = $"{DynamoTableKeys.ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = $"{DynamoTableKeys.MemberSkPrefix}{participantId}" }
             },
             ConsistentRead = true
         }, ct);

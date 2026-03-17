@@ -86,37 +86,4 @@ public static class ExperimentMemberItemMapper
     {
         return int.TryParse(value, out var result) ? result : null;
     }
-
-    public static ParticipantMembershipDto MapMembership(
-    Dictionary<string, AttributeValue> item,
-    string experimentId,
-    string participantId)
-    {
-        return new ParticipantMembershipDto
-        {
-            ExperimentId = experimentId,
-            ParticipantId = participantId,
-            Status = item.GetValueOrDefault("status")?.S ?? string.Empty,
-
-            Timezone = item.GetValueOrDefault("timezone")?.S,
-            StudyStartDate = item.GetValueOrDefault("studyStartDate")?.S,
-            StudyEndDate = item.GetValueOrDefault("studyEndDate")?.S,
-
-            ParticipantDurationDays = TryGetNullableInt(item, "participantDurationDays"),
-
-            CreatedAt = item.GetValueOrDefault("createdAt")?.S,
-            UpdatedAt = item.GetValueOrDefault("updatedAt")?.S
-        };
-    }
-
-    private static int? TryGetNullableInt(Dictionary<string, AttributeValue> map, string key)
-    {
-        if (!map.TryGetValue(key, out var attr))
-            return null;
-
-        if (string.IsNullOrWhiteSpace(attr.N))
-            return null;
-
-        return int.TryParse(attr.N, out var value) ? value : null;
-    }
 }
