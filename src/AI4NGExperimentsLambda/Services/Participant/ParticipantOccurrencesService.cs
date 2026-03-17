@@ -232,7 +232,16 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
         experimentId = Guard.RequireExperimentId(experimentId);
         participantId = Guard.RequireParticipantId(participantId);
 
-        await EnsureParticipantMembershipAsync(experimentId, participantId, ct);
+        //await EnsureParticipantMembershipAsync(experimentId, participantId, ct);
+        var membership = await LoadParticipantMembershipAsync(experimentId, participantId, ct);
+
+        if (!string.Equals(membership.Status, "active", StringComparison.OrdinalIgnoreCase))
+        {
+            return new ResolveOccurrenceDto
+            {
+                ResolutionType = "participant_inactive"
+            };
+        }
 
         // 1. Resume any in-progress occurrence first
         var existingDtos = await ListOccurrencesAsync(experimentId, participantId, ct: ct);
@@ -265,8 +274,25 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
         }
 
         var nowUtc = DateTime.UtcNow;
-        var todayLocal = DateOnly.FromDateTime(nowUtc);
+        var scheduleContext = BuildParticipantScheduleContext(membership, experiment, nowUtc);
 
+        if (!scheduleContext.HasStarted)
+        {
+            return new ResolveOccurrenceDto
+            {
+                ResolutionType = "not_started_yet"
+            };
+        }
+
+        if (!scheduleContext.IsWithinWindow)
+        {
+            return new ResolveOccurrenceDto
+            {
+                ResolutionType = "outside_schedule_window"
+            };
+        }
+
+        var todayLocal = scheduleContext.LocalToday;
         var isoYear = ISOWeek.GetYear(todayLocal.ToDateTime(TimeOnly.MinValue));
         var isoWeek = ISOWeek.GetWeekOfYear(todayLocal.ToDateTime(TimeOnly.MinValue));
 
@@ -301,7 +327,7 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
                 participantId,
                 protocol,
                 occurrenceKey,
-                nowUtc,
+                scheduleContext,
                 ct);
 
             return new ResolveOccurrenceDto
@@ -527,22 +553,19 @@ CancellationToken ct)
     }
 
     private async Task<OccurrenceDto> CreateRequiredOccurrenceAsync(
-    ExperimentDto experiment,
-    string participantId,
-    ProtocolSessionDto protocol,
-    string occurrenceKey,
-    DateTime nowUtc,
-    CancellationToken ct)
+        ExperimentDto experiment,
+        string participantId,
+        ProtocolSessionDto protocol,
+        string occurrenceKey,
+        ParticipantScheduleContext scheduleContext,
+        CancellationToken ct)
     {
         var taskOrder = await ResolveTaskOrderAsync(
             experiment.Id,
             protocol.SessionTypeKey,
             ct);
 
-        var nowIso = nowUtc.ToString("O");
-
-        var studyDay = TryCalculateStudyDay(experiment.Data?.StudyStartDate, nowUtc);
-        var studyWeek = TryCalculateStudyWeek(experiment.Data?.StudyStartDate, nowUtc);
+        var nowIso = scheduleContext.UtcNow.ToString("O");
 
         var occurrence = new ParticipantSessionOccurrence
         {
@@ -555,9 +578,10 @@ CancellationToken ct)
             IsRequired = true,
             Status = OccurrenceStatuses.Scheduled,
             ScheduledAt = nowIso,
-            DateLocal = DateOnly.FromDateTime(nowUtc).ToString("yyyy-MM-dd"),
-            StudyDay = studyDay,
-            StudyWeek = studyWeek,
+            DateLocal = scheduleContext.LocalToday.ToString("yyyy-MM-dd"),
+            StudyDay = scheduleContext.StudyDay,
+            StudyWeek = scheduleContext.StudyWeek,
+            Timezone = scheduleContext.Timezone,
             Source = OccurrenceSources.Scheduled,
             TaskOrder = taskOrder,
             TotalTaskCount = taskOrder.Count,
@@ -617,36 +641,123 @@ CancellationToken ct)
         return actions;
     }
 
-    private static int? TryGetNullableInt(Dictionary<string, AttributeValue> map, string key)
+    private async Task<ExperimentMemberDto> LoadParticipantMembershipAsync(
+    string experimentId,
+    string participantId,
+    CancellationToken ct)
     {
-        if (!map.TryGetValue(key, out var attr))
-            return null;
+        var resp = await _dynamo.GetItemAsync(new GetItemRequest
+        {
+            TableName = _experimentsTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new AttributeValue { S = $"{ExperimentPkPrefix}{experimentId}" },
+                ["SK"] = new AttributeValue { S = $"{MemberSkPrefix}{participantId}" }
+            },
+            ConsistentRead = true
+        }, ct);
 
-        if (string.IsNullOrWhiteSpace(attr.N))
-            return null;
+        if (!resp.IsItemSet || resp.Item == null || resp.Item.Count == 0)
+            throw new UnauthorizedAccessException("Participant is not enrolled in this experiment");
 
-        return int.TryParse(attr.N, out var value) ? value : null;
+        return ExperimentMemberItemMapper.MapMemberDto(resp.Item);
     }
 
-    private static int? TryCalculateStudyDay(string? studyStartDate, DateTime nowUtc)
+
+    private sealed class ParticipantScheduleContext
     {
-        if (string.IsNullOrWhiteSpace(studyStartDate) || !DateOnly.TryParse(studyStartDate, out var start))
-            return null;
+        public string Timezone { get; init; } = "UTC";
+        public DateTime UtcNow { get; init; }
+        public DateTime LocalNow { get; init; }
+        public DateOnly LocalToday { get; init; }
 
-        var today = DateOnly.FromDateTime(nowUtc);
+        public DateOnly? ParticipantStartDate { get; init; }
+        public DateOnly? ParticipantEndDate { get; init; }
+        public int? ParticipantDurationDaysOverride { get; init; }
 
-        if (today < start)
-            return 0;
+        public int? StudyDay { get; init; }
+        public int? StudyWeek { get; init; }
 
-        return today.DayNumber - start.DayNumber + 1;
+        public bool HasStarted { get; init; }
+        public bool IsWithinWindow { get; init; }
     }
 
-    private static int? TryCalculateStudyWeek(string? studyStartDate, DateTime nowUtc)
+    private static ParticipantScheduleContext BuildParticipantScheduleContext(
+    ExperimentMemberDto membership,
+    ExperimentDto experiment,
+    DateTime utcNow)
     {
-        var studyDay = TryCalculateStudyDay(studyStartDate, nowUtc);
-        if (!studyDay.HasValue || studyDay.Value <= 0)
+        var timezone = string.IsNullOrWhiteSpace(membership.Timezone)
+            ? "UTC"
+            : membership.Timezone.Trim();
+
+        TimeZoneInfo tz;
+        try
+        {
+            tz = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+        }
+        catch
+        {
+            tz = TimeZoneInfo.Utc;
+            timezone = "UTC";
+        }
+
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, tz);
+        var localToday = DateOnly.FromDateTime(localNow);
+
+        var participantStartDate = TryParseDateOnly(membership.ParticipantStartDate)
+            ?? TryParseDateOnly(experiment.Data?.StudyStartDate);
+
+        var participantEndDate = TryParseDateOnly(membership.ParticipantEndDate);
+
+        var durationDays = membership.ParticipantDurationDaysOverride
+            ?? experiment.Data?.ParticipantDurationDays;
+
+        if (!participantEndDate.HasValue &&
+            participantStartDate.HasValue &&
+            durationDays.HasValue &&
+            durationDays.Value > 0)
+        {
+            participantEndDate = participantStartDate.Value.AddDays(durationDays.Value - 1);
+        }
+
+        var hasStarted = !participantStartDate.HasValue || localToday >= participantStartDate.Value;
+        var isWithinWindow =
+            hasStarted &&
+            (!participantEndDate.HasValue || localToday <= participantEndDate.Value);
+
+        int? studyDay = null;
+        int? studyWeek = null;
+
+        if (participantStartDate.HasValue && localToday >= participantStartDate.Value)
+        {
+            studyDay = localToday.DayNumber - participantStartDate.Value.DayNumber + 1;
+            studyWeek = ((studyDay.Value - 1) / 7) + 1;
+        }
+
+        return new ParticipantScheduleContext
+        {
+            Timezone = timezone,
+            UtcNow = utcNow,
+            LocalNow = localNow,
+            LocalToday = localToday,
+            ParticipantStartDate = participantStartDate,
+            ParticipantEndDate = participantEndDate,
+            ParticipantDurationDaysOverride = membership.ParticipantDurationDaysOverride,
+            StudyDay = studyDay,
+            StudyWeek = studyWeek,
+            HasStarted = hasStarted,
+            IsWithinWindow = isWithinWindow
+        };
+    }
+
+    private static DateOnly? TryParseDateOnly(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
             return null;
 
-        return ((studyDay.Value - 1) / 7) + 1;
+        return DateOnly.TryParse(value, out var parsed)
+            ? parsed
+            : null;
     }
 }
