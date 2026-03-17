@@ -39,20 +39,17 @@ jobs:
       - name: Restore dependencies
         run: |
           dotnet restore src/AI4NGQuestionnairesLambda
-          dotnet restore src/AI4NGExperimentsLambda  
-          dotnet restore src/AI4NGResponsesLambda
+          dotnet restore src/AI4NGExperimentsLambda
 
       - name: Build projects
         run: |
           dotnet build src/AI4NGQuestionnairesLambda --configuration Release --no-restore
           dotnet build src/AI4NGExperimentsLambda --configuration Release --no-restore
-          dotnet build src/AI4NGResponsesLambda --configuration Release --no-restore
 
       - name: Build test projects
         run: |
           dotnet build tests/AI4NGQuestionnaires.Tests --configuration Release
           dotnet build tests/AI4NGExperiments.Tests --configuration Release
-          dotnet build tests/AI4NGResponses.Tests --configuration Release
 
       - name: Run unit tests
         run: |
