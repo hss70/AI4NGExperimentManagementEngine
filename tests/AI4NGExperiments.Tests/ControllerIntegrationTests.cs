@@ -19,8 +19,8 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentsService>(
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
-        var experiments = new List<AI4NGExperimentsLambda.Models.Dtos.ExperimentListDto> { new AI4NGExperimentsLambda.Models.Dtos.ExperimentListDto { Id = "exp-1", Name = "Test", Description = "Desc" } };
-        mockService.Setup(x => x.GetExperimentsAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(experiments);
+        var experiments = new List<ExperimentListDto> { new ExperimentListDto { Id = "exp-1", Name = "Test", Description = "Desc" } };
+        mockService.Setup(x => x.GetExperimentsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(experiments);
 
         // Act
         var result = await controller.GetAll(System.Threading.CancellationToken.None);
@@ -38,20 +38,20 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
         var experiment = TestDataBuilder.CreateValidExperiment();
-        var expDto = new AI4NGExperimentsLambda.Models.Dtos.ExperimentDto
+        var expDto = new ExperimentDto
         {
             Id = experiment.Id,
             Data = experiment.Data,
             UpdatedAt = DateTime.UtcNow.ToString("O")
         };
-        mockService.Setup(x => x.GetExperimentAsync("test-id", It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(expDto);
+        mockService.Setup(x => x.GetExperimentAsync("test-id", It.IsAny<CancellationToken>())).ReturnsAsync(expDto);
 
         // Act
         var result = await controller.GetById("test-id", System.Threading.CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        var returned = Assert.IsType<AI4NGExperimentsLambda.Models.Dtos.ExperimentDto>(okResult.Value);
+        var returned = Assert.IsType<ExperimentDto>(okResult.Value);
         Assert.Equal(experiment.Id, returned.Id);
         Assert.Equal(experiment.Data.Name, returned.Data.Name);
     }
@@ -63,7 +63,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentsService>(
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
-        mockService.Setup(x => x.GetExperimentAsync("nonexistent", It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync((AI4NGExperimentsLambda.Models.Dtos.ExperimentDto?)null);
+        mockService.Setup(x => x.GetExperimentAsync("nonexistent", It.IsAny<CancellationToken>())).ReturnsAsync((ExperimentDto?)null);
 
         // Act
         var result = await controller.GetById("nonexistent", System.Threading.CancellationToken.None);
@@ -82,8 +82,8 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
 
         var experiment = TestDataBuilder.CreateValidExperiment();
         var createRequest = new CreateExperimentRequest { Id = experiment.Id, Data = experiment.Data };
-        var createResult = new AI4NGExperimentsLambda.Models.Dtos.IdResponseDto { Id = "test-id" };
-        mockService.Setup(x => x.CreateExperimentAsync(createRequest, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(createResult);
+        var createResult = new IdResponseDto { Id = "test-id" };
+        mockService.Setup(x => x.CreateExperimentAsync(createRequest, TestDataBuilder.TestUsername, It.IsAny<CancellationToken>())).ReturnsAsync(createResult);
 
         // Act
         var result = await controller.Create(createRequest, System.Threading.CancellationToken.None);
@@ -102,7 +102,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
 
         var updateData = new ExperimentDataPatch { Name = "Updated Experiment" };
         var updateRequest = new UpdateExperimentRequest { Data = updateData };
-        mockService.Setup(x => x.UpdateExperimentAsync("test-id", updateRequest, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
+        mockService.Setup(x => x.UpdateExperimentAsync("test-id", updateRequest, TestDataBuilder.TestUsername, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         // Act
         var result = await controller.Update("test-id", updateRequest, System.Threading.CancellationToken.None);
@@ -121,7 +121,7 @@ public class ControllerIntegrationTests : ControllerTestBase<ResearcherExperimen
         var (mockService, controller, _) = CreateControllerWithMocks<IExperimentsService>(
             (service, auth) => new ResearcherExperimentsController(service, auth));
 
-        mockService.Setup(x => x.DeleteExperimentAsync("test-id", TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
+        mockService.Setup(x => x.DeleteExperimentAsync("test-id", TestDataBuilder.TestUsername, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         // Act
         var result = await controller.Delete("test-id", System.Threading.CancellationToken.None);

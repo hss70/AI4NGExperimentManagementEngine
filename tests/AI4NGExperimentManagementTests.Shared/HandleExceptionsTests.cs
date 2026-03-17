@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Xunit;
-using AI4NGResponsesLambda.Controllers;
+using ResearcherExperimentsController = AI4NGExperimentsLambda.Controllers.Researcher.ExperimentsController;
 
 namespace AI4NGExperimentManagementTests.Shared
 {
-    public class HandleExceptionTests : ControllerTestBase<ResponsesController>
+    public class HandleExceptionTests : ControllerTestBase<ResearcherExperimentsController>
     {
         [Theory]
         [MemberData(nameof(ExceptionTestData))]

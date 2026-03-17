@@ -1,6 +1,4 @@
 using AI4NGExperimentManagement.Shared;
-using AI4NGResponsesLambda.Controllers;
-using AI4NGResponsesLambda.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -9,14 +7,6 @@ namespace AI4NGExperimentManagementTests.Shared;
 
 public abstract class ControllerTestBase<TController> where TController : ControllerBase
 {
-    public class TestableResponsesController : ResponsesController
-    {
-        public TestableResponsesController(IResponseService service, IAuthenticationService auth)
-            : base(service, auth)
-        {
-        }
-    }
-
     public class TestBaseApiController : BaseApiController
     {
         // Adjust the ctor to match your real BaseApiController ctor
@@ -38,7 +28,7 @@ public abstract class ControllerTestBase<TController> where TController : Contro
         },
         new object[]
         {
-            new AI4NGExperimentManagement.Shared.ForbiddenException("Forbidden!"),
+            new ForbiddenException("Forbidden!"),
             typeof(ObjectResult),
             403
         },

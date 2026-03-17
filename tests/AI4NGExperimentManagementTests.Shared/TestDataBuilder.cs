@@ -1,6 +1,5 @@
 using AI4NGExperimentsLambda.Models;
 using AI4NG.ExperimentManagement.Contracts.Questionnaires;
-using AI4NGResponsesLambda.Models;
 
 namespace AI4NGExperimentManagementTests.Shared;
 
@@ -82,22 +81,6 @@ public static class TestDataBuilder
                     Required = true
                 }
             }
-        };
-    }
-
-    public static Response CreateValidResponse()
-    {
-        return new Response
-        {
-            Id = "test-response-id",
-            Data = new ResponseData
-            {
-                ExperimentId = "test-experiment-id",
-                SessionId = "test-session-id",
-                QuestionnaireId = "test-questionnaire-id"
-            },
-            CreatedBy = TestUsername,
-            CreatedAt = DateTime.UtcNow
         };
     }
 }

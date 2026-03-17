@@ -61,7 +61,7 @@ public class ErrorHandlingTests
     public async Task Service_ShouldThrowException_WhenDynamoDBConnectionFails()
     {
         // Arrange
-        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<System.Threading.CancellationToken>()))
+        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new AmazonDynamoDBException("Connection failed"));
 
         // Act & Assert
@@ -75,7 +75,7 @@ public class ErrorHandlingTests
     public async Task Service_ShouldThrowException_WhenInvalidRequestData()
     {
         // Arrange
-        _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), It.IsAny<System.Threading.CancellationToken>()))
+        _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ValidationException("Invalid request data"));
 
         var request = new CreateQuestionnaireRequest
@@ -91,7 +91,7 @@ public class ErrorHandlingTests
             }
         };
 
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<System.Threading.CancellationToken>()))
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act & Assert
@@ -105,7 +105,7 @@ public class ErrorHandlingTests
     public async Task Service_ShouldHandleTimeout_WhenOperationTakesTooLong()
     {
         // Arrange
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<System.Threading.CancellationToken>()))
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TaskCanceledException("Operation timed out"));
 
         // Act & Assert
@@ -117,7 +117,7 @@ public class ErrorHandlingTests
     public async Task Service_ShouldHandleResourceNotFound_WhenTableDoesNotExist()
     {
         // Arrange
-        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<System.Threading.CancellationToken>()))
+        _mockDynamoClient.Setup(x => x.QueryAsync(It.IsAny<QueryRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ResourceNotFoundException("Table not found"));
 
         // Act & Assert
@@ -131,7 +131,7 @@ public class ErrorHandlingTests
     public async Task Service_ShouldHandleProvisionedThroughputExceeded()
     {
         // Arrange
-        _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), It.IsAny<System.Threading.CancellationToken>()))
+        _mockDynamoClient.Setup(x => x.PutItemAsync(It.IsAny<PutItemRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ProvisionedThroughputExceededException("Rate limit exceeded"));
 
         var request = new CreateQuestionnaireRequest
@@ -147,7 +147,7 @@ public class ErrorHandlingTests
             }
         };
 
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<System.Threading.CancellationToken>()))
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act & Assert
@@ -164,7 +164,7 @@ public class ErrorHandlingTests
     public async Task Service_ShouldHandleInvalidQuestionnaireIds(string? invalidId)
     {
         // Arrange
-        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<System.Threading.CancellationToken>()))
+        _mockDynamoClient.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GetItemResponse { Item = null });
 
         // Act

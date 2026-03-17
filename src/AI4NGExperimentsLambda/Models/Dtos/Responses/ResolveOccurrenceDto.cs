@@ -3,7 +3,7 @@ namespace AI4NGExperimentsLambda.Models.Dtos.Responses;
 public sealed class ResolveOccurrenceDto
 {
     public string ResolutionType { get; init; } = string.Empty;
-    // resume_existing / start_required / start_optional / none_available
+    // resume / start_required / start_optional / none_available
 
     public OccurrenceDto? Occurrence { get; init; }
 

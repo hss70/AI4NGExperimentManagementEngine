@@ -17,6 +17,7 @@ public static class DynamoTableKeys
     public const string ProtocolSessionSkPrefix = "PROTOCOL_SESSION#";
 
     public const string SessionSkPrefix = "SESSION#";
+    public const string TaskResponsePkPrefix = "TASK_RESPONSE#";
 
     public const string TaskPkPrefix = "TASK#";
     public const string TaskGsiPk = "TASK";

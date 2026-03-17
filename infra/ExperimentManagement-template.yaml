@@ -213,36 +213,6 @@ Resources:
                 - cognito-idp:AdminGetUser
               Resource: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${ParticipantUserPoolId}
 
-  ResponsesApi:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: AI4NGResponsesLambda::AI4NGResponsesLambda.LambdaEntryPoint::FunctionHandlerAsync
-      Runtime: dotnet8
-      CodeUri: ../src/AI4NGResponsesLambda
-      Timeout: 30
-      MemorySize: 512
-      Tracing: Active
-      LoggingConfig:
-        LogFormat: JSON
-        ApplicationLogLevel: INFO
-        SystemLogLevel: INFO
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref PrivateSG
-        SubnetIds: !Ref PrivateSubnetIds
-      Environment:
-        Variables:
-          Environment: !Ref Environment
-          RESPONSES_TABLE: !Ref AI4NGResponsesTable
-          EXPERIMENTS_TABLE: !Ref AI4NGExperimentsTable
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - AWSLambdaVPCAccessExecutionRole
-        - DynamoDBCrudPolicy:
-            TableName: !Ref AI4NGResponsesTable
-        - DynamoDBReadPolicy:
-            TableName: !Ref AI4NGExperimentsTable
-
   QuestionnairesApi:
     Type: AWS::Serverless::Function
     Properties:
@@ -278,15 +248,6 @@ Resources:
       ApiId: !Ref SharedApiId
       IntegrationType: AWS_PROXY
       IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ExperimentsApi.Arn}/invocations
-      PayloadFormatVersion: "2.0"
-      IntegrationMethod: POST
-
-  ResponsesIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref SharedApiId
-      IntegrationType: AWS_PROXY
-      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ResponsesApi.Arn}/invocations
       PayloadFormatVersion: "2.0"
       IntegrationMethod: POST
 
@@ -528,6 +489,15 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
+  SubmitParticipantTaskResponseRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref SharedApiId
+      RouteKey: POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/tasks/{taskKey}/responses
+      AuthorizationType: JWT
+      AuthorizerId: !Ref SharedApiAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
   GetResearcherUserByEmailRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -646,53 +616,6 @@ Resources:
       AuthorizationType: JWT
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
-
-  # Responses Routes
-  GetResponsesRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: GET /api/responses
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${ResponsesIntegration}
-
-  GetResponseByIdRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: GET /api/responses/{responseId}
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${ResponsesIntegration}
-
-  CreateResponseRoute:
-    Type: AWS::ApiGatewayV2::Route
-    DeletionPolicy: Delete
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: POST /api/responses
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${ResponsesIntegration}
-
-  UpdateResponseRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: PUT /api/responses/{responseId}
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${ResponsesIntegration}
-
-  DeleteResponseRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: DELETE /api/responses/{responseId}
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${ResponsesIntegration}
 
   # Questionnaire Routes
   GetQuestionnairesRoute:
@@ -840,38 +763,11 @@ Resources:
       AuthorizerId: !Ref SharedApiAuthorizerId
       Target: !Sub integrations/${ExperimentsIntegration}
 
-  # Mobile Sync Routes
-  SyncQuestionnairesRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: GET /api/sync/questionnaires
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${QuestionnairesIntegration}
-
-  SyncResponsesRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref SharedApiId
-      RouteKey: GET /api/sync/responses
-      AuthorizationType: JWT
-      AuthorizerId: !Ref SharedApiAuthorizerId
-      Target: !Sub integrations/${ResponsesIntegration}
-
   # Lambda Permissions
   ExperimentsLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref ExperimentsApi
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SharedApiId}/*/*
-
-  ResponsesLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref ResponsesApi
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SharedApiId}/*/*
@@ -904,11 +800,6 @@ Outputs:
     Value: !GetAtt ExperimentsApi.Arn
     Export:
       Name: !Sub AI4NG-ExperimentsLambda-${Environment}
-
-  ResponsesLambdaArn:
-    Value: !GetAtt ResponsesApi.Arn
-    Export:
-      Name: !Sub AI4NG-ResponsesLambda-${Environment}
 
   QuestionnairesLambdaArn:
     Value: !GetAtt QuestionnairesApi.Arn

@@ -3,9 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Reflection;
 using AI4NGExperimentsLambda.Controllers;
 using AI4NGQuestionnairesLambda.Controllers;
-using AI4NGResponsesLambda.Controllers;
 using AI4NGExperimentsLambda.Controllers.Researcher;
-using System.Linq.Expressions;
 
 namespace AI4NGExperimentManagementTests.Shared;
 
@@ -90,32 +88,6 @@ public class RouteIntegrationTests
     }
 
     [Fact]
-    public void ResponsesController_ShouldHaveCorrectRouteAttributes()
-    {
-        // Arrange
-        var controllerType = typeof(ResponsesController);
-
-        // Act & Assert - Check controller route
-        var routeAttribute = controllerType.GetCustomAttribute<RouteAttribute>();
-        Assert.NotNull(routeAttribute);
-        Assert.Equal("api/responses", routeAttribute.Template);
-
-        // Check individual action routes
-        var methods = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .Where(m => m.DeclaringType == controllerType);
-
-        var httpGetMethods = methods.Where(m => m.GetCustomAttribute<HttpGetAttribute>() != null);
-        var httpPostMethods = methods.Where(m => m.GetCustomAttribute<HttpPostAttribute>() != null);
-        var httpPutMethods = methods.Where(m => m.GetCustomAttribute<HttpPutAttribute>() != null);
-        var httpDeleteMethods = methods.Where(m => m.GetCustomAttribute<HttpDeleteAttribute>() != null);
-
-        Assert.True(httpGetMethods.Any(), "Should have GET methods");
-        Assert.True(httpPostMethods.Any(), "Should have POST methods");
-        Assert.True(httpPutMethods.Any(), "Should have PUT methods");
-        Assert.True(httpDeleteMethods.Any(), "Should have DELETE methods");
-    }
-
-    [Fact]
     public void AllControllers_ShouldInheritFromBaseApiController()
     {
         // Arrange
@@ -124,7 +96,6 @@ public class RouteIntegrationTests
             typeof(ExperimentsController),
             typeof(TasksController),
             typeof(QuestionnairesController),
-            typeof(ResponsesController)
         };
 
         // Act & Assert
@@ -151,11 +122,6 @@ public class RouteIntegrationTests
     [InlineData(typeof(QuestionnairesController), "Create")]
     [InlineData(typeof(QuestionnairesController), "Update")]
     [InlineData(typeof(QuestionnairesController), "Delete")]
-    [InlineData(typeof(ResponsesController), "GetAll")]
-    [InlineData(typeof(ResponsesController), "GetById")]
-    [InlineData(typeof(ResponsesController), "Create")]
-    [InlineData(typeof(ResponsesController), "Update")]
-    [InlineData(typeof(ResponsesController), "Delete")]
     public void Controllers_ShouldHaveRequiredCrudMethods(Type controllerType, string methodName)
     {
         // Act
@@ -238,8 +204,7 @@ public class RouteIntegrationTests
         {
             typeof(ExperimentsController),
             typeof(TasksController),
-            typeof(QuestionnairesController),
-            typeof(ResponsesController)
+            typeof(QuestionnairesController)
         };
 
         // Act & Assert

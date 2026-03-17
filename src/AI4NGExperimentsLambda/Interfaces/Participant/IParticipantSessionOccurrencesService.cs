@@ -39,6 +39,14 @@ public interface IParticipantSessionOccurrencesService
         CreateOccurrenceRequest request,
         CancellationToken ct = default);
 
+    Task<OccurrenceDto> SubmitTaskResponseAsync(
+        string experimentId,
+        string participantId,
+        string occurrenceKey,
+        string taskKey,
+        SubmitTaskResponseRequest request,
+        CancellationToken ct = default);
+
     Task<ResolveOccurrenceDto> ResolveCurrentOccurrenceAsync(
         string experimentId,
         string participantId,

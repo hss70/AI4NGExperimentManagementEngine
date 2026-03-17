@@ -2,7 +2,6 @@ using Xunit;
 using Microsoft.Extensions.DependencyInjection;
 using AI4NGExperimentsLambda.Interfaces;
 using AI4NGQuestionnairesLambda.Interfaces;
-using AI4NGResponsesLambda.Interfaces;
 using AI4NGExperimentManagement.Shared;
 using AI4NGExperimentsLambda.Interfaces.Researcher;
 
@@ -17,7 +16,7 @@ public class ServiceWiringIntegrationTests
         Environment.SetEnvironmentVariable("EXPERIMENTS_TABLE", "test-experiments");
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "test-responses");
         Environment.SetEnvironmentVariable("TASKS_TABLE", "test-tasks");
-        
+
         var services = new ServiceCollection();
         var startup = new AI4NGExperimentsLambda.Startup();
 
@@ -36,7 +35,7 @@ public class ServiceWiringIntegrationTests
     {
         // Arrange
         Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "test-questionnaires");
-        
+
         var services = new ServiceCollection();
         var startup = new AI4NGQuestionnairesLambda.Startup();
 
@@ -50,31 +49,13 @@ public class ServiceWiringIntegrationTests
     }
 
     [Fact]
-    public void ResponsesLambda_Startup_ShouldRegisterAllServices()
-    {
-        // Arrange
-        Environment.SetEnvironmentVariable("RESPONSES_TABLE", "test-responses");
-        
-        var services = new ServiceCollection();
-        var startup = new AI4NGResponsesLambda.Startup();
-
-        // Act
-        startup.ConfigureServices(services);
-        var serviceProvider = services.BuildServiceProvider();
-
-        // Assert - Check that all required services are registered
-        Assert.NotNull(serviceProvider.GetService<IResponseService>());
-        Assert.NotNull(serviceProvider.GetService<IAuthenticationService>());
-    }
-
-    [Fact]
     public void ExperimentsLambda_Services_ShouldBeRegisteredWithCorrectLifetime()
     {
         // Arrange
         Environment.SetEnvironmentVariable("EXPERIMENTS_TABLE", "test-experiments");
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "test-responses");
         Environment.SetEnvironmentVariable("TASKS_TABLE", "test-tasks");
-        
+
         var services = new ServiceCollection();
         var startup = new AI4NGExperimentsLambda.Startup();
 
@@ -96,7 +77,7 @@ public class ServiceWiringIntegrationTests
     {
         // Arrange
         Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "test-questionnaires");
-        
+
         var services = new ServiceCollection();
         var startup = new AI4NGQuestionnairesLambda.Startup();
 
@@ -111,33 +92,13 @@ public class ServiceWiringIntegrationTests
     }
 
     [Fact]
-    public void ResponsesLambda_Services_ShouldBeRegisteredWithCorrectLifetime()
-    {
-        // Arrange
-        Environment.SetEnvironmentVariable("RESPONSES_TABLE", "test-responses");
-        
-        var services = new ServiceCollection();
-        var startup = new AI4NGResponsesLambda.Startup();
-
-        // Act
-        startup.ConfigureServices(services);
-
-        // Assert - Check service lifetimes
-        var responseServiceDescriptor = services.FirstOrDefault(s => s.ServiceType == typeof(IResponseService));
-
-        Assert.NotNull(responseServiceDescriptor);
-        Assert.Equal(ServiceLifetime.Scoped, responseServiceDescriptor.Lifetime);
-    }
-
-    [Fact]
     public void AllStartups_ShouldInheritFromBaseStartup()
     {
         // Arrange
         var startupTypes = new[]
         {
             typeof(AI4NGExperimentsLambda.Startup),
-            typeof(AI4NGQuestionnairesLambda.Startup),
-            typeof(AI4NGResponsesLambda.Startup)
+            typeof(AI4NGQuestionnairesLambda.Startup)
         };
 
         // Act & Assert
@@ -169,7 +130,7 @@ public class ServiceWiringIntegrationTests
         Environment.SetEnvironmentVariable("EXPERIMENTS_TABLE", "test-experiments");
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "test-responses");
         Environment.SetEnvironmentVariable("TASKS_TABLE", "test-tasks");
-        
+
         var services = new ServiceCollection();
         var startup = new AI4NGExperimentsLambda.Startup();
 
@@ -191,7 +152,7 @@ public class ServiceWiringIntegrationTests
         Environment.SetEnvironmentVariable("EXPERIMENTS_TABLE", "test-experiments");
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "test-responses");
         Environment.SetEnvironmentVariable("TASKS_TABLE", "test-tasks");
-        
+
         var services = new ServiceCollection();
         var startup = new AI4NGExperimentsLambda.Startup();
 
@@ -212,7 +173,6 @@ public class ServiceWiringIntegrationTests
     [Theory]
     [InlineData(typeof(AI4NGExperimentsLambda.Startup))]
     [InlineData(typeof(AI4NGQuestionnairesLambda.Startup))]
-    [InlineData(typeof(AI4NGResponsesLambda.Startup))]
     public void Startup_ConfigureServices_ShouldNotThrow(Type startupType)
     {
         // Arrange
@@ -220,7 +180,7 @@ public class ServiceWiringIntegrationTests
         Environment.SetEnvironmentVariable("RESPONSES_TABLE", "test-responses");
         Environment.SetEnvironmentVariable("TASKS_TABLE", "test-tasks");
         Environment.SetEnvironmentVariable("QUESTIONNAIRES_TABLE", "test-questionnaires");
-        
+
         var services = new ServiceCollection();
         var startup = Activator.CreateInstance(startupType);
         var configureMethod = startupType.GetMethod("ConfigureServices");

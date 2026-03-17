@@ -15,6 +15,7 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
 {
     private readonly IAmazonDynamoDB _dynamo;
     private readonly string _experimentsTable;
+    private readonly string _responsesTable;
 
     public ParticipantSessionOccurrencesService(IAmazonDynamoDB dynamo)
     {
@@ -23,6 +24,10 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
         _experimentsTable = Environment.GetEnvironmentVariable("EXPERIMENTS_TABLE") ?? string.Empty;
         if (string.IsNullOrWhiteSpace(_experimentsTable))
             throw new InvalidOperationException("EXPERIMENTS_TABLE environment variable is not set");
+
+        _responsesTable = Environment.GetEnvironmentVariable("RESPONSES_TABLE") ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(_responsesTable))
+            throw new InvalidOperationException("RESPONSES_TABLE environment variable is not set");
     }
 
     public async Task<IReadOnlyList<OccurrenceDto>> ListOccurrencesAsync(
@@ -220,6 +225,145 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
         return OccurrenceItemMapper.MapToDto(occurrence);
     }
 
+    public async Task<OccurrenceDto> SubmitTaskResponseAsync(
+        string experimentId,
+        string participantId,
+        string occurrenceKey,
+        string taskKey,
+        SubmitTaskResponseRequest request,
+        CancellationToken ct = default)
+    {
+        experimentId = Guard.RequireExperimentId(experimentId);
+        participantId = Guard.RequireParticipantId(participantId);
+        occurrenceKey = Guard.RequireOccurrenceKey(occurrenceKey);
+        taskKey = RequireTaskKey(taskKey);
+        request = request ?? throw new ArgumentException("Submit task response request is required");
+
+        var clientSubmissionId = RequireClientSubmissionId(request.ClientSubmissionId);
+        if (request.Payload == null)
+            throw new ArgumentException("Payload is required");
+
+        var occurrence = await LoadOccurrenceOrThrowAsync(experimentId, participantId, occurrenceKey, ct);
+
+        if (!string.Equals(occurrence.Status, OccurrenceStatuses.InProgress, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException($"Occurrence status must be '{OccurrenceStatuses.InProgress}' to submit a task response");
+
+        var expectedTaskKey = occurrence.CurrentTaskIndex >= 0 &&
+                              occurrence.CurrentTaskIndex < occurrence.TaskOrder.Count
+            ? occurrence.TaskOrder[occurrence.CurrentTaskIndex]
+            : null;
+
+        if (!string.Equals(expectedTaskKey, taskKey, StringComparison.OrdinalIgnoreCase))
+        {
+            var completedTask = occurrence.TaskState.FirstOrDefault(x =>
+                string.Equals(x.TaskKey, taskKey, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(x.Status, OccurrenceTaskStatuses.Completed, StringComparison.OrdinalIgnoreCase));
+
+            if (completedTask != null)
+            {
+                var existing = await LoadTaskResponseAsync(experimentId, participantId, occurrenceKey, taskKey, ct);
+
+                if (existing != null &&
+                    string.Equals(existing.ClientSubmissionId, clientSubmissionId, StringComparison.Ordinal))
+                {
+                    return OccurrenceItemMapper.MapToDto(occurrence);
+                }
+
+                throw new InvalidOperationException("Task has already been completed with a different submission");
+            }
+
+            throw new ArgumentException($"Task '{taskKey}' is not the current task");
+        }
+
+        if (occurrence.CurrentTaskIndex < 0 || occurrence.CurrentTaskIndex >= occurrence.TaskOrder.Count)
+            throw new InvalidOperationException("Occurrence has no remaining current task");
+
+        var nowIso = DateTime.UtcNow.ToString("O");
+        var responseId = Guid.NewGuid().ToString();
+
+        var response = new TaskResponse
+        {
+            ResponseId = responseId,
+            ExperimentId = experimentId,
+            ParticipantId = participantId,
+            OccurrenceKey = occurrenceKey,
+            TaskKey = taskKey,
+            QuestionnaireId = NormalizeOptional(request.QuestionnaireId),
+            Payload = request.Payload,
+            ClientSubmissionId = clientSubmissionId,
+            ClientSubmittedAt = NormalizeOptional(request.ClientSubmittedAt),
+            SubmittedAt = nowIso,
+            CreatedAt = nowIso
+        };
+
+        var taskState = occurrence.TaskState.FirstOrDefault(x =>
+            string.Equals(x.TaskKey, taskKey, StringComparison.OrdinalIgnoreCase));
+
+        if (taskState == null)
+            throw new KeyNotFoundException($"Task state for '{taskKey}' was not found");
+
+        taskState.Status = OccurrenceTaskStatuses.Completed;
+        taskState.StartedAt ??= nowIso;
+        taskState.EndedAt = nowIso;
+
+        occurrence.CompletedTaskCount = occurrence.TaskState.Count(x =>
+            string.Equals(x.Status, OccurrenceTaskStatuses.Completed, StringComparison.OrdinalIgnoreCase));
+
+        occurrence.CurrentTaskIndex += 1;
+        occurrence.UpdatedAt = nowIso;
+        occurrence.UpdatedBy = participantId;
+
+        if (occurrence.CurrentTaskIndex >= occurrence.TaskOrder.Count)
+        {
+            occurrence.Status = OccurrenceStatuses.Completed;
+            occurrence.EndedAt = nowIso;
+        }
+
+        var occurrenceItem = OccurrenceItemMapper.MapToItem(
+            occurrence,
+            string.IsNullOrWhiteSpace(occurrence.CreatedBy) ? participantId : occurrence.CreatedBy,
+            participantId);
+
+        var responseItem = TaskResponseItemMapper.MapToItem(response);
+        await _dynamo.TransactWriteItemsAsync(new TransactWriteItemsRequest
+        {
+            TransactItems = new List<TransactWriteItem>
+            {
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = _responsesTable,
+                        Item = responseItem,
+                        ConditionExpression = "attribute_not_exists(PK) AND attribute_not_exists(SK)"
+                    }
+                },
+                new()
+                {
+                    Put = new Put
+                    {
+                        TableName = _experimentsTable,
+                        Item = occurrenceItem,
+                        ConditionExpression = "attribute_exists(PK) AND attribute_exists(SK) AND #data.#status = :inProgress AND #data.#currentTaskIndex = :expectedIndex",
+                        ExpressionAttributeNames = new Dictionary<string, string>
+                        {
+                            ["#data"] = "data",
+                            ["#status"] = "Status",
+                            ["#currentTaskIndex"] = "CurrentTaskIndex"
+                        },
+                        ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                        {
+                            [":inProgress"] = new AttributeValue { S = OccurrenceStatuses.InProgress },
+                            [":expectedIndex"] = new AttributeValue { N = (occurrence.CurrentTaskIndex - 1).ToString() }
+                        }
+                    }
+                }
+            }
+        }, ct);
+
+        return OccurrenceItemMapper.MapToDto(occurrence);
+    }
+
     public async Task<ResolveOccurrenceDto> ResolveCurrentOccurrenceAsync(
         string experimentId,
         string participantId,
@@ -401,6 +545,32 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
         }, ct);
     }
 
+    private async Task<TaskResponse?> LoadTaskResponseAsync(
+        string experimentId,
+        string participantId,
+        string occurrenceKey,
+        string taskKey,
+        CancellationToken ct)
+    {
+        var responsePk = TaskResponseItemMapper.BuildPk(experimentId, participantId, occurrenceKey, taskKey);
+
+        var resp = await _dynamo.GetItemAsync(new GetItemRequest
+        {
+            TableName = _responsesTable,
+            Key = new Dictionary<string, AttributeValue>
+            {
+                ["PK"] = new AttributeValue { S = responsePk },
+                ["SK"] = new AttributeValue { S = TaskResponseItemMapper.BuildSk() }
+            },
+            ConsistentRead = true
+        }, ct);
+
+        if (!resp.IsItemSet)
+            return null;
+
+        return TaskResponseItemMapper.MapFromItem(resp.Item);
+    }
+
     private async Task EnsureParticipantMembershipAsync(
         string experimentId,
         string participantId,
@@ -494,6 +664,24 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
     }
     private static string? NormalizeOptional(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string RequireTaskKey(string value)
+    {
+        var trimmed = (value ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            throw new ArgumentException("Task key is required");
+
+        return trimmed;
+    }
+
+    private static string RequireClientSubmissionId(string value)
+    {
+        var trimmed = (value ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            throw new ArgumentException("ClientSubmissionId is required");
+
+        return trimmed;
+    }
 
     private async Task<ExperimentDto> LoadExperimentOrThrowAsync(
 string experimentId,

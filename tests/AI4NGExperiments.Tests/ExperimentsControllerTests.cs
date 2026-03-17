@@ -24,11 +24,11 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
     {
         // Arrange
         var (mockService, controller, _) = CreateController();
-        var experiment = new AI4NGExperimentsLambda.Models.Dtos.ExperimentDto { Id = TestDataBuilder.TestUserId, Data = new ExperimentData { Name = "Test Experiment" } };
+        var experiment = new ExperimentDto { Id = TestDataBuilder.TestUserId, Data = new ExperimentData { Name = "Test Experiment" } };
         if (exists)
-            mockService.Setup(x => x.GetExperimentAsync(id, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(experiment);
+            mockService.Setup(x => x.GetExperimentAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(experiment);
         else
-            mockService.Setup(x => x.GetExperimentAsync(id, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync((AI4NGExperimentsLambda.Models.Dtos.ExperimentDto?)null);
+            mockService.Setup(x => x.GetExperimentAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((ExperimentDto?)null);
 
         // Act
         var result = await controller.GetById(id, System.Threading.CancellationToken.None);
@@ -54,7 +54,7 @@ public class ExperimentsControllerTests : ControllerTestBase<ResearcherExperimen
         var (mockService, controller, _) = CreateController();
         var data = new ExperimentDataPatch { Name = "Updated Experiment" };
         var request = new UpdateExperimentRequest { Data = data };
-        mockService.Setup(x => x.UpdateExperimentAsync(TestDataBuilder.TestUserId, request, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(System.Threading.Tasks.Task.CompletedTask);
+        mockService.Setup(x => x.UpdateExperimentAsync(TestDataBuilder.TestUserId, request, TestDataBuilder.TestUsername, It.IsAny<CancellationToken>())).Returns(System.Threading.Tasks.Task.CompletedTask);
 
         // Act
         var result = await controller.Update(TestDataBuilder.TestUserId, request, System.Threading.CancellationToken.None);

@@ -23,7 +23,7 @@ public class QuestionnaireCreateTest : ControllerTestBase<QuestionnairesControll
             Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
         };
 
-        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>()))
+        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername, It.IsAny<CancellationToken>()))
               .ReturnsAsync("created-id");
 
         // Act

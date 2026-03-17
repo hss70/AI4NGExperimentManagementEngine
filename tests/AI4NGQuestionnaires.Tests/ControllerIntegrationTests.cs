@@ -23,7 +23,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             new() { Id = "q1", Data = new QuestionnaireDataDto { Name = "Test Questionnaire 1" } },
             new() { Id = "q2", Data = new QuestionnaireDataDto { Name = "Test Questionnaire 2" } }
         };
-        mockService.Setup(x => x.GetAllAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(questionnaires);
+        mockService.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(questionnaires);
 
         // Act
         var result = await controller.GetAll(CancellationToken.None);
@@ -45,7 +45,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             Id = "test-id",
             Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
         };
-        mockService.Setup(x => x.GetByIdAsync("test-id", It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(questionnaire);
+        mockService.Setup(x => x.GetByIdAsync("test-id", It.IsAny<CancellationToken>())).ReturnsAsync(questionnaire);
 
         // Act
         var result = await controller.GetById("test-id", CancellationToken.None);
@@ -62,7 +62,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth));
 
-        mockService.Setup(x => x.GetByIdAsync("nonexistent", It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync((QuestionnaireDto?)null);
+        mockService.Setup(x => x.GetByIdAsync("nonexistent", It.IsAny<CancellationToken>())).ReturnsAsync((QuestionnaireDto?)null);
 
         // Act
         var result = await controller.GetById("nonexistent", CancellationToken.None);
@@ -84,7 +84,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             Id = "test-id",
             Data = new QuestionnaireDataDto { Name = "Test Questionnaire" }
         };
-        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync("test-id");
+        mockService.Setup(x => x.CreateAsync(request.Id, request.Data, TestDataBuilder.TestUsername, It.IsAny<CancellationToken>())).ReturnsAsync("test-id");
 
         // Act
         var result = await controller.Create(request, CancellationToken.None);
@@ -108,7 +108,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         {
             Data = new QuestionnaireDataDto { Name = "Updated Questionnaire" }
         };
-        mockService.Setup(x => x.UpdateAsync("test-id", request.Data, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
+        mockService.Setup(x => x.UpdateAsync("test-id", request.Data, TestDataBuilder.TestUsername, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         // Act
         var result = await controller.Update("test-id", request, CancellationToken.None);
@@ -162,7 +162,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
         var (mockService, controller, _) = CreateControllerWithMocks<IQuestionnaireService>(
             (service, auth) => new QuestionnairesController(service, auth));
 
-        mockService.Setup(x => x.DeleteAsync("test-id", TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).Returns(Task.CompletedTask);
+        mockService.Setup(x => x.DeleteAsync("test-id", TestDataBuilder.TestUsername, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
         // Act
         var result = await controller.Delete("test-id", CancellationToken.None);
@@ -196,7 +196,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             }
         );
 
-        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(batchResult);
+        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername, It.IsAny<CancellationToken>())).ReturnsAsync(batchResult);
 
         // Act
         var result = await controller.CreateBatch(requests, CancellationToken.None);
@@ -226,7 +226,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             }
         );
 
-        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(batchResult);
+        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername, It.IsAny<CancellationToken>())).ReturnsAsync(batchResult);
 
         // Act
         var result = await controller.CreateBatch(requests, CancellationToken.None);
@@ -258,7 +258,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
             }
         );
 
-        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(batchResult);
+        mockService.Setup(x => x.CreateBatchAsync(requests, TestDataBuilder.TestUsername, It.IsAny<CancellationToken>())).ReturnsAsync(batchResult);
 
         // Act
         var result = await controller.CreateBatch(requests, CancellationToken.None);
@@ -284,7 +284,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
 
         // Act
         await Assert.ThrowsAsync<ForbiddenException>(() => controller.Create(request, CancellationToken.None));
-        mockService.Verify(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
+        mockService.Verify(x => x.CreateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -301,7 +301,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
 
         // Act
         await Assert.ThrowsAsync<ForbiddenException>(() => controller.Update("test-id", request, CancellationToken.None));
-        mockService.Verify(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
+        mockService.Verify(x => x.UpdateAsync(It.IsAny<string>(), It.IsAny<QuestionnaireDataDto>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -313,7 +313,7 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
 
         // Act and Assert - Should return Forbidden
         await Assert.ThrowsAsync<ForbiddenException>(() => controller.Delete("test-id", CancellationToken.None));
-        mockService.Verify(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
+        mockService.Verify(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -330,6 +330,6 @@ public class ControllerIntegrationTests : ControllerTestBase<QuestionnairesContr
 
         // Act and Assert - Should return Forbidden
         await Assert.ThrowsAsync<ForbiddenException>(() => controller.CreateBatch(requests, CancellationToken.None));
-        mockService.Verify(x => x.CreateBatchAsync(It.IsAny<List<CreateQuestionnaireRequest>>(), It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()), Times.Never);
+        mockService.Verify(x => x.CreateBatchAsync(It.IsAny<List<CreateQuestionnaireRequest>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

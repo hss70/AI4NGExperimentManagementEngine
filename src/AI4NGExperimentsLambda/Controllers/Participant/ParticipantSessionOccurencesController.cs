@@ -130,6 +130,30 @@ namespace AI4NGExperimentsLambda.Controllers.Participant
         }
 
         /// <summary>
+        /// Submits output for the current occurrence task and advances progression.
+        /// </summary>
+        [HttpPost("{occurrenceKey}/tasks/{taskKey}/responses")]
+        public async Task<IActionResult> SubmitTaskResponse(
+            string experimentId,
+            string occurrenceKey,
+            string taskKey,
+            [FromBody] SubmitTaskResponseRequest request,
+            CancellationToken ct = default)
+        {
+            var participantId = GetAuthenticatedUserSub();
+
+            var occurrence = await _occurrencesService.SubmitTaskResponseAsync(
+                experimentId,
+                participantId,
+                occurrenceKey,
+                taskKey,
+                request,
+                ct);
+
+            return Ok(occurrence);
+        }
+
+        /// <summary>
         /// Creates a participant-initiated optional occurrence.
         /// </summary>
         [HttpPost]
