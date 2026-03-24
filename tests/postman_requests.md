@@ -250,24 +250,38 @@ Note: each project is configured to run on port `5050`, so run one API at a time
 
 ---
 
-## Participant + participant-management stub endpoints (current behavior)
-
-These currently return stub payloads (not full business behavior yet).
+## Participant and Participant-Management APIs
 
 ### Participant self
-- `GET /api/me/experiments` -> `200` stub
-- `GET /api/me/experiments/{experimentId}/bundle?since=2026-03-01T00:00:00Z` -> `200` stub
-- `GET /api/me/experiments/{experimentId}/occurrences?from=2026-03-01&to=2026-03-31` -> `200` stub
-- `GET /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}` -> `200` stub
-- `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/start` -> `200` stub
-- `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/complete` -> `200` stub
+- `GET /api/me/experiments` -> `200`
+- `GET /api/me/experiments/{experimentId}/bundle?since=2026-03-01T00:00:00Z` -> `200`
+- `GET /api/me/experiments/{experimentId}/occurrences?from=2026-03-01&to=2026-03-31` -> `200`
+- `GET /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}` -> `200` or `404`
+- `GET /api/me/experiments/{experimentId}/occurrences/current` -> `200`
+- `POST /api/me/experiments/{experimentId}/occurrences` -> `200`
+- `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/start` -> `200`
+- `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/complete` -> `200`
+- `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/tasks/{taskKey}/responses` -> `200`
+
+Task response body example:
+```json
+{
+  "clientSubmissionId": "f51aa6df-c020-4e93-bc06-f046a665a157",
+  "clientSubmittedAt": "2026-03-17T09:30:00Z",
+  "questionnaireId": "mood-v1",
+  "payload": {
+    "answer": 4,
+    "notes": "felt focused"
+  }
+}
+```
 
 ### Researcher participant management
-- `GET /api/experiments/{experimentId}/participants` -> `200` stub
-- `GET /api/experiments/{experimentId}/participants/{participantId}` -> `200` stub
-- `PUT /api/experiments/{experimentId}/participants/{participantId}` (any JSON object) -> `200` stub
-- `POST /api/experiments/{experimentId}/participants/batch` (any JSON object) -> `200` stub
-- `DELETE /api/experiments/{experimentId}/participants/{participantId}` -> `200` stub
+- `GET /api/experiments/{experimentId}/participants` -> `200`
+- `GET /api/experiments/{experimentId}/participants/{participantId}` -> `200` or `404`
+- `PUT /api/experiments/{experimentId}/participants/{participantId}` -> `200`
+- `POST /api/experiments/{experimentId}/participants/batch` -> `200`
+- `DELETE /api/experiments/{experimentId}/participants/{participantId}` -> `204`
 
 ---
 
@@ -389,62 +403,8 @@ These currently return stub payloads (not full business behavior yet).
 
 ---
 
-## Responses API (`{{responses_api}}/api/responses`)
+## Legacy Responses API note
 
-### 1) List all responses
-- `GET /api/responses` -> `200`
-
-### 2) List by experiment
-- `GET /api/responses?experimentId=exp-manual-001` -> `200`
-
-### 3) List by experiment + session
-- `GET /api/responses?experimentId=exp-manual-001&sessionId=session-001` -> `200`
-
-### 4) Get response by id
-- `GET /api/responses/{responseId}`
-- found: `200`, missing: `404`
-
-### 5) Create response
-- `POST /api/responses`
-- Body:
-```json
-{
-  "data": {
-    "experimentId": "exp-manual-001",
-    "sessionId": "session-001",
-    "questionnaireId": "mood-v1",
-    "responses": [
-      {
-        "questionId": "q1",
-        "answer": 4,
-        "timestamp": "2026-03-13T10:00:00Z"
-      }
-    ]
-  }
-}
-```
-- Expected: `200` with generated `{ "id": "..." }`
-
-### 6) Update response
-- `PUT /api/responses/{responseId}`
-- Body:
-```json
-{
-  "experimentId": "exp-manual-001",
-  "sessionId": "session-001",
-  "questionnaireId": "mood-v1",
-  "responses": [
-    {
-      "questionId": "q1",
-      "answer": 5,
-      "timestamp": "2026-03-13T10:05:00Z"
-    }
-  ]
-}
-```
-- Expected: `200`
-
-### 7) Delete response
-- `DELETE /api/responses/{responseId}`
-- Expected: `200`
-
+- `/api/responses/*` routes are not declared in the current `infra/ExperimentManagement-template.yaml`.
+- Use occurrence-task submission route instead:
+  - `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/tasks/{taskKey}/responses`

@@ -1,0 +1,9 @@
+{
+    "Parameters": {
+        "Environment": "dev"
+    },
+    "Tags": {
+        "Project": "AI4NG",
+        "Environment": "dev"
+    }
+}

@@ -1,0 +1,1014 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: AI4NG Question Engine using existing API Gateway
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Resources:
+  # DynamoDB Tables
+  AI4NGExperimentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ai4ng-${Environment}-experiments
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  AI4NGResponsesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ai4ng-${Environment}-responses
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+        - AttributeName: GSI2PK
+          AttributeType: S
+        - AttributeName: GSI2SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI2
+          KeySchema:
+            - AttributeName: GSI2PK
+              KeyType: HASH
+            - AttributeName: GSI2SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  AI4NGQuestionnairesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ai4ng-${Environment}-questionnaires
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI3PK
+          AttributeType: S
+        - AttributeName: GSI3SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI3
+          KeySchema:
+            - AttributeName: GSI3PK
+              KeyType: HASH
+            - AttributeName: GSI3SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  ExperimentsApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/ai4ng-${Environment}-experiments-api
+      RetentionInDays: 14
+
+  QuestionnairesApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/ai4ng-${Environment}-questionnaires-api
+      RetentionInDays: 14
+
+  ExperimentsApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ai4ng-${Environment}-experiments-api-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+        - PolicyName: !Sub ai4ng-${Environment}-experiments-api-inline
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ExperimentsCrud
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt AI4NGExperimentsTable.Arn
+                  - !Sub "${AI4NGExperimentsTable.Arn}/index/*"
+
+              - Sid: ResponsesCrud
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt AI4NGResponsesTable.Arn
+                  - !Sub "${AI4NGResponsesTable.Arn}/index/*"
+
+              - Sid: QuestionnairesRead
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:BatchGetItem
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt AI4NGQuestionnairesTable.Arn
+                  - !Sub "${AI4NGQuestionnairesTable.Arn}/index/*"
+
+              - Sid: CognitoUserLookupReadOnly
+                Effect: Allow
+                Action:
+                  - cognito-idp:ListUsers
+                  - cognito-idp:AdminGetUser
+                Resource: !Sub
+                  - arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+                  - UserPoolId:
+                      Fn::ImportValue:
+                        Fn::Sub: AI4NG-${Environment}-ParticipantUserPoolId
+      Tags:
+        - Key: Project
+          Value: AI4NG
+        - Key: Environment
+          Value: !Ref Environment
+
+  QuestionnairesApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ai4ng-${Environment}-questionnaires-api-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+        - PolicyName: !Sub ai4ng-${Environment}-questionnaires-api-inline
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: QuestionnairesCrud
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt AI4NGQuestionnairesTable.Arn
+                  - !Sub "${AI4NGQuestionnairesTable.Arn}/index/*"
+      Tags:
+        - Key: Project
+          Value: AI4NG
+        - Key: Environment
+          Value: !Ref Environment
+  # Lambda Functions
+  ExperimentsApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ai4ng-${Environment}-experiments-api
+      Role: !GetAtt ExperimentsApiRole.Arn
+      Handler: AI4NGExperimentsLambda::AI4NGExperimentsLambda.LambdaEntryPoint::FunctionHandlerAsync
+      Runtime: dotnet8
+      CodeUri: ../src/AI4NGExperimentsLambda
+      Timeout: 30
+      MemorySize: 512
+      Tracing: Active
+      LoggingConfig:
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: INFO
+        LogGroup: !Ref ExperimentsApiLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: NetworkStack-PrivateSG
+        SubnetIds: !Split
+          - ","
+          - Fn::ImportValue: NetworkStack-PrivateSubnetIds
+      Environment:
+        Variables:
+          Environment: !Ref Environment
+          EXPERIMENTS_TABLE: !Ref AI4NGExperimentsTable
+          RESPONSES_TABLE: !Ref AI4NGResponsesTable
+          QUESTIONNAIRES_TABLE: !Ref AI4NGQuestionnairesTable
+          COGNITO_USER_POOL_ID:
+            Fn::ImportValue:
+              Fn::Sub: AI4NG-${Environment}-ParticipantUserPoolId
+      Tags:
+        Project: AI4NG
+        Environment: !Ref Environment
+  QuestionnairesApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ai4ng-${Environment}-questionnaires-api
+      Role: !GetAtt QuestionnairesApiRole.Arn
+      Handler: AI4NGQuestionnairesLambda::AI4NGQuestionnairesLambda.LambdaEntryPoint::FunctionHandlerAsync
+      Runtime: dotnet8
+      CodeUri: ../src/AI4NGQuestionnairesLambda
+      Timeout: 30
+      MemorySize: 512
+      Tracing: Active
+      LoggingConfig:
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: INFO
+        LogGroup: !Ref QuestionnairesApiLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: NetworkStack-PrivateSG
+        SubnetIds: !Split
+          - ","
+          - Fn::ImportValue: NetworkStack-PrivateSubnetIds
+      Environment:
+        Variables:
+          Environment: !Ref Environment
+          QUESTIONNAIRES_TABLE: !Ref AI4NGQuestionnairesTable
+      Tags:
+        Project: AI4NG
+        Environment: !Ref Environment
+
+  # API Gateway Integrations (using existing shared API)
+  ExperimentsIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ExperimentsApi.Arn
+      PayloadFormatVersion: "2.0"
+      IntegrationMethod: POST
+
+  QuestionnairesIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt QuestionnairesApi.Arn
+      PayloadFormatVersion: "2.0"
+      IntegrationMethod: POST
+
+  ## Routes:
+  # Experiments
+  GetExperimentsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/experiments
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetExperimentByIdRoute:
+    Type: AWS::ApiGatewayV2::Route
+    DeletionPolicy: Delete
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/experiments/{experimentId}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetMyExperimentsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/me/experiments
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  CreateExperimentRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/experiments
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  UpdateExperimentRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: PUT /api/experiments/{experimentId}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  DeleteExperimentRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: DELETE /api/experiments/{experimentId}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  ActivateExperimentRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/experiments/{experimentId}/activate
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  PauseExperimentRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/experiments/{experimentId}/pause
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  CloseExperimentRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/experiments/{experimentId}/close
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetExperimentParticipantsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/experiments/{experimentId}/participants
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetExperimentParticipantByIdRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/experiments/{experimentId}/participants/{participantId}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  UpsertExperimentParticipantRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: PUT /api/experiments/{experimentId}/participants/{participantId}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  BatchUpsertExperimentParticipantsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/experiments/{experimentId}/participants/batch
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  RemoveExperimentParticipantRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: DELETE /api/experiments/{experimentId}/participants/{participantId}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetParticipantExperimentBundleRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/me/experiments/{experimentId}/bundle
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetParticipantOccurrencesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/me/experiments/{experimentId}/occurrences
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetParticipantOccurrenceByKeyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetParticipantCurrentOccurrenceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/me/experiments/{experimentId}/occurrences/current
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  CreateParticipantOccurrenceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/me/experiments/{experimentId}/occurrences
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+  StartParticipantOccurrenceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/start
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  CompleteParticipantOccurrenceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/complete
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  SubmitParticipantTaskResponseRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/tasks/{taskKey}/responses
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetResearcherUserByEmailRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/researcher/users/by-email
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetResearcherUserByUsernameRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/researcher/users/by-username
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  # Task Management Routes
+  GetTasksRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/tasks
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetTaskByIdRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/tasks/{taskKey}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  CreateTaskRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/tasks
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  CreateTasksBatchRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/tasks/batch
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  UpdateTaskRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: PUT /api/tasks/{taskKey}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  DeleteTaskRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: DELETE /api/tasks/{taskKey}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  # Questionnaire Routes
+  GetQuestionnairesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/questionnaires
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  GetQuestionnaireRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/questionnaires/{id}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  CreateQuestionnaireRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/questionnaires
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  UpdateQuestionnaireRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: PUT /api/questionnaires/{id}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  DeleteQuestionnaireRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: DELETE /api/questionnaires/{id}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  GetQuestionnairesByIdsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/questionnaires/by-ids
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+
+  CreateQuestionnaireBatchPublicRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/questionnaires/batch
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${QuestionnairesIntegration}
+  # Session Protocol Routes
+  GetProtocolSessionsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/experiments/{experimentId}/protocol-sessions
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  GetProtocolSessionByKeyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: GET /api/experiments/{experimentId}/protocol-sessions/{protocolSessionKey}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  CreateProtocolSessionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: POST /api/experiments/{experimentId}/protocol-sessions/{protocolSessionKey}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  UpdateProtocolSessionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: PUT /api/experiments/{experimentId}/protocol-sessions/{protocolSessionKey}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  DeleteProtocolSessionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+      RouteKey: DELETE /api/experiments/{experimentId}/protocol-sessions/{protocolSessionKey}
+      AuthorizationType: JWT
+      AuthorizerId:
+        Fn::ImportValue:
+          Fn::Sub: AI4NG-${Environment}-ParticipantAuthorizerId
+      Target: !Sub integrations/${ExperimentsIntegration}
+
+  # Lambda Permissions
+  ExperimentsApiPermissionExperiments:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ExperimentsApi
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*/api/experiments*
+        - ApiId:
+            Fn::ImportValue:
+              Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+
+  ExperimentsApiPermissionMeExperiments:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ExperimentsApi
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*/api/me/experiments*
+        - ApiId:
+            Fn::ImportValue:
+              Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+
+  ExperimentsApiPermissionTasks:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ExperimentsApi
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*/api/tasks*
+        - ApiId:
+            Fn::ImportValue:
+              Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+
+  ExperimentsApiPermissionResearcherUsers:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ExperimentsApi
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*/api/researcher/users*
+        - ApiId:
+            Fn::ImportValue:
+              Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+
+  QuestionnairesApiPermissionRoot:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref QuestionnairesApi
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*/api/questionnaires
+        - ApiId:
+            Fn::ImportValue:
+              Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+
+  QuestionnairesApiPermissionSubpaths:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref QuestionnairesApi
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/*/*/api/questionnaires/*
+        - ApiId:
+            Fn::ImportValue:
+              Fn::Sub: AI4NG-${Environment}-SharedHttpApiId
+
+Outputs:
+  ExperimentsTableName:
+    Value: !Ref AI4NGExperimentsTable
+    Export:
+      Name: !Sub AI4NG-${Environment}-ExperimentsTableName
+
+  ExperimentsTableArn:
+    Value: !GetAtt AI4NGExperimentsTable.Arn
+    Export:
+      Name: !Sub AI4NG-${Environment}-ExperimentsTableArn
+
+  ResponsesTableName:
+    Value: !Ref AI4NGResponsesTable
+    Export:
+      Name: !Sub AI4NG-${Environment}-ResponsesTableName
+
+  ResponsesTableArn:
+    Value: !GetAtt AI4NGResponsesTable.Arn
+    Export:
+      Name: !Sub AI4NG-${Environment}-ResponsesTableArn
+
+  QuestionnairesTableName:
+    Value: !Ref AI4NGQuestionnairesTable
+    Export:
+      Name: !Sub AI4NG-${Environment}-QuestionnairesTableName
+
+  QuestionnairesTableArn:
+    Value: !GetAtt AI4NGQuestionnairesTable.Arn
+    Export:
+      Name: !Sub AI4NG-${Environment}-QuestionnairesTableArn
+
+  ExperimentsLambdaArn:
+    Value: !GetAtt ExperimentsApi.Arn
+    Export:
+      Name: !Sub AI4NG-${Environment}-ExperimentsLambdaArn
+
+  ExperimentsLambdaRoleArn:
+    Value: !GetAtt ExperimentsApiRole.Arn
+    Export:
+      Name: !Sub AI4NG-${Environment}-ExperimentsLambdaRoleArn
+
+  ExperimentsLogGroupName:
+    Value: !Ref ExperimentsApiLogGroup
+    Export:
+      Name: !Sub AI4NG-${Environment}-ExperimentsLogGroupName
+
+  QuestionnairesLambdaArn:
+    Value: !GetAtt QuestionnairesApi.Arn
+    Export:
+      Name: !Sub AI4NG-${Environment}-QuestionnairesLambdaArn
+
+  QuestionnairesLambdaRoleArn:
+    Value: !GetAtt QuestionnairesApiRole.Arn
+    Export:
+      Name: !Sub AI4NG-${Environment}-QuestionnairesLambdaRoleArn
+
+  QuestionnairesLogGroupName:
+    Value: !Ref QuestionnairesApiLogGroup
+    Export:
+      Name: !Sub AI4NG-${Environment}-QuestionnairesLogGroupName

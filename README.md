@@ -7,7 +7,6 @@ AI4NGExperimentManagement/
 ├── src/                           # Lambda function source code
 │   ├── AI4NGQuestionnairesLambda/ # Questionnaire management API
 │   ├── AI4NGExperimentsLambda/    # Experiment management API  
-│   └── AI4NGResponsesLambda/      # Response collection API
 ├── infra/                         # CloudFormation templates
 ├── scripts/                       # PowerShell automation scripts
 ├── docs/                          # Documentation
