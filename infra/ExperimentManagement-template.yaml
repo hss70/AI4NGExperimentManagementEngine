@@ -784,17 +784,22 @@ Outputs:
   ExperimentsTableName:
     Value: !Ref AI4NGExperimentsTable
     Export:
-      Name: !Sub AI4NG-ExperimentsTable-${Environment}
+      Name: !Sub AI4NG-ExperimentsTable
+
+  ExperimentsTableArn:
+  Value: !GetAtt AI4NGExperimentsTable.Arn
+  Export:
+    Name: !Sub AI4NG-ExperimentsTableArn
 
   ResponsesTableName:
     Value: !Ref AI4NGResponsesTable
     Export:
-      Name: !Sub AI4NG-ResponsesTable-${Environment}
+      Name: !Sub AI4NG-ResponsesTable
 
   QuestionnairesTableName:
     Value: !Ref AI4NGQuestionnairesTable
     Export:
-      Name: !Sub AI4NG-QuestionnairesTable-${Environment}
+      Name: !Sub AI4NG-QuestionnairesTable
 
   ExperimentsLambdaArn:
     Value: !GetAtt ExperimentsApi.Arn
