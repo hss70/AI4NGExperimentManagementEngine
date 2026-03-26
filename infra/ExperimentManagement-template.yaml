@@ -787,9 +787,9 @@ Outputs:
       Name: !Sub AI4NG-ExperimentsTable
 
   ExperimentsTableArn:
-  Value: !GetAtt AI4NGExperimentsTable.Arn
-  Export:
-    Name: !Sub AI4NG-ExperimentsTableArn
+    Value: !GetAtt AI4NGExperimentsTable.Arn
+    Export:
+      Name: !Sub AI4NG-ExperimentsTableArn
 
   ResponsesTableName:
     Value: !Ref AI4NGResponsesTable
