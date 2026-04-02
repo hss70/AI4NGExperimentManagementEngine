@@ -439,39 +439,35 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
         // 3. Work through required protocol sessions in order
         foreach (var protocol in protocolSessions.OrderBy(x => x.Order))
         {
-            var occurrenceKey = GetRequiredOccurrenceKey(protocol, todayLocal, isoYear, isoWeek);
-            if (occurrenceKey == null)
+            var baseKey = GetRequiredOccurrenceBaseKey(protocol, todayLocal, isoYear, isoWeek);
+            if (baseKey == null)
                 continue;
 
-            var existing = existingDtos.FirstOrDefault(x =>
-                string.Equals(x.OccurrenceKey, occurrenceKey, StringComparison.OrdinalIgnoreCase));
+            var matchingOccurrences = existingDtos
+                .Where(x =>
+                    string.Equals(x.OccurrenceKey, baseKey, StringComparison.OrdinalIgnoreCase) ||
+                    x.OccurrenceKey.StartsWith(baseKey + "#", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(x => GetOccurrenceSlotNumber(x.OccurrenceKey, baseKey))
+                .ToList();
 
-            if (existing != null)
+            var scheduled = matchingOccurrences
+                .FirstOrDefault(x => string.Equals(x.Status, OccurrenceStatuses.Scheduled, StringComparison.OrdinalIgnoreCase));
+
+            if (scheduled != null)
             {
-                if (string.Equals(existing.Status, OccurrenceStatuses.InProgress, StringComparison.OrdinalIgnoreCase))
+                return new ResolveOccurrenceDto
                 {
-                    return new ResolveOccurrenceDto
-                    {
-                        ResolutionType = "resume",
-                        Occurrence = existing
-                    };
-                }
-
-                if (string.Equals(existing.Status, OccurrenceStatuses.Scheduled, StringComparison.OrdinalIgnoreCase))
-                {
-                    return new ResolveOccurrenceDto
-                    {
-                        ResolutionType = "start_required",
-                        Occurrence = existing
-                    };
-                }
-
-                if (string.Equals(existing.Status, OccurrenceStatuses.Completed, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(existing.Status, OccurrenceStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
+                    ResolutionType = "start_required",
+                    Occurrence = scheduled
+                };
             }
+
+            var maxRepeats = protocol.MaxPerDay ?? 1;
+            if (matchingOccurrences.Count >= maxRepeats)
+                continue;
+
+            var nextSlot = matchingOccurrences.Count + 1;
+            var occurrenceKey = BuildRequiredOccurrenceSlotKey(baseKey, nextSlot);
 
             var created = await CreateRequiredOccurrenceAsync(
                 experiment,
@@ -661,6 +657,49 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
 
             _ => null
         };
+    }
+    private static string? GetRequiredOccurrenceBaseKey(
+    ProtocolSessionDto protocol,
+    DateOnly todayLocal,
+    int isoYear,
+    int isoWeek)
+    {
+        var cadence = (protocol.CadenceType ?? string.Empty).Trim().ToUpperInvariant();
+
+        return cadence switch
+        {
+            "ONCE" => string.IsNullOrWhiteSpace(protocol.ProtocolKey)
+                ? "FIRST"
+                : protocol.ProtocolKey,
+
+            "DAILY" => OccurrenceKeyHelper.BuildDailyKey(todayLocal),
+
+            "WEEKLY" => OccurrenceKeyHelper.BuildWeeklyKey(isoYear, isoWeek),
+
+            _ => null
+        };
+    }
+
+    private static string BuildRequiredOccurrenceSlotKey(string baseKey, int slotNumber)
+    {
+        if (slotNumber <= 1)
+            return baseKey;
+
+        return $"{baseKey}#{slotNumber}";
+    }
+
+    private static int GetOccurrenceSlotNumber(string occurrenceKey, string baseKey)
+    {
+        if (string.Equals(occurrenceKey, baseKey, StringComparison.OrdinalIgnoreCase))
+            return 1;
+
+        var suffix = occurrenceKey.Substring(baseKey.Length);
+        if (!suffix.StartsWith("#", StringComparison.Ordinal))
+            return int.MaxValue;
+
+        return int.TryParse(suffix[1..], out var slotNumber) && slotNumber > 0
+            ? slotNumber
+            : int.MaxValue;
     }
     private static string? NormalizeOptional(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
