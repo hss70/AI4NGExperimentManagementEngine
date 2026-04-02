@@ -12,8 +12,8 @@ public static class TaskResponseItemMapper
         string experimentId,
         string participantId,
         string occurrenceKey,
-        string taskKey)
-        => $"{DynamoTableKeys.TaskResponsePkPrefix}{experimentId}#{participantId}#{occurrenceKey}#{taskKey}";
+        int taskIndex)
+        => $"{DynamoTableKeys.TaskResponsePkPrefix}{experimentId}#{participantId}#{occurrenceKey}#{taskIndex:D4}";
 
     public static string BuildSk() => DynamoTableKeys.MetadataSk;
 
@@ -21,7 +21,7 @@ public static class TaskResponseItemMapper
     {
         return new Dictionary<string, AttributeValue>
         {
-            ["PK"] = new AttributeValue { S = BuildPk(response.ExperimentId, response.ParticipantId, response.OccurrenceKey, response.TaskKey) },
+            ["PK"] = new AttributeValue { S = BuildPk(response.ExperimentId, response.ParticipantId, response.OccurrenceKey, response.TaskIndex) },
             ["SK"] = new AttributeValue { S = BuildSk() },
             ["type"] = new AttributeValue { S = "TaskResponse" },
             ["data"] = new AttributeValue { M = MapDataToAttributeMap(response) },
@@ -46,6 +46,7 @@ public static class TaskResponseItemMapper
             ExperimentId = map.GetValueOrDefault("ExperimentId")?.S ?? string.Empty,
             ParticipantId = map.GetValueOrDefault("ParticipantId")?.S ?? string.Empty,
             OccurrenceKey = map.GetValueOrDefault("OccurrenceKey")?.S ?? string.Empty,
+            TaskIndex = TryGetNullableInt(map, "TaskIndex") ?? 0,
             TaskKey = map.GetValueOrDefault("TaskKey")?.S ?? string.Empty,
             QuestionnaireId = NormalizeOptional(map.GetValueOrDefault("QuestionnaireId")?.S),
             Payload = DynamoDBHelper.ConvertAttributeValueToObject(map.GetValueOrDefault("Payload")) ?? new object(),
@@ -64,6 +65,7 @@ public static class TaskResponseItemMapper
             ["ExperimentId"] = new AttributeValue { S = response.ExperimentId },
             ["ParticipantId"] = new AttributeValue { S = response.ParticipantId },
             ["OccurrenceKey"] = new AttributeValue { S = response.OccurrenceKey },
+            ["TaskIndex"] = new AttributeValue { N = response.TaskIndex.ToString() },
             ["TaskKey"] = new AttributeValue { S = response.TaskKey },
             ["Payload"] = new AttributeValue
             {
@@ -85,4 +87,13 @@ public static class TaskResponseItemMapper
 
     private static string? NormalizeOptional(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static int? TryGetNullableInt(Dictionary<string, AttributeValue> map, string key)
+    {
+        return map.TryGetValue(key, out var value) &&
+               value != null &&
+               int.TryParse(value.N, out var parsed)
+            ? parsed
+            : null;
+    }
 }

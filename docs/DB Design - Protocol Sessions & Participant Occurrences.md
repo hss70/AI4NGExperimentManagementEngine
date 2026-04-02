@@ -125,7 +125,7 @@ Stores participant outputs for questionnaire questions and other task results.
   - `GSI3PK="USER#<participant_id>#SYNC#RESPONSE"`, `GSI3SK=<lastModifiedIso>`
 
 ### Attributes
-- Identifiers: `experimentId`, `participantId`, `occurrenceKey`, `protocolKey?`, `taskKey`, `questionnaireId?`, `questionId?`
+- Identifiers: `experimentId`, `participantId`, `occurrenceKey`, `taskIndex`, `protocolKey?`, `taskKey`, `questionnaireId?`, `questionId?`
 - Historical integrity: `questionText` and optional `answerOptions` snapshot (for questionnaire items)
 - Payload: `answerValue` / `payload` (freeform JSON for non-questionnaire tasks)
 - `timestamp`, `responseTimeMs`, `metadata` (device/app version/etc.)
@@ -142,6 +142,7 @@ Stores participant outputs for questionnaire questions and other task results.
 
 Key points:
 - `taskKey` is canonical (recommend **UPPER_SNAKE_CASE**).
+- `taskIndex` is the canonical per-occurrence response slot and disambiguates repeated task keys within the same occurrence.
 - `TaskData` includes:
   - `name`, `type`, `description`
   - `estimatedDurationMinutes`
@@ -284,6 +285,7 @@ This is the execution record and the anchor for responses.
   - Update occurrence status + timestamps (conditional updates)
 - Upload responses for an occurrence:
   - Put items into `AI4NGResponses` using occurrence-centric PK
+  - Response PK includes `taskIndex` so repeated task keys in one occurrence do not collide
 
 ## Tasks
 - Get task:

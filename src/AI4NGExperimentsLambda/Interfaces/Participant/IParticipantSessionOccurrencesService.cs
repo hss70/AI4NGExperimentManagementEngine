@@ -44,6 +44,7 @@ public interface IParticipantSessionOccurrencesService
         string participantId,
         string occurrenceKey,
         string taskKey,
+        int? taskIndex,
         SubmitTaskResponseRequest request,
         CancellationToken ct = default);
 

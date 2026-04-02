@@ -131,12 +131,14 @@ namespace AI4NGExperimentsLambda.Controllers.Participant
 
         /// <summary>
         /// Submits output for the current occurrence task and advances progression.
+        /// If a task key appears more than once in the same occurrence, pass taskIndex to disambiguate the step.
         /// </summary>
         [HttpPost("{occurrenceKey}/tasks/{taskKey}/responses")]
         public async Task<IActionResult> SubmitTaskResponse(
             string experimentId,
             string occurrenceKey,
             string taskKey,
+            [FromQuery] int? taskIndex,
             [FromBody] SubmitTaskResponseRequest request,
             CancellationToken ct = default)
         {
@@ -147,6 +149,7 @@ namespace AI4NGExperimentsLambda.Controllers.Participant
                 participantId,
                 occurrenceKey,
                 taskKey,
+                taskIndex,
                 request,
                 ct);
 

@@ -230,6 +230,7 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
         string participantId,
         string occurrenceKey,
         string taskKey,
+        int? taskIndex,
         SubmitTaskResponseRequest request,
         CancellationToken ct = default)
     {
@@ -248,20 +249,23 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
         if (!string.Equals(occurrence.Status, OccurrenceStatuses.InProgress, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"Occurrence status must be '{OccurrenceStatuses.InProgress}' to submit a task response");
 
-        var expectedTaskKey = occurrence.CurrentTaskIndex >= 0 &&
-                              occurrence.CurrentTaskIndex < occurrence.TaskOrder.Count
-            ? occurrence.TaskOrder[occurrence.CurrentTaskIndex]
-            : null;
+        var resolvedTaskIndex = ResolveTaskIndex(occurrence, taskKey, taskIndex);
 
-        if (!string.Equals(expectedTaskKey, taskKey, StringComparison.OrdinalIgnoreCase))
+        if (resolvedTaskIndex < 1 || resolvedTaskIndex > occurrence.TaskState.Count)
+            throw new ArgumentException($"Task index '{resolvedTaskIndex}' is out of range for occurrence '{occurrenceKey}'");
+
+        var taskState = occurrence.TaskState[resolvedTaskIndex - 1];
+
+        if (!string.Equals(taskState.TaskKey, taskKey, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException($"Task '{taskKey}' does not match task index '{resolvedTaskIndex}'");
+
+        var currentTaskIndex = occurrence.CurrentTaskIndex + 1;
+
+        if (resolvedTaskIndex != currentTaskIndex)
         {
-            var completedTask = occurrence.TaskState.FirstOrDefault(x =>
-                string.Equals(x.TaskKey, taskKey, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(x.Status, OccurrenceTaskStatuses.Completed, StringComparison.OrdinalIgnoreCase));
-
-            if (completedTask != null)
+            if (string.Equals(taskState.Status, OccurrenceTaskStatuses.Completed, StringComparison.OrdinalIgnoreCase))
             {
-                var existing = await LoadTaskResponseAsync(experimentId, participantId, occurrenceKey, taskKey, ct);
+                var existing = await LoadTaskResponseAsync(experimentId, participantId, occurrenceKey, resolvedTaskIndex, ct);
 
                 if (existing != null &&
                     string.Equals(existing.ClientSubmissionId, clientSubmissionId, StringComparison.Ordinal))
@@ -275,8 +279,18 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
             throw new ArgumentException($"Task '{taskKey}' is not the current task");
         }
 
-        if (occurrence.CurrentTaskIndex < 0 || occurrence.CurrentTaskIndex >= occurrence.TaskOrder.Count)
-            throw new InvalidOperationException("Occurrence has no remaining current task");
+        if (string.Equals(taskState.Status, OccurrenceTaskStatuses.Completed, StringComparison.OrdinalIgnoreCase))
+        {
+            var existing = await LoadTaskResponseAsync(experimentId, participantId, occurrenceKey, resolvedTaskIndex, ct);
+
+            if (existing != null &&
+                string.Equals(existing.ClientSubmissionId, clientSubmissionId, StringComparison.Ordinal))
+            {
+                return OccurrenceItemMapper.MapToDto(occurrence);
+            }
+
+            throw new InvalidOperationException("Task has already been completed with a different submission");
+        }
 
         var nowIso = DateTime.UtcNow.ToString("O");
         var responseId = Guid.NewGuid().ToString();
@@ -287,6 +301,7 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
             ExperimentId = experimentId,
             ParticipantId = participantId,
             OccurrenceKey = occurrenceKey,
+            TaskIndex = resolvedTaskIndex,
             TaskKey = taskKey,
             QuestionnaireId = NormalizeOptional(request.QuestionnaireId),
             Payload = request.Payload,
@@ -295,12 +310,6 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
             SubmittedAt = nowIso,
             CreatedAt = nowIso
         };
-
-        var taskState = occurrence.TaskState.FirstOrDefault(x =>
-            string.Equals(x.TaskKey, taskKey, StringComparison.OrdinalIgnoreCase));
-
-        if (taskState == null)
-            throw new KeyNotFoundException($"Task state for '{taskKey}' was not found");
 
         taskState.Status = OccurrenceTaskStatuses.Completed;
         taskState.StartedAt ??= nowIso;
@@ -545,10 +554,10 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
         string experimentId,
         string participantId,
         string occurrenceKey,
-        string taskKey,
+        int taskIndex,
         CancellationToken ct)
     {
-        var responsePk = TaskResponseItemMapper.BuildPk(experimentId, participantId, occurrenceKey, taskKey);
+        var responsePk = TaskResponseItemMapper.BuildPk(experimentId, participantId, occurrenceKey, taskIndex);
 
         var resp = await _dynamo.GetItemAsync(new GetItemRequest
         {
@@ -720,6 +729,28 @@ public sealed class ParticipantSessionOccurrencesService : IParticipantSessionOc
             throw new ArgumentException("ClientSubmissionId is required");
 
         return trimmed;
+    }
+
+    private static int ResolveTaskIndex(
+        ParticipantSessionOccurrence occurrence,
+        string taskKey,
+        int? taskIndex)
+    {
+        if (taskIndex.HasValue)
+            return taskIndex.Value;
+
+        var matchingIndices = occurrence.TaskState
+            .Where(x => string.Equals(x.TaskKey, taskKey, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.Order)
+            .ToList();
+
+        if (matchingIndices.Count == 0)
+            throw new ArgumentException($"Task '{taskKey}' was not found in this occurrence");
+
+        if (matchingIndices.Count > 1)
+            throw new ArgumentException($"Task '{taskKey}' appears multiple times in this occurrence. Provide taskIndex to submit it.");
+
+        return matchingIndices[0];
     }
 
     private async Task<ExperimentDto> LoadExperimentOrThrowAsync(
