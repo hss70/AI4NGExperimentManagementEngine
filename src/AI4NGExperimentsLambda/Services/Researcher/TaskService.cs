@@ -308,6 +308,7 @@ public class TaskService : ITaskService
         {
             case "Training":
             case "NeuroGame":
+            case "NeuroMagic":
                 if (questionnaireIds.Any())
                     throw new ArgumentException($"{type} tasks must not define QuestionnaireIds.");
 
@@ -339,7 +340,7 @@ public class TaskService : ITaskService
                 break;
 
             default:
-                throw new ArgumentException($"Unsupported task Type '{type}'. Supported: Training, NeuroGame, Questionnaire, QuestionnaireSet.");
+                throw new ArgumentException($"Unsupported task Type '{type}'. Supported: Training, NeuroGame, NeuroMagic, Questionnaire, QuestionnaireSet.");
         }
     }
     private static string GetRequiredConfigurationString(Dictionary<string, object> configuration, string key)
