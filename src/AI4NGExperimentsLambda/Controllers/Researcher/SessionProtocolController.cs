@@ -58,7 +58,6 @@ namespace AI4NGExperimentsLambda.Controllers.Researcher
         }
 
         [HttpPost("batch")]
-        [ProducesResponseType(typeof(IReadOnlyList<ProtocolSessionDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> BatchCreateSessions(
             string experimentId,
             [FromBody] BatchCreateProtocolSessionsRequest request,
@@ -66,14 +65,13 @@ namespace AI4NGExperimentsLambda.Controllers.Researcher
         {
             var user = User.Identity?.Name ?? "system";
 
-            var result = await _protocolService.BatchCreateProtocolSessionsAsync(
+            var result = await _sessionProtocolService.CreateProtocolSessionsBatchAsync(
                 experimentId,
-                protocolKey,
-                requests,
+                request,
                 user,
                 ct);
 
-            return StatusCode(StatusCodes.Status201Created, result);
+            return CreatedAtAction(nameof(Get), new { experimentId }, result);
         }
 
         /// <summary>

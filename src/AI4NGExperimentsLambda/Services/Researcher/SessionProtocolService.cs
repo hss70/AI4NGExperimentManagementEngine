@@ -8,6 +8,7 @@ using AI4NGExperimentManagement.Shared;
 using System.Text.Json;
 using AI4NGExperimentsLambda.Mappers;
 using AI4NGExperimentsLambda.Models.Constants;
+using System.Dynamic;
 
 namespace AI4NGExperimentsLambda.Services.Researcher;
 

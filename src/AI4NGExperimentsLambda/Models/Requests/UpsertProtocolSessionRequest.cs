@@ -16,3 +16,15 @@ public sealed class UpsertProtocolSessionRequest
 
     public int? Weekday { get; set; }
 }
+
+public sealed class BatchCreateProtocolSessionsRequest
+{
+    public required IReadOnlyList<BatchCreateProtocolSessionItem> Sessions { get; init; }
+}
+
+public sealed class BatchCreateProtocolSessionItem
+{
+    public required string ProtocolKey { get; init; }
+
+    public required UpsertProtocolSessionRequest Session { get; init; }
+}
