@@ -156,6 +156,62 @@ public sealed class SessionProtocolService : ISessionProtocolService
 
     private enum WriteMode { Create, Update }
 
+    public async Task<IReadOnlyList<ProtocolSessionDto>>
+        CreateProtocolSessionsBatchAsync(
+            string experimentId,
+            BatchCreateProtocolSessionsRequest request,
+            string performedBy,
+            CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(experimentId);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Sessions);
+
+        if (request.Sessions.Count == 0)
+        {
+            throw new ArgumentException(
+                "At least one protocol session must be supplied.",
+                nameof(request));
+        }
+
+        var duplicateKeys = request.Sessions
+            .GroupBy(
+                x => x.ProtocolKey,
+                StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToArray();
+
+        if (duplicateKeys.Length > 0)
+        {
+            throw new ArgumentException(
+                $"Duplicate protocol session keys were supplied: " +
+                $"{string.Join(", ", duplicateKeys)}.");
+        }
+
+        var results = new List<ProtocolSessionDto>(
+            request.Sessions.Count);
+
+        foreach (var item in request.Sessions)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(item.ProtocolKey);
+            ArgumentNullException.ThrowIfNull(item.Session);
+
+            var session = await CreateProtocolSessionAsync(
+                experimentId,
+                item.ProtocolKey,
+                item.Session,
+                performedBy,
+                ct);
+
+            results.Add(session);
+        }
+
+        return results;
+    }
+
     private async Task<ProtocolSessionDto> WriteProtocolSessionAsync(
         string experimentId,
         string protocolKey,

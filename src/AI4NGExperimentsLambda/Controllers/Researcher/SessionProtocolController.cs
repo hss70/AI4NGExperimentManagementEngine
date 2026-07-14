@@ -57,6 +57,25 @@ namespace AI4NGExperimentsLambda.Controllers.Researcher
             return CreatedAtAction(nameof(Get), new { experimentId, protocolSessionKey = created.ProtocolKey }, created);
         }
 
+        [HttpPost("batch")]
+        [ProducesResponseType(typeof(IReadOnlyList<ProtocolSessionDto>), StatusCodes.Status201Created)]
+        public async Task<IActionResult> BatchCreateSessions(
+            string experimentId,
+            [FromBody] BatchCreateProtocolSessionsRequest request,
+            CancellationToken ct)
+        {
+            var user = User.Identity?.Name ?? "system";
+
+            var result = await _protocolService.BatchCreateProtocolSessionsAsync(
+                experimentId,
+                protocolKey,
+                requests,
+                user,
+                ct);
+
+            return StatusCode(StatusCodes.Status201Created, result);
+        }
+
         /// <summary>
         /// Creates or replaces a protocol session definition (researcher-only, idempotent).
         /// </summary>
