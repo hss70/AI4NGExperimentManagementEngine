@@ -48,6 +48,7 @@ public class ParticipantSessionOccurrencesServiceTests
             ParticipantId,
             OccurrenceKey,
             "task-a",
+            null,
             new SubmitTaskResponseRequest
             {
                 ClientSubmissionId = "submission-1",
@@ -79,6 +80,7 @@ public class ParticipantSessionOccurrencesServiceTests
             ParticipantId,
             OccurrenceKey,
             "task-b",
+            null,
             new SubmitTaskResponseRequest
             {
                 ClientSubmissionId = "submission-1",
@@ -108,6 +110,7 @@ public class ParticipantSessionOccurrencesServiceTests
             ParticipantId,
             OccurrenceKey,
             "task-a",
+            null,
             new SubmitTaskResponseRequest
             {
                 ClientSubmissionId = "submission-1",
@@ -133,6 +136,7 @@ public class ParticipantSessionOccurrencesServiceTests
             ExperimentId = ExperimentId,
             ParticipantId = ParticipantId,
             OccurrenceKey = OccurrenceKey,
+            TaskIndex = 1,
             TaskKey = "task-a",
             ClientSubmissionId = "submission-1",
             SubmittedAt = DateTime.UtcNow.ToString("O"),
@@ -147,6 +151,7 @@ public class ParticipantSessionOccurrencesServiceTests
             ParticipantId,
             OccurrenceKey,
             "task-a",
+            null,
             new SubmitTaskResponseRequest
             {
                 ClientSubmissionId = "submission-1",
@@ -173,6 +178,7 @@ public class ParticipantSessionOccurrencesServiceTests
             ExperimentId = ExperimentId,
             ParticipantId = ParticipantId,
             OccurrenceKey = OccurrenceKey,
+            TaskIndex = 1,
             TaskKey = "task-a",
             ClientSubmissionId = "submission-1",
             SubmittedAt = DateTime.UtcNow.ToString("O"),
@@ -187,6 +193,7 @@ public class ParticipantSessionOccurrencesServiceTests
             ParticipantId,
             OccurrenceKey,
             "task-a",
+            null,
             new SubmitTaskResponseRequest
             {
                 ClientSubmissionId = "submission-2",
@@ -200,7 +207,7 @@ public class ParticipantSessionOccurrencesServiceTests
     {
         var occurrenceItem = OccurrenceItemMapper.MapToItem(occurrence, ParticipantId, ParticipantId);
         var occurrencePk = OccurrenceItemMapper.BuildPk(ExperimentId, ParticipantId);
-        var responsePk = TaskResponseItemMapper.BuildPk(ExperimentId, ParticipantId, OccurrenceKey, "task-a");
+        var responsePk = TaskResponseItemMapper.BuildPk(ExperimentId, ParticipantId, OccurrenceKey, 1);
 
         _dynamo.Setup(x => x.GetItemAsync(It.IsAny<GetItemRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((GetItemRequest request, CancellationToken _) =>

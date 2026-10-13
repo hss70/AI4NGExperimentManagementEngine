@@ -62,7 +62,12 @@ Source of truth: controller routes in `src/*/Controllers` and API Gateway routes
 - `POST /api/me/experiments/{experimentId}/occurrences`
 - `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/start`
 - `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/complete`
-- `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/tasks/{taskKey}/responses`
+- `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/tasks/{taskKey}/responses?taskIndex={optional}`
+
+Notes for task response submission:
+- `taskKey` remains the primary route identifier for the task definition.
+- `taskIndex` disambiguates repeated tasks inside the same occurrence.
+- If the same task key appears multiple times in one occurrence, callers must pass `taskIndex` so the service can store the response against the correct step.
 
 Request body for task response submission:
 ```json

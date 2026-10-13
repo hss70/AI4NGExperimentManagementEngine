@@ -6,6 +6,7 @@ public sealed class TaskResponse
     public string ExperimentId { get; set; } = string.Empty;
     public string ParticipantId { get; set; } = string.Empty;
     public string OccurrenceKey { get; set; } = string.Empty;
+    public int TaskIndex { get; set; }
     public string TaskKey { get; set; } = string.Empty;
     public string? QuestionnaireId { get; set; }
     public object Payload { get; set; } = new();

@@ -21,6 +21,12 @@ public interface ISessionProtocolService
         string performedBy,
         CancellationToken ct = default);
 
+    Task<IReadOnlyList<ProtocolSessionDto>> CreateProtocolSessionsBatchAsync(
+        string experimentId,
+        BatchCreateProtocolSessionsRequest request,
+        string performedBy,
+        CancellationToken ct = default);
+
     Task<ProtocolSessionDto> UpdateProtocolSessionAsync(
         string experimentId,
         string protocolKey,

@@ -261,7 +261,7 @@ Note: each project is configured to run on port `5050`, so run one API at a time
 - `POST /api/me/experiments/{experimentId}/occurrences` -> `200`
 - `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/start` -> `200`
 - `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/complete` -> `200`
-- `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/tasks/{taskKey}/responses` -> `200`
+- `POST /api/me/experiments/{experimentId}/occurrences/{occurrenceKey}/tasks/{taskKey}/responses?taskIndex={optional}` -> `200`
 
 Task response body example:
 ```json
@@ -275,6 +275,10 @@ Task response body example:
   }
 }
 ```
+
+Notes:
+- Use `taskIndex` when the same `taskKey` appears more than once in one occurrence.
+- If the task key is unique in the occurrence, you can omit `taskIndex`.
 
 ### Researcher participant management
 - `GET /api/experiments/{experimentId}/participants` -> `200`
